@@ -15,10 +15,20 @@
     "noUnusedLocals": false,
     "noUnusedParameters": false,
     "noFallthroughCasesInSwitch": true,
+
+    // ✅ FIX 1: baseUrl is deprecated in TS 6.0+. Adding ignoreDeprecations
+    // silences the warning and keeps @/* path aliases working.
+    // When you upgrade to TS 7, migrate to `rootDir` + `paths` without baseUrl.
+    "ignoreDeprecations": "6.0",
+
     "baseUrl": ".",
     "paths": {
       "@/*": ["src/*"]
-    }
+    },
+
+    // ✅ FIX 2: Declare node and vite/client types so TS knows about
+    // __dirname, process.env, import.meta.env, etc.
+    "types": ["node", "vite/client"]
   },
   "include": ["src"],
   "references": [{ "path": "./tsconfig.node.json" }]
