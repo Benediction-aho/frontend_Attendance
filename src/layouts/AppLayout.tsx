@@ -41,22 +41,26 @@ const AppLayout: React.FC<{ children: React.ReactNode }> = ({ children }) => {
   const links = user?.role === 'admin' ? adminLinks : employeeLinks;
 
   const Sidebar = () => (
-    <aside style={{
-      width: 260,
-      minHeight: '100vh',
-      background: 'var(--sidebar-bg)',
-      color: 'var(--sidebar-text)',
-      display: 'flex',
-      flexDirection: 'column',
-      position: 'fixed',
-      left: 0,
-      top: 0,
-      bottom: 0,
-      zIndex: 100,
-      boxShadow: '4px 0 20px rgba(0,0,0,0.2)',
-      transition: 'transform 0.3s',
-      transform: mobileOpen ? 'translateX(0)' : '',
-    }}>
+    // ✅ FIX 1: ajout de className={mobileOpen ? 'open' : ''}
+    // ✅ FIX 2: suppression de transform dans le style inline
+    //    (le CSS gère maintenant tout via aside et aside.open)
+    <aside
+      className={mobileOpen ? 'open' : ''}
+      style={{
+        width: 260,
+        minHeight: '100vh',
+        background: 'var(--sidebar-bg)',
+        color: 'var(--sidebar-text)',
+        display: 'flex',
+        flexDirection: 'column',
+        position: 'fixed',
+        left: 0,
+        top: 0,
+        bottom: 0,
+        zIndex: 100,
+        boxShadow: '4px 0 20px rgba(0,0,0,0.2)',
+        transition: 'transform 0.3s',
+      }}>
       {/* Logo area */}
       <div style={{
         padding: '28px 24px 20px',
@@ -228,11 +232,12 @@ const AppLayout: React.FC<{ children: React.ReactNode }> = ({ children }) => {
       </div>
 
       {/* Mobile overlay */}
+      {/* ✅ FIX 3: suppression de display:'none' inline qui bloquait le CSS */}
       {mobileOpen && (
         <div
           style={{
             position: 'fixed', inset: 0, background: 'rgba(0,0,0,0.5)',
-            zIndex: 99, display: 'none',
+            zIndex: 99,
           }}
           className="mobile-overlay"
           onClick={() => setMobileOpen(false)}
