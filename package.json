@@ -1,39 +1,28 @@
 {
-  "name": "assistance-ghana-backend",
+  "name": "assistance-ghana-frontend",
   "version": "1.0.0",
-  "description": "Assistance Ghana Attendance - Backend API",
-  "main": "server.js",
+  "description": "Assistance Ghana Attendance - Frontend",
+  "type": "module",
   "scripts": {
-    "start": "node server.js",
-    "dev": "nodemon server.js",
-    "seed:admin": "node scripts/seedAdmin.js",
-    "fix:admin": "node scripts/fixAdminPassword.js",
-    "generate:openapi": "node scripts/generateOpenapi.js",
-    "generate:sdk": "npx @openapitools/openapi-generator-cli generate -i ./openapi.json -g typescript-axios -o ./sdk --additional-properties=npmName=@assistance-ghana/sdk,supportsES6=true",
-    "generate:all": "npm run generate:openapi && npm run generate:sdk"
+    "dev": "vite",
+    "build": "vite build",
+    "preview": "vite preview"
   },
   "dependencies": {
-    "bcryptjs": "^2.4.3",
-    "cors": "^2.8.5",
-    "dotenv": "^16.3.1",
-    "express": "^4.18.2",
-    "express-validator": "^7.0.1",
+    "axios": "^1.7.2",
     "i18next": "^26.2.0",
-    "jsonwebtoken": "^9.0.2",
-    "mongoose": "^8.0.3",
     "react": "^19.2.6",
     "react-dom": "^19.2.6",
     "react-i18next": "^17.0.8",
-    "swagger-jsdoc": "^6.2.8",
-    "swagger-ui-express": "^5.0.0",
-    "typescript": "^6.0.3"
+    "react-router-dom": "^7.15.1",
+    "recharts": "^2.12.7"
   },
   "devDependencies": {
-    "@types/node": "^25.7.0",
     "@types/react": "^19.2.14",
     "@types/react-dom": "^19.2.3",
-    "@vitejs/plugin-react": "^6.0.1",
-    "nodemon": "^3.0.2",
+    "@types/node": "^20.0.0",
+    "@vitejs/plugin-react": "^6.0.2",
+    "typescript": "^6.0.3",
     "vite": "^8.0.13"
   }
 }
