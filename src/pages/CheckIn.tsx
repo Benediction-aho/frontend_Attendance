@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useRef } from 'react';
 import { useTranslation } from 'react-i18next';
 import { attendanceApi } from '../api/attendanceApi';
 import useGeolocation from '../hooks/useGeolocation';
@@ -15,6 +15,7 @@ interface AttendanceRecord {
 }
 
 const CheckIn: React.FC = () => {
+  const isSubmitting = useRef(false);
   const { t } = useTranslation();
   const { user } = useAuthContext();
   const { loading: geoLoading, getPosition } = useGeolocation();
@@ -36,20 +37,25 @@ const CheckIn: React.FC = () => {
     } catch {}
   };
 
-  const handleCheckIn = async () => {
-    setLoading(true);
-    try {
-      const pos = await getPosition();
-      const res = await attendanceApi.checkIn(pos.latitude, pos.longitude);
-      setAttendance(res.data.attendance);
-      setToast({ message: t('checkInSuccess'), type: 'success' });
-    } catch (err: any) {
-      const msg = err.response?.data?.message || err.message || t('locationRequired');
-      setToast({ message: msg, type: 'error' });
-    } finally {
-      setLoading(false);
-    }
-  };
+  
+
+const handleCheckIn = async () => {
+  if (isSubmitting.current) return; // block immediately, no state lag
+  isSubmitting.current = true;
+  setLoading(true);
+  try {
+    const pos = await getPosition();
+    const res = await attendanceApi.checkIn(pos.latitude, pos.longitude);
+    setAttendance(res.data.attendance);
+    setToast({ message: t('checkInSuccess'), type: 'success' });
+  } catch (err: any) {
+    const msg = err.response?.data?.message || err.message || t('locationRequired');
+    setToast({ message: msg, type: 'error' });
+  } finally {
+    setLoading(false);
+    isSubmitting.current = false;
+  }
+};
 
   const handleCheckOut = async () => {
     setLoading(true);
@@ -238,7 +244,7 @@ const CheckIn: React.FC = () => {
             </div>
           ) : (
             <div className="geo-indicator geo-in">
-              🎉 Bonne journée ! Sortie enregistrée à {formatTime(attendance!.checkOutTime!)}
+              Au revoir {user?.firstName}! Sortie enregistrée à {formatTime(attendance!.checkOutTime!)}
             </div>
           )}
         </div>
