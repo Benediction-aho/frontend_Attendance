@@ -40,13 +40,20 @@ const CheckIn: React.FC = () => {
   
 
 const handleCheckIn = async () => {
-  if (isSubmitting.current) return; // block immediately, no state lag
+  if (isSubmitting.current) return;
   isSubmitting.current = true;
   setLoading(true);
   try {
     const pos = await getPosition();
     const res = await attendanceApi.checkIn(pos.latitude, pos.longitude);
-    setAttendance(res.data.attendance);
+
+    if (res.data.attendance) {
+      setAttendance(res.data.attendance);
+    } else {
+      // Safety net: re-fetch from server if attendance is null
+      await loadToday();
+    }
+
     setToast({ message: t('checkInSuccess'), type: 'success' });
   } catch (err: any) {
     const msg = err.response?.data?.message || err.message || t('locationRequired');
