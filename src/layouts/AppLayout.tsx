@@ -41,11 +41,8 @@ const AppLayout: React.FC<{ children: React.ReactNode }> = ({ children }) => {
   const links = user?.role === 'admin' ? adminLinks : employeeLinks;
 
   const Sidebar = () => (
-    // ✅ FIX 1: ajout de className={mobileOpen ? 'open' : ''}
-    // ✅ FIX 2: suppression de transform dans le style inline
-    //    (le CSS gère maintenant tout via aside et aside.open)
     <aside
-      className={mobileOpen ? 'open' : ''}
+      className={`app-sidebar${mobileOpen ? ' open' : ''}`}
       style={{
         width: 260,
         minHeight: '100vh',
@@ -226,10 +223,10 @@ const AppLayout: React.FC<{ children: React.ReactNode }> = ({ children }) => {
 
   return (
     <div style={{ display: 'flex', minHeight: '100vh' }}>
-      {/* Desktop sidebar */}
-      <div style={{ width: 260, flexShrink: 0 }} className="desktop-sidebar">
-        <Sidebar />
-      </div>
+      {/* Desktop spacer for the fixed sidebar */}
+      <div style={{ width: 260, flexShrink: 0 }} className="desktop-sidebar" />
+
+      <Sidebar />
 
       {/* Mobile overlay */}
       {/* ✅ FIX 3: suppression de display:'none' inline qui bloquait le CSS */}
@@ -284,8 +281,8 @@ const AppLayout: React.FC<{ children: React.ReactNode }> = ({ children }) => {
           .desktop-sidebar { display: none !important; }
           .mobile-header { display: flex !important; }
           .mobile-overlay { display: block !important; }
-          aside { transform: translateX(-100%) !important; }
-          aside.open { transform: translateX(0) !important; }
+          .app-sidebar { transform: translateX(-100%) !important; }
+          .app-sidebar.open { transform: translateX(0) !important; }
         }
       `}</style>
     </div>
