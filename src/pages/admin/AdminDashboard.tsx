@@ -84,18 +84,15 @@ const AdminDashboard: React.FC = () => {
       {/* Stats overview */}
       <div className="stat-grid">
         {[
-          { label: 'Employés actifs', value: stats.totalEmployees, color: 'var(--primary)', icon: '👥' },
-          { label: 'Présences', value: stats.totalAttendances, color: 'var(--success)', icon: '✅' },
-          { label: 'Retards', value: stats.lateCount, color: 'var(--warning)', icon: '⚠️' },
-          { label: 'Départs anticipés', value: stats.earlyLeaveCount, color: 'var(--danger)', icon: '🚪' },
-          { label: 'Heures totales', value: `${stats.totalHours}h`, color: 'var(--secondary)', icon: '⏱️' },
-          { label: 'Tâches terminées', value: stats.completedTasks, color: 'var(--success)', icon: '🎯' },
-          { label: 'Tâches en cours', value: stats.pendingTasks, color: 'var(--warning)', icon: '📝' },
-          { label: 'Tentatives hors zone', value: stats.totalAttempts, color: 'var(--danger)', icon: '🚨' },
+          { label: 'Employés actifs', value: stats.totalEmployees, color: 'var(--primary)'},
+          { label: 'Départs anticipés', value: stats.earlyLeaveCount, color: 'var(--danger)'},
+          { label: 'Tâches terminées', value: stats.completedTasks, color: 'var(--success)'},
+          { label: 'Tâches en cours', value: stats.pendingTasks, color: 'var(--warning)'},
+          { label: 'Tentatives hors zone', value: stats.totalAttempts, color: 'var(--danger)'},
         ].map((s, i) => (
           <div key={i} className="stat-card" style={{ borderLeftColor: s.color, animationDelay: `${i * 0.05}s` }}>
             <div className="stat-value" style={{ color: s.color, fontSize: 28 }}>
-              {s.icon} {s.value ?? 0}
+              {s.value ?? 0}
             </div>
             <div className="stat-label">{s.label}</div>
           </div>
