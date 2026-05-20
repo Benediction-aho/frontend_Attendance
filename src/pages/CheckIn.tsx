@@ -93,7 +93,7 @@ const handleCheckIn = async () => {
         {/* Header */}
         <div className="page-header">
           <div>
-            <h1 className="page-title">👋 Bonjour, {user?.firstName}!</h1>
+            <h1 className="page-title">👋 Hello, {user?.firstName}!</h1>
             <p className="page-subtitle">
               {new Date().toLocaleDateString('fr-FR', { weekday: 'long', day: 'numeric', month: 'long', year: 'numeric' })}
             </p>

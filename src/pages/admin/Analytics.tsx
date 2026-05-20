@@ -201,7 +201,7 @@ const Analytics: React.FC = () => {
           <table>
             <thead>
               <tr>
-                <th>Employé (Nom, Prénom)</th>
+                <th>Employé</th>
                 <th>Présence</th>
                 <th>Heure d'arrivée</th>
                 <th>Heure de départ</th>
@@ -252,7 +252,7 @@ const Analytics: React.FC = () => {
           <table>
             <thead>
               <tr>
-                <th>Employé (Nom, Prénom)</th>
+                <th>Employé</th>
                 <th>Liste des tâches</th>
                 <th>Liste des tâches non accomplies</th>
                 <th>Non accomplies / Total tâches</th>
@@ -303,7 +303,7 @@ const Analytics: React.FC = () => {
           <table>
             <thead>
               <tr>
-                <th>Employé (Nom, Prénom)</th>
+                <th>Employé</th>
                 <th>Présence</th>
                 <th>Retard</th>
                 <th>Départ anticipé</th>
