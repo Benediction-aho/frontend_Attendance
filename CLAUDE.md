@@ -1,13 +1,13 @@
 # Assistance Ghana Attendance – Frontend (v2)
 
-The React code currently in this repository is **v1 (legacy)**. It is being rebuilt with React + TypeScript + Tailwind + Capacitor, following `docs/PLAN_DEVELOPPEMENT.md`. Tag `legacy-v1` marks the old version once phase 0 starts.
+The React code currently in this repository is **v1 (legacy)**. It is being rebuilt with React + TypeScript + Tailwind (installable PWA), following `docs/PLAN_DEVELOPPEMENT.md`. Tag `legacy-v1` marks the old version once phase 0 starts.
 
 Status of the work: `docs/PROGRESS.md`.
 
 ## Agents and workflow (both repositories)
 
 Assistance Ghana Attendance v2 is built in two repositories that are always checked out side by side:
-`backend_Attendance` (Laravel API) and `frontend_Attendance` (React + Capacitor).
+`backend_Attendance` (Laravel API) and `frontend_Attendance` (React PWA).
 
 | Agent | Repository | Role |
 |---|---|---|

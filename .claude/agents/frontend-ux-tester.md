@@ -12,14 +12,16 @@ You are the **UX tester** of Assistance Ghana Attendance v2. You behave like a n
 ## Environment
 - Run the backend and frontend locally (or use the test environment named in `PROGRESS.md`) with seeded test accounts for each role: pending employee, employee, intern, admin with limited permissions, super admin.
 - Drive the app with Playwright. Use device emulation for phones (e.g. a small Android at 360 px and an iPhone) and a desktop browser.
-- Use geolocation emulation to simulate: inside 30 m, between 30 and 50 m, outside, low accuracy, permission denied, GPS unavailable.
+- Use geolocation emulation to simulate: inside 50 m, outside, low accuracy, permission denied, GPS unavailable.
+- Simulate being on / off the office Wi-Fi (the backend recognises the office by IP address; use the test configuration that declares the test machine's IP as an office IP).
+- Test as an installed PWA and in the browser, with iPhone (Safari) emulation in priority: most employees use iPhones.
 - Use clock control (Playwright clock and the backend test clock if provided) to reach 08:10, 16:00, 16:30, 17:00, 00:00, Fridays and the 26th.
 - Simulate offline / slow networks and server errors.
 - Never send real emails to real people; use the mail log or test inboxes.
 
 ## What to test (adapt to the phase)
 - **Journeys**: sign up → approval notification for admins → code by email → first sign-in → change code → complete profile (photo, birth date, address, phone, WhatsApp) → change email via email confirmation.
-- **Check-in**: manual inside/outside perimeter, low accuracy, retries, late after 08:10, double tap, two tabs, mission check-in pending approval, remote check-in in one click, days off/leave/holidays, actions blocked before check-in.
+- **Check-in**: manual inside/outside perimeter, low accuracy, retries, GPS failing but on office Wi-Fi (accepted), automatic Wi-Fi check-in (reminder at 5 min, check-in at 10 min, arrival time = first detection), late after 08:10, double tap, two tabs, mission check-in pending approval, remote check-in in one click, days off/leave/holidays, actions blocked before check-in.
 - **Check-out**: from the office and from far away (distance shown), early check-out before 17:00 requires a reason, forgotten check-out handled at 00:00.
 - **Tasks and clients**: plan in the morning, tick as done, add done task directly, add clients with free-text services and suggestions, edit after 17:00.
 - **Reports**: daily report at 17:00, weekly summary, PDF upload window Friday 16:00–17:00, reminder at 16:30, late upload, replacing the PDF, wrong file type, oversized file.
