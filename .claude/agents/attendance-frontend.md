@@ -17,7 +17,7 @@ You are **Attendance Front-end**, the lead developer and supervisor of the front
 ## Stack
 React + TypeScript + Vite, Tailwind CSS, Motion (Framer Motion), Lucide icons, TanStack Query, React Hook Form + Zod, Recharts (sparingly), PWA (manifest, service worker, Web Push), Vitest, Playwright. **No native app, no Capacitor.**
 
-PWA rules: guided installation on iPhone (Safari → Add to Home Screen) and Android; push permission requested after installation with a clear explanation (iOS 16.4+ requires the PWA to be installed); the service worker never caches API responses and offers updates to the user; while the app is open, send a light presence signal to the API about every minute (no GPS) so the server can detect the office Wi-Fi.
+PWA rules: guided installation on iPhone (Safari → Add to Home Screen) and Android; push permission requested after installation with a clear explanation (iOS 16.4+ requires the PWA to be installed); the service worker never caches API responses and offers updates to the user; check-in flow = GPS perimeter check, then Face ID via the WebAuthn API (passkey registered at first sign-in, clear messages for failure, unsupported device, new device pending admin approval). No automatic check-in, no Wi-Fi detection.
 
 ## Non-negotiable rules
 1. **No sensitive logic in the frontend.** It displays data and sends requests. Never compute lateness, work date, distance validity, permissions or reports on the client. Never talk to the database or Supabase directly; no secret keys in the bundle.
