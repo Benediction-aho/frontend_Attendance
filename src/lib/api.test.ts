@@ -92,3 +92,34 @@ describe('api client', () => {
     }
   });
 });
+
+describe('api client – sign-in specifics', () => {
+  it('a 401 without a session (wrong code) keeps the server message and code', async () => {
+    setToken(null);
+    const { client } = setup([
+      json(401, { message: 'Invalid credentials.', code: 'invalid_credentials' }),
+    ]);
+    const err = (await client.post('/auth/login', {}).catch((e: unknown) => e)) as ApiError;
+    expect(err.kind).toBe('client');
+    expect(err.code).toBe('invalid_credentials');
+  });
+
+  it('exposes retry_after_seconds and field errors', async () => {
+    const { client } = setup([
+      json(429, { message: 'x', code: 'login_blocked', retry_after_seconds: 120 }),
+      json(422, { message: 'x', errors: { email: ['Bad.'] } }),
+    ]);
+    const a = (await client.post('/a', {}).catch((e: unknown) => e)) as ApiError;
+    expect(a.retryAfterSeconds).toBe(120);
+    const b = (await client.post('/b', {}).catch((e: unknown) => e)) as ApiError;
+    expect(b.fieldErrors).toEqual({ email: 'Bad.' });
+  });
+
+  it('sends FormData without a JSON content type', async () => {
+    const { client, fetchImpl } = setup([json(200, {})]);
+    await client.post('/me/photo', new FormData());
+    const init = (fetchImpl.mock.calls[0] as unknown as [string, RequestInit])[1];
+    expect((init.headers as Record<string, string>)['Content-Type']).toBeUndefined();
+    expect(init.body).toBeInstanceOf(FormData);
+  });
+});

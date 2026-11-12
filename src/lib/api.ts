@@ -20,6 +20,29 @@ export class ApiError extends Error {
   get transient(): boolean {
     return this.kind === 'network' || this.kind === 'server';
   }
+
+  /** Machine-readable reason from the API (e.g. login_blocked). */
+  get code(): string | undefined {
+    const b = this.body as { code?: unknown } | null;
+    return b && typeof b.code === 'string' ? b.code : undefined;
+  }
+
+  get retryAfterSeconds(): number | undefined {
+    const b = this.body as { retry_after_seconds?: unknown } | null;
+    return b && typeof b.retry_after_seconds === 'number' ? b.retry_after_seconds : undefined;
+  }
+
+  /** 422 field errors: field => first message. */
+  get fieldErrors(): Record<string, string> {
+    const b = this.body as { errors?: Record<string, unknown> } | null;
+    const out: Record<string, string> = {};
+    if (b && b.errors && typeof b.errors === 'object') {
+      for (const [k, v] of Object.entries(b.errors)) {
+        if (Array.isArray(v) && typeof v[0] === 'string') out[k] = v[0];
+      }
+    }
+    return out;
+  }
 }
 
 export interface RequestOptions {
@@ -36,6 +59,15 @@ export interface ApiClientConfig {
   sleep?: (ms: number) => Promise<void>;
   baseDelayMs?: number;
   maxDelayMs?: number;
+}
+
+type Listener = (e: ApiError) => void;
+const forbiddenListeners = new Set<Listener>();
+
+/** Notified when the API answers 403 password_change_required. */
+export function onPasswordChangeRequired(l: Listener): () => void {
+  forbiddenListeners.add(l);
+  return () => forbiddenListeners.delete(l);
 }
 
 const defaultSleep = (ms: number) => new Promise<void>((r) => setTimeout(r, ms));
@@ -55,7 +87,8 @@ export function createApiClient(config: ApiClientConfig) {
 
   async function once<T>(path: string, opts: RequestOptions): Promise<T> {
     const headers: Record<string, string> = { Accept: 'application/json' };
-    if (opts.body !== undefined) headers['Content-Type'] = 'application/json';
+    const isForm = typeof FormData !== 'undefined' && opts.body instanceof FormData;
+    if (opts.body !== undefined && !isForm) headers['Content-Type'] = 'application/json';
     const token = getToken();
     if (token) headers.Authorization = `Bearer ${token}`;
 
@@ -64,9 +97,15 @@ export function createApiClient(config: ApiClientConfig) {
       res = await fetchImpl(`${root}${path.startsWith('/') ? path : `/${path}`}`, {
         method: opts.method ?? 'GET',
         headers,
-        body: opts.body === undefined ? undefined : JSON.stringify(opts.body),
+        body:
+          opts.body === undefined
+            ? undefined
+            : isForm
+              ? (opts.body as FormData)
+              : JSON.stringify(opts.body),
         signal: opts.signal,
         cache: 'no-store',
+        credentials: 'omit',
       });
     } catch (e) {
       if (e instanceof DOMException && e.name === 'AbortError') throw e;
@@ -81,9 +120,17 @@ export function createApiClient(config: ApiClientConfig) {
     const data: unknown = await res.json().catch(() => null);
 
     if (res.ok) return data as T;
-    if (res.status === 401) {
+    const serverMessage =
+      data && typeof data === 'object' && 'message' in data && typeof data.message === 'string'
+        ? data.message
+        : null;
+    if (res.status === 401 && token) {
       // Only a genuinely invalid session signs the user out.
-      invalidateSession();
+      const code =
+        data && typeof data === 'object' && 'code' in data && typeof data.code === 'string'
+          ? data.code
+          : undefined;
+      invalidateSession(code);
       throw new ApiError(
         'unauthorized',
         401,
@@ -94,11 +141,16 @@ export function createApiClient(config: ApiClientConfig) {
     if (res.status >= 500) {
       throw new ApiError('server', res.status, 'The service is temporarily unavailable.', data);
     }
-    const message =
-      data && typeof data === 'object' && 'message' in data && typeof data.message === 'string'
-        ? data.message
-        : 'The request could not be completed.';
-    throw new ApiError('client', res.status, message, data);
+    const err = new ApiError(
+      'client',
+      res.status,
+      serverMessage ?? 'The request could not be completed.',
+      data,
+    );
+    if (res.status === 403 && err.code === 'password_change_required') {
+      forbiddenListeners.forEach((l) => l(err));
+    }
+    throw err;
   }
 
   async function request<T>(path: string, opts: RequestOptions = {}): Promise<T> {
@@ -113,15 +165,37 @@ export function createApiClient(config: ApiClientConfig) {
     }
   }
 
+  type O = Omit<RequestOptions, 'method' | 'body'>;
   return {
     request,
-    get: <T>(path: string, o?: Omit<RequestOptions, 'method' | 'body'>) =>
-      request<T>(path, { ...o, method: 'GET' }),
-    post: <T>(path: string, body?: unknown, o?: Omit<RequestOptions, 'method' | 'body'>) =>
+    get: <T>(path: string, o?: O) => request<T>(path, { ...o, method: 'GET' }),
+    post: <T>(path: string, body?: unknown, o?: O) =>
       request<T>(path, { ...o, method: 'POST', body }),
+    put: <T>(path: string, body?: unknown, o?: O) =>
+      request<T>(path, { ...o, method: 'PUT', body }),
+    patch: <T>(path: string, body?: unknown, o?: O) =>
+      request<T>(path, { ...o, method: 'PATCH', body }),
+    del: <T>(path: string, o?: O) => request<T>(path, { ...o, method: 'DELETE' }),
   };
 }
 
 export type ApiClient = ReturnType<typeof createApiClient>;
 
 export const api = createApiClient({ baseUrl: import.meta.env.VITE_API_URL ?? '' });
+
+/** Builds a query string, skipping empty values. */
+export function qs(params: Record<string, string | number | boolean | undefined | null>): string {
+  const p = new URLSearchParams();
+  for (const [k, v] of Object.entries(params)) {
+    if (v === undefined || v === null || v === '') continue;
+    p.set(k, String(v));
+  }
+  const s = p.toString();
+  return s ? `?${s}` : '';
+}
+
+/** User-facing message for any error. */
+export function errorMessage(e: unknown): string {
+  if (e instanceof ApiError) return e.message;
+  return 'Something went wrong. Please try again.';
+}

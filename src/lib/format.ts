@@ -1,0 +1,54 @@
+const dateFmt = new Intl.DateTimeFormat('en-GB', {
+  day: 'numeric',
+  month: 'short',
+  year: 'numeric',
+  timeZone: 'Africa/Accra',
+});
+const dateTimeFmt = new Intl.DateTimeFormat('en-GB', {
+  day: 'numeric',
+  month: 'short',
+  year: 'numeric',
+  hour: '2-digit',
+  minute: '2-digit',
+  timeZone: 'Africa/Accra',
+});
+
+/** Formats a server timestamp in the office time zone (Africa/Accra). */
+export function formatDateTime(iso: string | null | undefined): string {
+  if (!iso) return '–';
+  const d = new Date(iso);
+  return Number.isNaN(d.getTime()) ? '–' : dateTimeFmt.format(d);
+}
+
+export function formatDate(iso: string | null | undefined): string {
+  if (!iso) return '–';
+  const d = new Date(iso.length === 10 ? `${iso}T12:00:00Z` : iso);
+  return Number.isNaN(d.getTime()) ? '–' : dateFmt.format(d);
+}
+
+/** "9 min 05 s", "45 s" – for lockout countdowns. */
+export function formatCountdown(totalSeconds: number): string {
+  const s = Math.max(0, Math.ceil(totalSeconds));
+  const m = Math.floor(s / 60);
+  const r = s % 60;
+  if (m === 0) return `${r} s`;
+  return `${m} min ${String(r).padStart(2, '0')} s`;
+}
+
+export const ROLE_LABEL = {
+  super_admin: 'Super admin',
+  admin: 'Admin',
+  employee: 'Staff',
+} as const;
+export const TYPE_LABEL = { intern: 'Intern', employee: 'Employee' } as const;
+export const STATUS_LABEL = {
+  pending: 'Pending',
+  active: 'Active',
+  blocked: 'Blocked',
+  locked: 'Locked',
+  deleted: 'Deleted',
+} as const;
+
+export function initials(first?: string, last?: string): string {
+  return `${(first ?? '').charAt(0)}${(last ?? '').charAt(0)}`.toUpperCase() || '?';
+}
