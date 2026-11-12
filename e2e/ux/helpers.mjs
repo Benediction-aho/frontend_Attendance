@@ -8,7 +8,7 @@ export const BASE = 'http://localhost:4173';
 export const logSize = () => statSync(LOG).size;
 export async function mailAfter(offset, subject, to) {
   for (let i = 0; i < 40; i++) {
-    const t = readFileSync(LOG, 'utf8').slice(offset);
+    const t = readFileSync(LOG).subarray(offset).toString('utf8');
     const parts = t
       .split(/(?=From: .*\nTo: )/)
       .filter((p) => subject.test(p) && (!to || p.includes(to)));
