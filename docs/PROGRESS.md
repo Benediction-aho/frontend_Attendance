@@ -3,7 +3,7 @@
 Updated by the agents at the end of every work session.
 
 ## Current phase
-Phase 2 – Frontend foundations: **UI findings UI2-01..UI2-14 fixed (2026-11-12), ready for frontend-ui-designer re-review** (then frontend-ux-tester). Report files expected: `docs/reports/phase-2-ui.md`, `docs/reports/phase-2-ux.md`.
+Phase 2 – Frontend foundations: **UI signed off (re-review 1; UI2-12, 15-19 fixed), UX findings UX2-01..20 fixed on the frontend (UX2-17 backend) – ready for frontend-ux-tester re-test** (2026-11-12). Report files expected: `docs/reports/phase-2-ui.md`, `docs/reports/phase-2-ux.md`.
 
 ### Phase 2 – what was delivered
 - **Design system** (`src/ui`): Button (variants, loading), Field/Input/Select/Textarea/Segmented, Switch, Card/StatTile, Badge, Table, Modal (bottom sheet on phones, focus trap, Escape), Toast, Skeleton, EmptyState, PageHeader, Stepper, Alert, Pagination, Avatar, Spinner. Motion: staggered reveals, step slides, page transitions, animated errors; `MotionConfig reducedMotion="user"` + CSS reduced-motion. Icons only in the navigation (Lucide, 1.5 stroke). Colors only via theme tokens (lint rule).
@@ -38,7 +38,7 @@ The API uses Bearer device tokens only (no cookies), so an HttpOnly cookie is no
 |---|---|---|---|
 | 0 – Preparation | Frontend skeleton done | – | Legacy v1 kept on `main` at `5f4de51a854ca91bf31c72e282b0f3519d2d3b4f` (tag `legacy-v1` not pushed: tag push not allowed from this session) |
 | 1 – Backend foundations | Not started | – | |
-| 2 – Frontend foundations | UI findings fixed, ready for UI re-review | UI: `docs/reports/phase-2-ui.md` (14 fixed), UX: pending | See "Phase 2 – what was delivered" |
+| 2 – Frontend foundations | Ready for UX re-test | UI: `docs/reports/phase-2-ui.md` (signed off, 20 fixed), UX: `docs/reports/phase-2-ux.md` (19 fixed, UX2-17 backend) | See "Phase 2 – what was delivered" |
 | 3 – Attendance (manual) | Not started | – | |
 | 4 – PWA, Face ID, notifications | Not started | – | |
 | 5 – Tasks, clients, reports | Not started | – | |
@@ -52,6 +52,12 @@ The API uses Bearer device tokens only (no cookies), so an HttpOnly cookie is no
 - Supabase `ynspiijfjpumatmszmhx` (Attendance_Manager, eu-west-1, Postgres 17): ACTIVE_HEALTHY, security advisors: no findings. No migration applied (phase 1). Note: CI uses Postgres 16, Supabase runs 17 – align CI to 17 in phase 1.
 - Vercel: **blocked** – the Vercel connection used by the agents has no access to the account scope `benediction-ahouanse-s-projects` (403). No project created.
 - Backend test host: Render approved by the owner (account to create); Render procedure ready in `docs/DEPLOYMENT.md` (backend repo).
+
+## Requests to the backend (frontend already handles them when present)
+- `GET /admin/settings`: add `min` / `max` per setting (client-side validation, UX2-05).
+- `GET /me`: add `password_min_length` (password rule shown up front, UX2-13).
+- `invalid_credentials`: add `remaining_attempts` ("1 attempt left", UX2-20).
+- 401 after a block: optional `code: account_blocked` (precise banner, UX2-03; a generic explanation is shown meanwhile).
 
 ## Blocked / questions for the owner
 - **Logo (owner action)**: please provide the official Assistance Ghana logo as **SVG** (preferred) or a **transparent PNG** at least 2000 px wide with no margins, ideally also a square version of the mark for the home-screen icon. The current file is a JPEG with a white background; the app uses a best-effort cropped/transparent version until then (`scripts/make-logo.py`).
@@ -78,3 +84,4 @@ _Not given yet._
 - Phase 0 frontend: legacy v1 removed; new React + TypeScript + Vite skeleton (Tailwind v4 theme tokens, Motion, React Router, TanStack Query, RHF + Zod, lucide in the menu only), API client with backoff and 401-only sign-out, server-time helper stub, PWA (manifest, prompt-to-update service worker, app shell only, no API caching), production build without source maps/console/library names, ESLint + Prettier, Vitest (11 tests), Playwright smoke (iPhone + desktop), CI workflow, vercel.json SPA rewrites.
 - Phase 2 frontend: design system, sign-in/sign-up/super admin/recovery/email confirmation, forced code change and profile completion, device session (memory + IndexedDB), profile, admin accounts and permissions, settings with effective date and history, notifications, activity log; 33 unit tests, 30 mocked e2e + 1 real-API e2e passing. Ready for frontend-ui-designer.
 - Phase 2 UI review fixes (UI2-01..14): interim logo + icons, danger-ghost button and danger zone, onboarding timeline, phone filter sheet, dashboard next action, no repeated code at first sign-in + strength hint, bottom bar up to lg, phone menu button, consistent badges, en-GB dates, styled selects, text back links, route code splitting. 42 unit tests, 35 mocked e2e passing (+1 phone-only skipped on desktop). Ready for UI re-review.
+- Phase 2 UX fixes (UX2-01..20 front parts) and UI re-review fixes (UI2-12, 15-19): 56 unit tests, 45 mocked e2e passing (+1 skipped), lint/typecheck/build green. Ready for frontend-ux-tester re-test.

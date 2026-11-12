@@ -101,3 +101,13 @@ Method: preview build + `e2e/mockApi.ts` (extra mocks for a filled settings hist
 13 of the 14 original findings are fixed, and none of the new findings is Critical or High. The app now feels consistent and polished at all three widths. The new phone menu, filter sheet, onboarding timeline and loading skeletons are well done. **There is no Critical or High finding open, so phase 2 UI can be signed off.** The Medium items can be fixed in the next pass.
 
 Top 5 priorities: UI2-15 (history on phones), UI2-16 (danger zone placement), UI2-12 (history select), UI2-19 (menu close control), UI2-18 (timeline done state).
+
+## Fixes after re-review 1 (2026-11-12, `attendance-frontend`)
+| ID | Status | Note |
+|---|---|---|
+| UI2-12 | Fixed | Settings > History filter uses the shared `Select`. |
+| UI2-15 | Fixed | Below `sm`, history is a stacked list (label, "50 to 60", "From date · author"); table from `sm`. |
+| UI2-16 | Fixed | Danger zone is its own last card (after Role), `border-t-danger-200`, `danger-outline` button full width on phones, aligned to the content edge. |
+| UI2-17 | Fixed | No strikethrough: old value `text-ink-500`, new value semibold. |
+| UI2-18 | Fixed | Done steps full opacity with white label (sr-only "Done:"); future steps at 60 % opacity. |
+| UI2-19 | Fixed | "Close" text button (44 px) next to the Menu title; sheets get `pb-[calc(1rem+env(safe-area-inset-bottom))]`. |

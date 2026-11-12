@@ -13,26 +13,26 @@ Tester: `frontend-ux-tester` – 2026-11-12. Branch `claude/upbeat-noether-f7def
 
 | ID | Severity | Title | Status |
 |---|---|---|---|
-| UX2-01 | High | Identification code pasted with a space is refused as "incorrect" and counts as a failed attempt | Open |
-| UX2-02 | High | Sign-up limited to 5 requests per hour per IP: a whole office on one Wi-Fi is blocked on day one | Open |
-| UX2-03 | Medium | Blocked user is sent to the sign-in page with no explanation | Open |
-| UX2-04 | Medium | Raw validation messages from the server shown to the super admin in Settings | Open |
-| UX2-05 | Medium | Settings: no client validation (e.g. negative radius) and the unsaved-changes bar hides the field on iPhone | Open |
-| UX2-06 | Medium | Settings: unsaved changes are lost without warning when leaving the page | Open |
-| UX2-07 | Medium | Super admin: code requests silently throttled; "a code is on its way" but none arrives | Open |
-| UX2-08 | Medium | Super admin temporary block: "Get a recovery link" does nothing while the countdown runs | Open |
-| UX2-09 | Medium | Users list on phones: no email shown, people with the same name cannot be told apart | Open |
-| UX2-10 | Medium | Error toast covers the "Use this photo" button of the photo sheet | Open |
-| UX2-11 | Medium | Pending account trying to sign in gets "The email or code is incorrect." | Open (decision needed) |
-| UX2-12 | Low | Start-up error screen does not retry by itself and says "Check your connection" when the server is down | Open |
-| UX2-13 | Low | Password rules (10 characters minimum) not announced before submitting | Open |
-| UX2-14 | Low | Notification "New account request" is not clickable / does not open Sign-up requests | Open |
-| UX2-15 | Low | Limited admin opening a forbidden deep link is silently sent to Home | Open |
-| UX2-16 | Low | Reloading the email-confirmation page shows only the title | Open |
+| UX2-01 | High | Identification code pasted with a space is refused as "incorrect" and counts as a failed attempt | Fixed (front trims codes/emails; server trims too) |
+| UX2-02 | High | Sign-up limited to 5 requests per hour per IP: a whole office on one Wi-Fi is blocked on day one | Fixed (front: wait time + next step; server limits raised) |
+| UX2-03 | Medium | Blocked user is sent to the sign-in page with no explanation | Fixed |
+| UX2-04 | Medium | Raw validation messages from the server shown to the super admin in Settings | Fixed |
+| UX2-05 | Medium | Settings: no client validation (e.g. negative radius) and the unsaved-changes bar hides the field on iPhone | Fixed |
+| UX2-06 | Medium | Settings: unsaved changes are lost without warning when leaving the page | Fixed |
+| UX2-07 | Medium | Super admin: code requests silently throttled; "a code is on its way" but none arrives | Fixed (front shows explicit 429 + wait) |
+| UX2-08 | Medium | Super admin temporary block: "Get a recovery link" does nothing while the countdown runs | Fixed (server sends link during temporary block; stale notice cleared) |
+| UX2-09 | Medium | Users list on phones: no email shown, people with the same name cannot be told apart | Fixed |
+| UX2-10 | Medium | Error toast covers the "Use this photo" button of the photo sheet | Fixed |
+| UX2-11 | Medium | Pending account trying to sign in gets "The email or code is incorrect." | Fixed (generic message + approval hint) |
+| UX2-12 | Low | Start-up error screen does not retry by itself and says "Check your connection" when the server is down | Fixed |
+| UX2-13 | Low | Password rules (10 characters minimum) not announced before submitting | Fixed (front; min length shown when /me provides `password_min_length`) |
+| UX2-14 | Low | Notification "New account request" is not clickable / does not open Sign-up requests | Fixed |
+| UX2-15 | Low | Limited admin opening a forbidden deep link is silently sent to Home | Fixed |
+| UX2-16 | Low | Reloading the email-confirmation page shows only the title | Fixed |
 | UX2-17 | Low | Plain-text emails show HTML entities in names (`Ama &lt;b&gt;…`); email links point to `/login` on the configured front URL | Open (backend) |
-| UX2-18 | Low | Users list: super admin "Last sign-in" stays "–" after OTP sign-in; super admin shown with type "Employee" | Open (backend?) |
-| UX2-19 | Low | Back button on "Complete your profile" leaves the app (about:blank) | Open |
-| UX2-20 | Low | No warning before the 5th failed attempt ("1 attempt left") | Open (suggestion) |
+| UX2-18 | Low | Users list: super admin "Last sign-in" stays "–" after OTP sign-in; super admin shown with type "Employee" | Fixed (front accepts null type; server sends last sign-in) |
+| UX2-19 | Low | Back button on "Complete your profile" leaves the app (about:blank) | Fixed |
+| UX2-20 | Low | No warning before the 5th failed attempt ("1 attempt left") | Fixed (front; shown when API sends `remaining_attempts`) |
 
 ### UX2-01 – High – Code with a space is refused and counts as a failure
 - Role/device: new employee, iPhone. Script `e2e/ux/j1-signup.mjs` (first version) and curl check.
@@ -117,3 +117,18 @@ Tester: `frontend-ux-tester` – 2026-11-12. Branch `claude/upbeat-noether-f7def
 - Limited admin sees only the granted section (Users) and only the granted actions; forbidden routes not reachable.
 - Settings save now / history tab; activity log with filters.
 - Sessions: stay signed in across reloads; offline navigation keeps the session and cached data; 503 / timeouts at launch do not sign out; slow network sign-in – triple tap sends one request, button disabled with spinner.
+
+## Fixes (2026-11-12, `attendance-frontend`)
+- UX2-01: generated codes are trimmed before sending (`normalizeSecret`), emails trimmed; super admin code spaces removed.
+- UX2-02 / UX2-07: every 429 shows the remaining time (body `retry_after_seconds` or `Retry-After` header) and a next step; `too_many_code_requests` moves to the code step and only blocks "Send a new code", not "Sign in".
+- UX2-03: a forced sign-out always leaves a reason; the sign-in page explains a possible block ("contact an administrator"), with a precise message when the 401 carries `account_blocked`.
+- UX2-04/05/06: server messages rewritten in plain English; bounds checked client-side when the API sends `min`/`max` (hint "Between 10 and 5000."); compact one-line unsaved bar, date behind "Schedule for later" (with `min` = server today), bar steps aside on phones while a text field is focused; leave-page dialog (in-app) + `beforeunload`.
+- UX2-09: email shown on the phone list (job title as third line).
+- UX2-10: toasts move to the top while a sheet is open; picking a new file clears old toasts; HEIC hint.
+- UX2-12: start-up error screen retries every 5 s and on `online`, and says offline vs service unavailable.
+- UX2-14: notifications open their page (`signup_request` -> Sign-up requests; app-relative paths prefixed with `/app`; external paths ignored).
+- UX2-15: "You do not have access to this page" with a Home button.
+- UX2-16: confirmation result kept for the tab, shown again after reload.
+- UX2-19: onboarding pages keep a guard history entry; Back stays in the app.
+- Tests: `src/features/ux2/ux2.test.tsx` (14 unit tests), `e2e/ux2.spec.ts` (5 journeys x 2 devices).
+- Waiting on the backend (frontend ready): `min`/`max` in `GET /admin/settings`, `password_min_length` on `/me`, `remaining_attempts` on `invalid_credentials`, optional `code: account_blocked` on the 401 after a block.
