@@ -11,7 +11,7 @@ export default defineConfig({
     VitePWA({
       registerType: 'prompt',
       injectRegister: false,
-      includeAssets: ['logo.png', 'icons/*.png'],
+      includeAssets: ['brand/*.png', 'icons/*.png'],
       manifest: {
         name: 'Assistance Ghana Attendance',
         short_name: 'Attendance',

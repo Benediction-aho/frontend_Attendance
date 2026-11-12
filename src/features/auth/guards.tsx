@@ -19,7 +19,7 @@ function FullScreen({ children }: { children: React.ReactNode }) {
 function Loading() {
   return (
     <FullScreen>
-      <Logo className="h-12 w-auto" />
+      <Logo variant="signin" />
       <span className="text-primary-600">
         <Spinner label="Loading your account" />
       </span>
@@ -48,7 +48,7 @@ export function RequireAuth() {
   if (me.isError || !me.data)
     return (
       <FullScreen>
-        <Logo className="h-12 w-auto" />
+        <Logo variant="signin" />
         <div>
           <p className="font-semibold text-ink-800">We could not load your account.</p>
           <p className="mt-1 text-sm text-ink-500">
