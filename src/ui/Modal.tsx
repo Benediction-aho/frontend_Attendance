@@ -2,6 +2,7 @@ import { useEffect, useId, useRef, type ReactNode } from 'react';
 import { createPortal } from 'react-dom';
 import { AnimatePresence, motion, useReducedMotion } from 'motion/react';
 import { duration, easing } from './motion';
+import { registerOpenSheet } from './Toast';
 
 /**
  * Dialog: bottom sheet on phones, centred card from `sm` up.
@@ -14,6 +15,7 @@ export function Modal({
   description,
   children,
   footer,
+  showClose = false,
 }: {
   open: boolean;
   onClose: () => void;
@@ -21,6 +23,8 @@ export function Modal({
   description?: ReactNode;
   children?: ReactNode;
   footer?: ReactNode;
+  /** Shows a text "Close" button next to the title (sheets without a footer). */
+  showClose?: boolean;
 }) {
   const titleId = useId();
   const panel = useRef<HTMLDivElement>(null);
@@ -29,6 +33,8 @@ export function Modal({
   useEffect(() => {
     onCloseRef.current = onClose;
   });
+
+  useEffect(() => (open ? registerOpenSheet() : undefined), [open]);
 
   useEffect(() => {
     if (!open) return;
@@ -90,13 +96,25 @@ export function Modal({
             animate={{ opacity: 1, y: 0 }}
             exit={reduce ? { opacity: 0 } : { opacity: 0, y: 40 }}
             transition={{ duration: duration.base, ease: easing.standard }}
-            className="relative max-h-[90dvh] w-full overflow-y-auto rounded-t-panel bg-surface pb-[env(safe-area-inset-bottom)] shadow-raised focus:outline-none sm:max-w-lg sm:rounded-panel"
+            className="relative max-h-[90dvh] w-full overflow-y-auto rounded-t-panel bg-surface pb-[calc(1rem+env(safe-area-inset-bottom))] sm:pb-0 shadow-raised focus:outline-none sm:max-w-lg sm:rounded-panel"
           >
             <div aria-hidden className="mx-auto mt-2 h-1 w-10 rounded-full bg-ink-200 sm:hidden" />
             <div className="px-5 pt-4 pb-2 sm:px-6 sm:pt-6">
-              <h2 id={titleId} className="text-lg font-semibold text-ink-900">
-                {title}
-              </h2>
+              <div className="flex items-center justify-between gap-3">
+                <h2 id={titleId} className="text-lg font-semibold text-ink-900">
+                  {title}
+                </h2>
+                {showClose && (
+                  <button
+                    type="button"
+                    data-close
+                    onClick={onClose}
+                    className="-mr-2 inline-flex min-h-11 items-center rounded-control px-3 text-sm font-semibold text-primary-700 hover:bg-primary-50"
+                  >
+                    Close
+                  </button>
+                )}
+              </div>
               {description && <div className="mt-1 text-sm text-ink-600">{description}</div>}
             </div>
             {children && <div className="px-5 py-3 sm:px-6">{children}</div>}

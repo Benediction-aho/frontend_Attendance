@@ -100,8 +100,7 @@ export function UserDetailPage() {
     setSendNewCode(false);
     setConfirm(c);
   };
-  const anyAction =
-    can.approve || can.block || can.unblock || can.unlock || can.newCode || can.remove;
+  const anyAction = can.approve || can.block || can.unblock || can.unlock || can.newCode;
 
   return (
     <>
@@ -121,7 +120,7 @@ export function UserDetailPage() {
                 <div className="mt-2 flex flex-wrap gap-2">
                   <Badge tone={STATUS_TONE[u.status]}>{STATUS_LABEL[u.status]}</Badge>
                   <Badge tone="primary">{ROLE_LABEL[u.role]}</Badge>
-                  <Badge>{TYPE_LABEL[u.employee_type]}</Badge>
+                  {u.employee_type && <Badge>{TYPE_LABEL[u.employee_type]}</Badge>}
                 </div>
               </div>
             </CardBody>
@@ -255,31 +254,6 @@ export function UserDetailPage() {
                     Block
                   </Button>
                 )}
-                {can.remove && (
-                  <div className="mt-2 w-full border-t border-ink-100 pt-4">
-                    <p className="text-xs font-semibold tracking-wide text-danger-700 uppercase">
-                      Danger zone
-                    </p>
-                    <p className="mt-1 mb-2 text-sm text-ink-600">
-                      Closes the account for good. This cannot be undone.
-                    </p>
-                    <Button
-                      variant="danger-ghost"
-                      className="-ml-3"
-                      onClick={() =>
-                        ask({
-                          action: { kind: 'delete' },
-                          title: `Delete ${u.full_name}?`,
-                          body: 'The account is closed and signed out everywhere. History keeps the name.',
-                          cta: 'Delete account',
-                          variant: 'danger',
-                        })
-                      }
-                    >
-                      Delete account
-                    </Button>
-                  </div>
-                )}
               </CardBody>
             </Card>
           )}
@@ -324,6 +298,31 @@ export function UserDetailPage() {
                   }
                 >
                   Change role
+                </Button>
+              </CardBody>
+            </Card>
+          )}
+          {can.remove && (
+            <Card className="border-t-2 border-t-danger-200" data-testid="danger-zone">
+              <CardHeader
+                title="Danger zone"
+                description="Closes the account for good. This cannot be undone."
+              />
+              <CardBody>
+                <Button
+                  variant="danger-outline"
+                  className="w-full sm:w-auto"
+                  onClick={() =>
+                    ask({
+                      action: { kind: 'delete' },
+                      title: `Delete ${u.full_name}?`,
+                      body: 'The account is closed and signed out everywhere. History keeps the name.',
+                      cta: 'Delete account',
+                      variant: 'danger',
+                    })
+                  }
+                >
+                  Delete account
                 </Button>
               </CardBody>
             </Card>

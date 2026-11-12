@@ -3,7 +3,7 @@ import { cx } from './cx';
 import { Spinner } from './Spinner';
 
 export type ButtonVariant =
-  'primary' | 'secondary' | 'outline' | 'ghost' | 'danger' | 'danger-ghost';
+  'primary' | 'secondary' | 'outline' | 'ghost' | 'danger' | 'danger-ghost' | 'danger-outline';
 type Size = 'md' | 'lg' | 'sm';
 
 const styles: Record<ButtonVariant, string> = {
@@ -14,6 +14,8 @@ const styles: Record<ButtonVariant, string> = {
   ghost: 'bg-transparent text-primary-700 hover:bg-primary-50 active:bg-primary-100',
   danger: 'bg-danger-700 text-white hover:bg-danger-800 active:bg-danger-900',
   'danger-ghost': 'bg-transparent text-danger-700 hover:bg-danger-50 active:bg-danger-100',
+  'danger-outline':
+    'border border-danger-200 bg-surface text-danger-700 hover:bg-danger-50 active:bg-danger-100',
 };
 
 /** Disabled (not loading): neutral grey so it never reads as an available action. */
@@ -24,6 +26,7 @@ const disabledStyles: Record<ButtonVariant, string> = {
   outline: 'border border-ink-100 bg-surface text-ink-400',
   ghost: 'bg-transparent text-ink-400',
   'danger-ghost': 'bg-transparent text-ink-400',
+  'danger-outline': 'border border-ink-100 bg-surface text-ink-400',
 };
 
 const sizes: Record<Size, string> = {

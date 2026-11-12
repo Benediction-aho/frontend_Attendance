@@ -13,6 +13,7 @@ import { cx } from '../../ui/cx';
 import { errorMessage } from '../../lib/api';
 import { formatDateTime } from '../../lib/format';
 import type { AppNotification } from '../../lib/types';
+import { notificationTarget } from './target';
 import { useMarkRead, useNotifications, useUnreadCount } from './useNotifications';
 
 export function NotificationsPage() {
@@ -26,8 +27,8 @@ export function NotificationsPage() {
 
   const open = (n: AppNotification) => {
     if (!n.read_at) mark.mutate(n.id);
-    const path = n.data.path;
-    if (path && path.startsWith('/app')) navigate(path);
+    const path = notificationTarget(n);
+    if (path) navigate(path);
   };
 
   return (

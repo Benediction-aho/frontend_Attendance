@@ -19,8 +19,67 @@ export function toInput(value: unknown, type: SettingType): string | boolean {
   return String(value);
 }
 
-/** Parses a form value back to the API type. Range rules stay on the server. */
+export interface Bounds {
+  min?: number | null;
+  max?: number | null;
+}
+
+/** "Between 10 and 5000." – shown as a hint under numeric settings. */
+export function boundsHint(b: Bounds): string | null {
+  const min = b.min ?? null;
+  const max = b.max ?? null;
+  if (min !== null && max !== null) return `Between ${min} and ${max}.`;
+  if (min !== null) return `Minimum ${min}.`;
+  if (max !== null) return `Maximum ${max}.`;
+  return null;
+}
+
+/**
+ * Parses a form value back to the API type and checks the bounds the API gave
+ * for this setting (the server validates again).
+ */
 export function parseInput(
+  raw: string | boolean,
+  type: SettingType,
+  bounds: Bounds = {},
+): { ok: true; value: unknown } | { ok: false; error: string } {
+  const r = parseType(raw, type);
+  if (!r.ok) return r;
+  const min = bounds.min ?? null;
+  const max = bounds.max ?? null;
+  const nums =
+    type === 'int' || type === 'float'
+      ? [r.value as number]
+      : type === 'int_list'
+        ? (r.value as number[])
+        : [];
+  for (const n of nums) {
+    if (min !== null && n < min) return { ok: false, error: `Minimum ${min}.` };
+    if (max !== null && n > max) return { ok: false, error: `Maximum ${max}.` };
+  }
+  return r;
+}
+
+/** Plain-English version of a server validation message (never shows field keys). */
+export function friendlyServerMessage(message: string): string {
+  let m: RegExpMatchArray | null;
+  if ((m = message.match(/must not be greater than (-?\d+(?:\.\d+)?)/i))) return `Maximum ${m[1]}.`;
+  if ((m = message.match(/must be at least (-?\d+(?:\.\d+)?)/i))) return `Minimum ${m[1]}.`;
+  if ((m = message.match(/must be between (-?\d+(?:\.\d+)?) and (-?\d+(?:\.\d+)?)/i)))
+    return `Enter a value between ${m[1]} and ${m[2]}.`;
+  if (/after or equal to|must be a date after/i.test(message))
+    return 'Choose today or a later date.';
+  if (/must be an integer/i.test(message)) return 'Enter a whole number.';
+  if (/must be a number|must be numeric/i.test(message)) return 'Enter a number.';
+  if (/does not match the format/i.test(message)) return 'Use the HH:MM format.';
+  if (/duplicate|distinct/i.test(message)) return 'Each value can appear only once.';
+  if (/selected .* is invalid|is invalid/i.test(message)) return 'This value is not accepted.';
+  if (/is required/i.test(message)) return 'This value is required.';
+  // Unknown wording: drop the technical field name ("The values.x y field …").
+  return message.replace(/^The [\w.* ]+? field /i, 'This value ');
+}
+
+function parseType(
   raw: string | boolean,
   type: SettingType,
 ): { ok: true; value: unknown } | { ok: false; error: string } {

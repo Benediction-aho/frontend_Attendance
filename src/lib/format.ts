@@ -26,6 +26,17 @@ export function formatDate(iso: string | null | undefined): string {
   return Number.isNaN(d.getTime()) ? '–' : dateFmt.format(d);
 }
 
+const isoDayFmt = new Intl.DateTimeFormat('en-CA', {
+  year: 'numeric',
+  month: '2-digit',
+  day: '2-digit',
+  timeZone: 'Africa/Accra',
+});
+/** YYYY-MM-DD of a date in the office time zone (pass the server-synchronised now). */
+export function isoDay(d: Date): string {
+  return isoDayFmt.format(d);
+}
+
 /** "9 min 05 s", "45 s" – for lockout countdowns. */
 export function formatCountdown(totalSeconds: number): string {
   const s = Math.max(0, Math.ceil(totalSeconds));

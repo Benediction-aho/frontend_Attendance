@@ -164,9 +164,10 @@ export function UsersPage() {
                       <span className="block truncate font-semibold text-ink-900">
                         {u.full_name}
                       </span>
-                      <span className="block truncate text-sm text-ink-500">
-                        {u.job_title ?? u.email}
-                      </span>
+                      <span className="block truncate text-sm text-ink-500">{u.email}</span>
+                      {u.job_title && (
+                        <span className="block truncate text-xs text-ink-400">{u.job_title}</span>
+                      )}
                     </span>
                     <Badge tone={STATUS_TONE[u.status]}>{STATUS_LABEL[u.status]}</Badge>
                   </Link>
@@ -212,7 +213,7 @@ export function UsersPage() {
                         </div>
                       </TD>
                       <TD>{ROLE_LABEL[u.role]}</TD>
-                      <TD>{TYPE_LABEL[u.employee_type]}</TD>
+                      <TD>{u.employee_type ? TYPE_LABEL[u.employee_type] : '–'}</TD>
                       <TD>
                         <Badge tone={STATUS_TONE[u.status]}>{STATUS_LABEL[u.status]}</Badge>
                       </TD>

@@ -25,8 +25,12 @@ export function PhotoCard({ user }: { user: User }) {
 
   const pick = async (file: File | undefined) => {
     if (!file) return;
+    toast.clear();
     if (!ACCEPTED_IMAGE_TYPES.includes(file.type)) {
-      toast.show('Choose a JPEG, PNG or WebP photo.', 'danger');
+      toast.show(
+        'Choose a JPEG, PNG or WebP photo. iPhone HEIC photos: pick it from Photos (not Files), or take a screenshot of it.',
+        'danger',
+      );
       return;
     }
     try {

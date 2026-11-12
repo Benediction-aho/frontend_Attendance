@@ -196,7 +196,7 @@ export function AppLayout() {
         </main>
       </div>
 
-      <Modal open={menuOpen} onClose={() => setMenuOpen(false)} title="Menu">
+      <Modal open={menuOpen} onClose={() => setMenuOpen(false)} title="Menu" showClose>
         <nav aria-label="Full menu" className="flex flex-col gap-1">
           {nav.main.map((i) => (
             <SideLink key={i.to} item={i} activeId="menu-active" />

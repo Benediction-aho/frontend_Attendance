@@ -5,6 +5,7 @@ import {
   useMemo,
   useRef,
   useState,
+  useSyncExternalStore,
   type ReactNode,
 } from 'react';
 import { AnimatePresence, motion } from 'motion/react';
@@ -19,9 +20,32 @@ interface ToastItem {
 }
 interface ToastApi {
   show: (message: string, tone?: Tone) => void;
+  /** Removes every toast (e.g. the user picked a new file after an error). */
+  clear: () => void;
 }
 
-const Ctx = createContext<ToastApi>({ show: () => {} });
+const Ctx = createContext<ToastApi>({ show: () => {}, clear: () => {} });
+
+// Open sheets/dialogs: toasts move to the top so they never cover sheet actions.
+let openSheets = 0;
+const sheetListeners = new Set<() => void>();
+export function registerOpenSheet(): () => void {
+  openSheets++;
+  sheetListeners.forEach((l) => l());
+  return () => {
+    openSheets--;
+    sheetListeners.forEach((l) => l());
+  };
+}
+function useSheetOpen(): boolean {
+  return useSyncExternalStore(
+    (l) => {
+      sheetListeners.add(l);
+      return () => sheetListeners.delete(l);
+    },
+    () => openSheets > 0,
+  );
+}
 
 export function useToast(): ToastApi {
   return useContext(Ctx);
@@ -46,13 +70,21 @@ export function ToastProvider({ children }: { children: ReactNode }) {
     },
     [dismiss],
   );
-  const api = useMemo(() => ({ show }), [show]);
+  const clear = useCallback(() => setItems([]), []);
+  const api = useMemo(() => ({ show, clear }), [show, clear]);
+  const sheetOpen = useSheetOpen();
   return (
     <Ctx.Provider value={api}>
       {children}
       <div
         aria-live="polite"
-        className="pointer-events-none fixed inset-x-4 bottom-[calc(5rem+env(safe-area-inset-bottom))] z-[60] flex flex-col items-center gap-2 md:inset-x-auto md:top-4 md:right-4 md:bottom-auto md:items-end"
+        data-position={sheetOpen ? 'top' : 'bottom'}
+        className={cx(
+          'pointer-events-none fixed z-[60] flex flex-col items-center gap-2 md:inset-x-auto md:top-4 md:right-4 md:bottom-auto md:items-end',
+          sheetOpen
+            ? 'inset-x-4 top-[calc(1rem+env(safe-area-inset-top))]'
+            : 'inset-x-4 bottom-[calc(5rem+env(safe-area-inset-bottom))]',
+        )}
       >
         <AnimatePresence initial={false}>
           {items.map((t) => (
