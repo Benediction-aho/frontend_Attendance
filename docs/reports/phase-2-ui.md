@@ -63,3 +63,41 @@ Fixes by `attendance-frontend` (2026-11-12, commits e0d33a7..26d1c99). Ready for
 | UI2-13 | Fixed | Top bar avatar is a 44 px link to Profile (`aria-label="My profile"`). |
 | UI2-14 | Fixed | "Super admin sign-in" moved to a small footer outside the card; "Request an account" is the single secondary call to action. |
 | Extra | Done | Phones: a "Open menu" button (top bar, `aria-expanded`, `data-testid="mobile-menu-button"`) opens a sheet with every menu entry, including admin sections and Sign out; the bottom bar is labelled "Bottom menu", the sidebar "Sidebar". Route-level code splitting: main chunk 397 kB (was 730 kB), no Vite warning. |
+
+## Re-review 1 (2026-11-12, `frontend-ui-designer`)
+Method: preview build + `e2e/mockApi.ts` (extra mocks for a filled settings history and delayed responses for loading states), Chromium, deviceScaleFactor 1, 360 / 768 / 1440. New screenshots are prefixed `r2-` in `docs/reports/screens/phase-2/`.
+
+| ID | Status | Evidence / note |
+|---|---|---|
+| UI2-01 | Fixed (interim) | `r2-dashboard-super-1440.png`, `r2-signin-1440.png`: wordmark is now crisp and readable in the sidebar, top bar and auth pages. Official SVG still pending from the owner. |
+| UI2-02 | Fixed | `r2-user-detail-360.png`: "Delete account" is red in a "Danger zone" block. See the new finding UI2-16 about where it sits. |
+| UI2-03 | Fixed | `r2-signin-1440.png`: 4-step timeline fills the brand panel and the current step is highlighted. See UI2-18 (Low). |
+| UI2-04 | Fixed | `r2-users-filter-sheet-360.png`, `r2-logs-filter-sheet-360.png`, `r2-logs-360.png`: list starts above the fold, and the sheet is clean with a single "Show results" action. |
+| UI2-05 | Fixed | `r2-dashboard-super-1440.png`: equal heights, the requests tile has a soft secondary ring and a "Review requests" link. |
+| UI2-06 | Fixed | `r2-welcome-code-360.png`: only New + Confirm fields are shown. On Profile, "Current code or password" is still asked, which is correct. |
+| UI2-07 | Fixed | `r2-users-768.png`: full-width content with the bottom bar at 768 px. |
+| UI2-08 | Fixed | `r2-user-detail-360.png`: disabled buttons are neutral grey and "Undo" is hidden while the form is clean. |
+| UI2-09 | Fixed | `r2-users-768.png`, `r2-user-detail-360.png`: neutral type, primary role and semantic status badges. |
+| UI2-10 | Fixed | `lang="en-GB"`. |
+| UI2-11 | Fixed | Text-only back links on every admin page. |
+| UI2-12 | Still open (partly) | `Select` is fixed everywhere except the **Settings > History "Setting" filter** (`src/features/admin/SettingsPage.tsx:223`, a raw `<select>` with the Chrome chevron, `r2-settings-history-filled-1440.png`). Use the shared `Select` component (or add `select-chevron pr-10`). |
+| UI2-13 | Fixed | Top bar avatar links to Profile (44 px). |
+| UI2-14 | Fixed | `r2-signin-1440.png`: one secondary call to action, and the super admin link sits in a quiet footer. |
+| Phone menu | Good | `r2-mobile-menu-360.png` (bottom sheet), `r2-mobile-menu-768.png` (centred dialog): clear grouping, the active item is tinted, Sign out is separated. See UI2-19. |
+| Loading states | Good | `r2-users-loading-360.png`: skeleton rows match the list layout. `r2-profile-password-loading-*.png`: button loading state. |
+| Profile changes | Good | `r2-profile-photo-preview-*.png` (preview sheet), `r2-profile-photo-saved-*.png` (toast), `r2-profile-password-weak-*` / `-done-*` (strength meter, inline error), `r2-profile-email-validation-*` / `-email-sent-*` (neutral success alert). |
+
+### New findings
+
+| ID | Screen / width | Screenshot | Severity | Problem | Recommendation |
+|---|---|---|---|---|---|
+| UI2-15 | Settings > History, 360 | `r2-settings-history-filled-360.png` | Medium | On phones the history table scrolls sideways inside the card. "Applies from" and "By" are cut off, and only part of the row is visible. | Below `sm`, show each change as a stacked row, like the Users list: setting label (semibold), "50 to 60" on its own line, then "From 1 Dec 2026 · Kofi Boateng" in `text-xs text-ink-500`. Keep the table from `sm` upwards. |
+| UI2-16 | User detail, all widths | `r2-user-detail-360.png` | Medium | The "Danger zone" sits in the middle of the page, inside "Actions", with the "Role" card below it. A destructive action should be the last thing on the page. Also, the ghost button padding pulls "Delete account" about 8 px to the right of the left edge of the text above it. | Move the Danger zone into its own last card (after Role), with a `border-danger-200` top border and its text. Align the button to the content edge (`-ml-3` on the ghost button, or use the `outline` danger style with full width on phones). |
+| UI2-17 | Settings > History, all widths | `r2-settings-history-filled-1440.png` | Low | The old value uses strikethrough, and "to" is in grey with the new value in primary. That is readable, but a struck-through "On" is hard to read at `text-sm`. | Drop the strikethrough and use `text-ink-500` for the old value: "50 to **60**". |
+| UI2-18 | Auth brand panel, 1440 | `r2-signin-1440.png` | Low | On sign-in, the current step is 4, but steps 1 to 3 look the same as future steps, so the timeline does not say "you are here, these are done". | Mark past steps as done: filled `primary-100` circle at 100 % opacity and full-white label. Keep future steps at 60 % opacity. |
+| UI2-19 | Phone menu, 360 | `r2-mobile-menu-360.png` | Low | The sheet has no visible close control. Users can only close it by tapping the backdrop or with the system Back button. On 360 x 780 the sheet is nearly full height, and "Sign out" sits 30 px from the bottom edge. | Add a text "Close" button (44 px) to the right of the "Menu" title. Add `pb-[calc(1rem+env(safe-area-inset-bottom))]` to the sheet. |
+
+## Verdict (re-review 1)
+13 of the 14 original findings are fixed, and none of the new findings is Critical or High. The app now feels consistent and polished at all three widths. The new phone menu, filter sheet, onboarding timeline and loading skeletons are well done. **There is no Critical or High finding open, so phase 2 UI can be signed off.** The Medium items can be fixed in the next pass.
+
+Top 5 priorities: UI2-15 (history on phones), UI2-16 (danger zone placement), UI2-12 (history select), UI2-19 (menu close control), UI2-18 (timeline done state).
