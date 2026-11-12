@@ -1,78 +1,211 @@
 import {
-  CalendarCheck,
+  Bell,
+  ClipboardList,
   LayoutDashboard,
-  ListChecks,
-  Settings,
+  LogOut,
+  ScrollText,
+  Settings2,
+  ShieldCheck,
+  UserRound,
+  UsersRound,
   type LucideIcon,
 } from 'lucide-react';
-import { NavLink, Outlet } from 'react-router';
+import { AnimatePresence, motion } from 'motion/react';
+import { NavLink, useLocation, useNavigate, useOutlet } from 'react-router';
 import { Logo } from '../ui/Logo';
+import { Avatar } from '../ui/Avatar';
+import { cx } from '../ui/cx';
+import { duration, easing } from '../ui/motion';
+import { signOut, useMe } from '../features/auth/useSession';
+import { useUnreadCount } from '../features/notifications/useNotifications';
+import { can, canManageAccounts, canViewLogs, isSuperAdmin } from '../lib/permissions';
+import type { User } from '../lib/types';
 
 interface NavItem {
   to: string;
   label: string;
   icon: LucideIcon;
+  end?: boolean;
+  badge?: number;
 }
 
-// Icons are allowed in the navigation menu only.
-const NAV: NavItem[] = [
-  { to: '/app', label: 'Dashboard', icon: LayoutDashboard },
-  { to: '/app/attendance', label: 'Attendance', icon: CalendarCheck },
-  { to: '/app/tasks', label: 'Tasks', icon: ListChecks },
-  { to: '/app/settings', label: 'Settings', icon: Settings },
-];
-
-function navClass({ isActive }: { isActive: boolean }) {
-  return `flex min-h-11 items-center gap-3 rounded-control px-3 text-sm font-medium transition-colors ${
-    isActive ? 'bg-primary-50 text-primary-700' : 'text-ink-600 hover:bg-ink-50 hover:text-ink-800'
-  }`;
+export function navFor(user: User | undefined, unread = 0) {
+  const home: NavItem = { to: '/app', label: 'Home', icon: LayoutDashboard, end: true };
+  const alerts: NavItem = {
+    to: '/app/notifications',
+    label: 'Notifications',
+    icon: Bell,
+    badge: unread,
+  };
+  const profile: NavItem = { to: '/app/profile', label: 'Profile', icon: UserRound };
+  const main: NavItem[] = [home, alerts, profile];
+  const admin: NavItem[] = [];
+  if (can(user, 'approve_users'))
+    admin.push({ to: '/app/admin/requests', label: 'Sign-up requests', icon: ClipboardList });
+  if (canManageAccounts(user))
+    admin.push({ to: '/app/admin/users', label: 'Users', icon: UsersRound });
+  if (isSuperAdmin(user))
+    admin.push({ to: '/app/admin/settings', label: 'Settings', icon: Settings2 });
+  if (canViewLogs(user))
+    admin.push({ to: '/app/admin/logs', label: 'Activity log', icon: ScrollText });
+  // Phones: at most four entries; admin sections are grouped behind "Admin".
+  const mobile: NavItem[] = [home, alerts];
+  if (admin.length) mobile.push({ to: '/app/admin', label: 'Admin', icon: ShieldCheck });
+  mobile.push(profile);
+  return { main, admin, mobile };
 }
 
-/** Placeholder authenticated layout. The auth guard arrives in phase 2. */
+function Count({ n }: { n?: number }) {
+  if (!n) return null;
+  return (
+    <span className="ml-auto min-w-5 rounded-full bg-secondary-500 px-1.5 text-center text-[11px] leading-5 font-semibold text-ink-900">
+      <span className="sr-only">, </span>
+      {n > 99 ? '99+' : n}
+      <span className="sr-only"> unread</span>
+    </span>
+  );
+}
+
+function SideLink({ item }: { item: NavItem }) {
+  const Icon = item.icon;
+  return (
+    <NavLink
+      to={item.to}
+      end={item.end}
+      className={({ isActive }) =>
+        cx(
+          'relative flex min-h-11 items-center gap-3 rounded-control px-3 text-sm font-medium transition-colors',
+          isActive ? 'text-primary-700' : 'text-ink-600 hover:bg-ink-50 hover:text-ink-800',
+        )
+      }
+    >
+      {({ isActive }) => (
+        <>
+          {isActive && (
+            <motion.span
+              layoutId="side-active"
+              className="absolute inset-0 rounded-control bg-primary-50"
+              transition={{ duration: duration.base, ease: easing.standard }}
+            />
+          )}
+          <Icon aria-hidden size={18} strokeWidth={1.5} className="relative" />
+          <span className="relative">{item.label}</span>
+          <span className="relative ml-auto">
+            <Count n={item.badge} />
+          </span>
+        </>
+      )}
+    </NavLink>
+  );
+}
+
 export function AppLayout() {
+  const { data: me } = useMe();
+  const { data: unread } = useUnreadCount();
+  const nav = navFor(me, unread ?? 0);
+  const location = useLocation();
+  // The element (not <Outlet/>) is captured so an exiting page keeps its own content.
+  const outlet = useOutlet();
+  const navigate = useNavigate();
+  const logout = () => void signOut().then(() => navigate('/sign-in', { replace: true }));
+
   return (
     <div className="min-h-dvh md:flex">
-      <aside className="hidden w-64 shrink-0 border-r border-ink-100 bg-surface p-4 md:block">
-        <Logo className="mb-6 h-9 w-auto" />
-        <nav aria-label="Main" className="flex flex-col gap-1">
-          {NAV.map(({ to, label, icon: Icon }) => (
-            <NavLink key={to} to={to} end className={navClass}>
-              <Icon aria-hidden size={18} strokeWidth={1.5} />
-              {label}
-            </NavLink>
+      <aside className="sticky top-0 hidden h-dvh w-64 shrink-0 flex-col border-r border-ink-100 bg-surface p-4 md:flex">
+        <Logo className="mb-8 ml-2 h-9 w-auto self-start" />
+        <nav aria-label="Main" className="flex flex-1 flex-col gap-1 overflow-y-auto">
+          {nav.main.map((i) => (
+            <SideLink key={i.to} item={i} />
           ))}
+          {nav.admin.length > 0 && (
+            <>
+              <p className="mt-6 mb-1 px-3 text-xs font-semibold tracking-wide text-ink-400 uppercase">
+                Administration
+              </p>
+              {nav.admin.map((i) => (
+                <SideLink key={i.to} item={i} />
+              ))}
+            </>
+          )}
         </nav>
+        {me && (
+          <div className="mt-4 flex items-center gap-3 border-t border-ink-100 pt-4">
+            <Avatar src={me.photo_url} first={me.first_name} last={me.last_name} size="sm" />
+            <div className="min-w-0 flex-1">
+              <p className="truncate text-sm font-semibold text-ink-800">{me.full_name}</p>
+              <p className="truncate text-xs text-ink-500">{me.job_title ?? me.email}</p>
+            </div>
+            <button
+              type="button"
+              onClick={logout}
+              aria-label="Sign out"
+              title="Sign out"
+              className="flex size-11 items-center justify-center rounded-control text-ink-500 hover:bg-ink-50 hover:text-ink-800"
+            >
+              <LogOut aria-hidden size={18} strokeWidth={1.5} />
+            </button>
+          </div>
+        )}
       </aside>
-      <main className="flex-1 p-4 pb-24 md:p-8">
-        <Outlet />
-      </main>
+
+      <div className="flex min-w-0 flex-1 flex-col">
+        <header className="sticky top-0 z-30 flex items-center justify-between border-b border-ink-100 bg-surface/90 px-4 pt-[env(safe-area-inset-top)] backdrop-blur md:hidden">
+          <Logo className="my-2.5 h-8 w-auto" />
+          {me && <Avatar src={me.photo_url} first={me.first_name} last={me.last_name} size="sm" />}
+        </header>
+        <main className="mx-auto w-full max-w-6xl flex-1 px-4 pt-5 pb-[calc(6rem+env(safe-area-inset-bottom))] sm:px-6 md:px-8 md:pt-8 md:pb-10">
+          <AnimatePresence mode="wait" initial={false}>
+            <motion.div
+              key={location.pathname}
+              initial={{ opacity: 0, y: 8 }}
+              animate={{ opacity: 1, y: 0 }}
+              exit={{ opacity: 0, transition: { duration: duration.fast } }}
+              transition={{ duration: duration.base, ease: easing.standard }}
+            >
+              {outlet}
+            </motion.div>
+          </AnimatePresence>
+        </main>
+      </div>
+
       <nav
         aria-label="Main"
-        className="fixed inset-x-0 bottom-0 grid grid-cols-4 border-t border-ink-100 bg-surface pb-[env(safe-area-inset-bottom)] md:hidden"
+        className="fixed inset-x-0 bottom-0 z-30 flex border-t border-ink-100 bg-surface pb-[env(safe-area-inset-bottom)] md:hidden"
       >
-        {NAV.map(({ to, label, icon: Icon }) => (
+        {nav.mobile.map(({ to, label, icon: Icon, end, badge }) => (
           <NavLink
             key={to}
             to={to}
-            end
+            end={end}
             className={({ isActive }) =>
-              `flex min-h-14 flex-col items-center justify-center gap-1 text-xs ${isActive ? 'text-primary-700' : 'text-ink-500'}`
+              cx(
+                'relative flex min-h-14 flex-1 flex-col items-center justify-center gap-1 text-xs',
+                isActive ? 'font-semibold text-primary-700' : 'text-ink-500',
+              )
             }
           >
-            <Icon aria-hidden size={20} strokeWidth={1.5} />
-            {label}
+            {({ isActive }) => (
+              <>
+                {isActive && (
+                  <motion.span
+                    layoutId="tab-active"
+                    className="absolute inset-x-6 top-0 h-0.5 rounded-full bg-primary-600"
+                  />
+                )}
+                <span className="relative">
+                  <Icon aria-hidden size={20} strokeWidth={1.5} />
+                  {badge ? (
+                    <span className="absolute -top-1 -right-2 size-2.5 rounded-full bg-secondary-500 ring-2 ring-surface">
+                      <span className="sr-only">{badge} unread</span>
+                    </span>
+                  ) : null}
+                </span>
+                {label}
+              </>
+            )}
           </NavLink>
         ))}
       </nav>
     </div>
-  );
-}
-
-export function PlaceholderPage({ title }: { title: string }) {
-  return (
-    <section className="rounded-card bg-surface p-6 shadow-card">
-      <h1 className="text-xl font-semibold text-primary-700">{title}</h1>
-      <p className="mt-2 text-ink-600">This section will be built in a later phase.</p>
-    </section>
   );
 }
