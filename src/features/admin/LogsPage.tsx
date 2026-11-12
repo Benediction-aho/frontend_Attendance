@@ -5,6 +5,7 @@ import { useSearchParams } from 'react-router';
 import { Alert } from '../../ui/Alert';
 import { Badge, type Tone } from '../../ui/Badge';
 import { Button } from '../../ui/Button';
+import { FilterPanel } from '../../ui/FilterPanel';
 import { Card } from '../../ui/Card';
 import { Input, Select } from '../../ui/Field';
 import { EmptyState } from '../../ui/EmptyState';
@@ -28,6 +29,12 @@ const TYPE_LABEL: Record<ActivityLog['type'], string> = {
   error: 'Error',
   security: 'Security',
   automatic: 'Automatic',
+};
+const LEVEL_LABEL: Record<ActivityLog['level'], string> = {
+  info: 'Info',
+  warning: 'Warning',
+  error: 'Error',
+  critical: 'Critical',
 };
 const FILTERS = ['user_id', 'type', 'level', 'from', 'to', 'event'] as const;
 
@@ -105,29 +112,15 @@ export function LogsPage() {
         description="Read-only record of actions, security events, automatic tasks and errors."
         back={{ to: '/app/admin', label: 'Administration' }}
       />
-      <Card className="mb-4 p-4">
-        <div className="grid gap-3 sm:grid-cols-2 lg:grid-cols-3">
-          {users.data ? (
-            <Select
-              label="User"
-              value={get('user_id')}
-              onChange={(e) => set('user_id', e.target.value)}
-            >
-              <option value="">Everyone</option>
-              {users.data.data.map((u) => (
-                <option key={u.id} value={u.id}>
-                  {u.full_name} ({u.email})
-                </option>
-              ))}
-            </Select>
-          ) : (
-            <Input
-              label="User ID"
-              inputMode="numeric"
-              value={get('user_id')}
-              onChange={(e) => set('user_id', e.target.value.replace(/\D/g, ''))}
-            />
-          )}
+      <FilterPanel
+        gridClassName="sm:grid-cols-2 lg:grid-cols-3"
+        activeMore={FILTERS.filter((k) => k !== 'type' && get(k)).length}
+        onClear={() => {
+          const n = new URLSearchParams();
+          if (get('type')) n.set('type', get('type'));
+          setParams(n, { replace: true });
+        }}
+        main={
           <Select label="Type" value={get('type')} onChange={(e) => set('type', e.target.value)}>
             <option value="">All types</option>
             {Object.entries(TYPE_LABEL).map(([v, l]) => (
@@ -136,43 +129,76 @@ export function LogsPage() {
               </option>
             ))}
           </Select>
-          <Select label="Level" value={get('level')} onChange={(e) => set('level', e.target.value)}>
-            <option value="">All levels</option>
-            <option value="info">Info</option>
-            <option value="warning">Warning</option>
-            <option value="error">Error</option>
-            <option value="critical">Critical</option>
-          </Select>
-          <Input
-            label="From"
-            type="date"
-            value={get('from')}
-            onChange={(e) => set('from', e.target.value)}
-          />
-          <Input
-            label="To"
-            type="date"
-            value={get('to')}
-            onChange={(e) => set('to', e.target.value)}
-          />
-          <Input
-            label="Event starts with"
-            placeholder="e.g. auth."
-            value={get('event')}
-            onChange={(e) => set('event', e.target.value.trim())}
-          />
-        </div>
-        {filtered && (
-          <Button
-            variant="ghost"
-            size="sm"
-            className="mt-3"
-            onClick={() => setParams(new URLSearchParams(), { replace: true })}
-          >
-            Clear filters
-          </Button>
-        )}
-      </Card>
+        }
+        more={
+          <>
+            {users.data ? (
+              <Select
+                label="User"
+                value={get('user_id')}
+                onChange={(e) => set('user_id', e.target.value)}
+              >
+                <option value="">Everyone</option>
+                {users.data.data.map((u) => (
+                  <option key={u.id} value={u.id}>
+                    {u.full_name} ({u.email})
+                  </option>
+                ))}
+              </Select>
+            ) : (
+              <Input
+                label="User ID"
+                inputMode="numeric"
+                value={get('user_id')}
+                onChange={(e) => set('user_id', e.target.value.replace(/\D/g, ''))}
+              />
+            )}
+            <Select
+              label="Level"
+              value={get('level')}
+              onChange={(e) => set('level', e.target.value)}
+            >
+              <option value="">All levels</option>
+              <option value="info">Info</option>
+              <option value="warning">Warning</option>
+              <option value="error">Error</option>
+              <option value="critical">Critical</option>
+            </Select>
+            <Input
+              label="From"
+              type="date"
+              value={get('from')}
+              onChange={(e) => set('from', e.target.value)}
+            />
+            <Input
+              label="To"
+              type="date"
+              value={get('to')}
+              onChange={(e) => set('to', e.target.value)}
+            />
+            <Input
+              label="Event starts with"
+              placeholder="e.g. auth."
+              value={get('event')}
+              onChange={(e) => set('event', e.target.value.trim())}
+            />
+          </>
+        }
+        footer={
+          <>
+            {filtered && (
+              <Button
+                variant="ghost"
+                size="sm"
+                className="mt-3"
+                onClick={() => setParams(new URLSearchParams(), { replace: true })}
+              >
+                Clear filters
+              </Button>
+            )}
+          </>
+        }
+      />
       <Card>
         {logs.isPending ? (
           <SkeletonRows rows={6} />
@@ -215,7 +241,7 @@ export function LogsPage() {
                             {TYPE_LABEL[l.type]}
                           </Badge>
                           {l.level !== 'info' && (
-                            <Badge tone={LEVEL_TONE[l.level]}>{l.level}</Badge>
+                            <Badge tone={LEVEL_TONE[l.level]}>{LEVEL_LABEL[l.level]}</Badge>
                           )}
                         </span>
                         <span className="min-w-0 flex-1 text-sm text-ink-800">

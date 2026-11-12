@@ -58,34 +58,38 @@ export function DashboardPage() {
         variants={stagger}
         initial="hidden"
         animate="show"
-        className="grid gap-4 sm:grid-cols-2 lg:grid-cols-3"
+        className="grid items-stretch gap-4 sm:grid-cols-2"
       >
-        <motion.div variants={fadeUp}>
+        <motion.div variants={fadeUp} className="h-full">
           <Link
             to="/app/notifications"
-            className="block rounded-card focus-visible:outline-offset-4"
+            className="block h-full rounded-card focus-visible:outline-offset-4"
           >
             <StatTile
               label="Unread notifications"
               value={unread.isPending ? <Skeleton className="h-8 w-10" /> : (unread.data ?? 0)}
+              hint={unread.data ? 'New messages for you.' : 'You are all caught up.'}
+              cta={unread.data ? 'Open notifications' : undefined}
             />
           </Link>
         </motion.div>
         {approver && (
-          <motion.div variants={fadeUp}>
+          <motion.div variants={fadeUp} className="h-full">
             <Link
               to="/app/admin/requests"
-              className="block rounded-card focus-visible:outline-offset-4"
+              className="block h-full rounded-card focus-visible:outline-offset-4"
             >
               <StatTile
                 label="Sign-up requests waiting"
                 value={pending.isPending ? <Skeleton className="h-8 w-10" /> : (pending.data ?? 0)}
-                hint={pending.data ? 'Review them now' : undefined}
+                highlight={Boolean(pending.data)}
+                hint={pending.data ? 'Waiting for your approval.' : 'Nothing to review.'}
+                cta={pending.data ? 'Review requests' : undefined}
               />
             </Link>
           </motion.div>
         )}
-        <motion.div variants={fadeUp} className="sm:col-span-2 lg:col-span-3">
+        <motion.div variants={fadeUp} className="sm:col-span-2">
           <Card>
             <CardBody>
               <h2 className="text-base font-semibold text-ink-900">Attendance</h2>

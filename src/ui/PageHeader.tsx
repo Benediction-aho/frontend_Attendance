@@ -21,7 +21,7 @@ export function PageHeader({
           to={back.to}
           className="mb-2 inline-flex min-h-11 items-center text-sm font-medium text-primary-700 hover:underline"
         >
-          ← {back.label}
+          Back to {back.label.toLowerCase()}
         </Link>
       )}
       <div className="flex flex-wrap items-end justify-between gap-3">

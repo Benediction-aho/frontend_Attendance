@@ -126,7 +126,7 @@ export function Select({
           id={id}
           aria-invalid={invalid || undefined}
           aria-describedby={describedBy}
-          className={cx(control, border(invalid), className)}
+          className={cx(control, border(invalid), 'select-chevron pr-10', className)}
           {...props}
         >
           {children}

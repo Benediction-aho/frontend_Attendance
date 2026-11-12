@@ -210,3 +210,36 @@ test('activity log: filter by type and expand an entry', async ({ page }) => {
     true,
   );
 });
+
+test('phones: menu button opens the full menu; filters open in a sheet', async ({
+  page,
+}, testInfo) => {
+  test.skip(testInfo.project.name !== 'iphone', 'Phone layout only');
+  const state = newState(SUPER, [pending, makeUser({ id: 3 })]);
+  await mockApi(page, state);
+  await signInUi(page, 'kofi@assistance.test');
+  const menuButton = page.getByRole('button', { name: 'Open menu' });
+  await expect(menuButton).toBeVisible();
+  await menuButton.click();
+  const menu = page.getByRole('dialog', { name: 'Menu' });
+  await expect(menu.getByRole('link', { name: 'Activity log' })).toBeVisible();
+  await menu.getByRole('link', { name: 'Users' }).click();
+  await expect(page).toHaveURL(/\/app\/admin\/users$/);
+  await expect(page.getByRole('dialog')).toHaveCount(0);
+  // Only the search field is on screen; the other filters are behind "Filters".
+  await expect(page.getByLabel('Status')).toBeHidden();
+  await page.getByRole('button', { name: 'Filters', exact: true }).click();
+  await page.getByRole('dialog', { name: 'Filters' }).getByLabel('Status').selectOption('pending');
+  await page.getByRole('button', { name: 'Show results' }).click();
+  await expect(page.getByRole('button', { name: 'Filters · 1' })).toBeVisible();
+});
+
+test('delete account sits in a danger zone and asks for confirmation', async ({ page }) => {
+  const state = newState(SUPER, [makeUser({ id: 3 })]);
+  await mockApi(page, state);
+  await signInUi(page, 'kofi@assistance.test');
+  await page.goto('/app/admin/users/3');
+  await expect(page.getByText('Danger zone')).toBeVisible();
+  await page.getByRole('button', { name: 'Delete account' }).click();
+  await expect(page.getByRole('dialog', { name: /Delete Ama Mensah/ })).toBeVisible();
+});

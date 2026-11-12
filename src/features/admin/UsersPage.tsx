@@ -1,6 +1,7 @@
 import { useEffect, useState } from 'react';
 import { motion } from 'motion/react';
 import { Link, useNavigate, useSearchParams } from 'react-router';
+import { FilterPanel } from '../../ui/FilterPanel';
 import { Card } from '../../ui/Card';
 import { Badge, STATUS_TONE } from '../../ui/Badge';
 import { Button } from '../../ui/Button';
@@ -68,8 +69,14 @@ export function UsersPage() {
           )
         }
       />
-      <Card className="mb-4 p-4">
-        <div className="grid gap-3 sm:grid-cols-2 lg:grid-cols-4">
+      <FilterPanel
+        activeMore={['status', 'role', 'type'].filter((k) => get(k)).length}
+        onClear={() => {
+          const n = new URLSearchParams(params);
+          ['status', 'role', 'type', 'page'].forEach((k) => n.delete(k));
+          setParams(n, { replace: true });
+        }}
+        main={
           <Input
             label="Search"
             type="search"
@@ -77,35 +84,43 @@ export function UsersPage() {
             value={q}
             onChange={(e) => setQ(e.target.value)}
           />
-          <Select
-            label="Status"
-            value={get('status')}
-            onChange={(e) => set('status', e.target.value)}
-          >
-            <option value="">All statuses</option>
-            {Object.entries(STATUS_LABEL).map(([v, l]) => (
-              <option key={v} value={v}>
-                {l}
-              </option>
-            ))}
-          </Select>
-          {isSuperAdmin(me) && (
-            <Select label="Role" value={get('role')} onChange={(e) => set('role', e.target.value)}>
-              <option value="">All roles</option>
-              {Object.entries(ROLE_LABEL).map(([v, l]) => (
+        }
+        more={
+          <>
+            <Select
+              label="Status"
+              value={get('status')}
+              onChange={(e) => set('status', e.target.value)}
+            >
+              <option value="">All statuses</option>
+              {Object.entries(STATUS_LABEL).map(([v, l]) => (
                 <option key={v} value={v}>
                   {l}
                 </option>
               ))}
             </Select>
-          )}
-          <Select label="Type" value={get('type')} onChange={(e) => set('type', e.target.value)}>
-            <option value="">Interns and employees</option>
-            <option value="intern">Interns</option>
-            <option value="employee">Employees</option>
-          </Select>
-        </div>
-      </Card>
+            {isSuperAdmin(me) && (
+              <Select
+                label="Role"
+                value={get('role')}
+                onChange={(e) => set('role', e.target.value)}
+              >
+                <option value="">All roles</option>
+                {Object.entries(ROLE_LABEL).map(([v, l]) => (
+                  <option key={v} value={v}>
+                    {l}
+                  </option>
+                ))}
+              </Select>
+            )}
+            <Select label="Type" value={get('type')} onChange={(e) => set('type', e.target.value)}>
+              <option value="">Interns and employees</option>
+              <option value="intern">Interns</option>
+              <option value="employee">Employees</option>
+            </Select>
+          </>
+        }
+      />
       <Card>
         {list.isPending ? (
           <SkeletonRows />

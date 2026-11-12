@@ -34,16 +34,27 @@ export function StatTile({
   label,
   value,
   hint,
+  cta,
+  highlight = false,
 }: {
   label: string;
   value: ReactNode;
   hint?: string;
+  /** Call to action shown when the tile asks for something to be done. */
+  cta?: string;
+  highlight?: boolean;
 }) {
   return (
-    <Card className="px-5 py-4">
+    <Card
+      className={cx(
+        'flex h-full min-h-32 flex-col px-5 py-4 transition-shadow duration-200',
+        highlight && 'ring-1 ring-secondary-300',
+      )}
+    >
       <p className="text-sm text-ink-500">{label}</p>
       <p className="mt-1 text-2xl font-semibold tabular-nums text-primary-700">{value}</p>
       {hint && <p className="mt-1 text-xs text-ink-500">{hint}</p>}
+      {cta && <p className="mt-auto pt-2 text-sm font-medium text-primary-700">{cta}</p>}
     </Card>
   );
 }

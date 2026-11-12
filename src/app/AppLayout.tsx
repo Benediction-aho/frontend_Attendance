@@ -3,6 +3,7 @@ import {
   ClipboardList,
   LayoutDashboard,
   LogOut,
+  Menu,
   ScrollText,
   Settings2,
   ShieldCheck,
@@ -11,7 +12,9 @@ import {
   type LucideIcon,
 } from 'lucide-react';
 import { AnimatePresence, motion } from 'motion/react';
-import { NavLink, useLocation, useNavigate, useOutlet } from 'react-router';
+import { useState } from 'react';
+import { Link, NavLink, useLocation, useNavigate, useOutlet } from 'react-router';
+import { Modal } from '../ui/Modal';
 import { Logo } from '../ui/Logo';
 import { Avatar } from '../ui/Avatar';
 import { cx } from '../ui/cx';
@@ -66,7 +69,7 @@ function Count({ n }: { n?: number }) {
   );
 }
 
-function SideLink({ item }: { item: NavItem }) {
+function SideLink({ item, activeId = 'side-active' }: { item: NavItem; activeId?: string }) {
   const Icon = item.icon;
   return (
     <NavLink
@@ -83,7 +86,7 @@ function SideLink({ item }: { item: NavItem }) {
         <>
           {isActive && (
             <motion.span
-              layoutId="side-active"
+              layoutId={activeId}
               className="absolute inset-0 rounded-control bg-primary-50"
               transition={{ duration: duration.base, ease: easing.standard }}
             />
@@ -108,12 +111,16 @@ export function AppLayout() {
   const outlet = useOutlet();
   const navigate = useNavigate();
   const logout = () => void signOut().then(() => navigate('/sign-in', { replace: true }));
+  // The phone menu belongs to the page it was opened on: navigating closes it.
+  const [menuPath, setMenuPath] = useState<string | null>(null);
+  const menuOpen = menuPath === location.pathname;
+  const setMenuOpen = (open: boolean) => setMenuPath(open ? location.pathname : null);
 
   return (
-    <div className="min-h-dvh md:flex">
-      <aside className="sticky top-0 hidden h-dvh w-64 shrink-0 flex-col border-r border-ink-100 bg-surface p-4 md:flex">
-        <Logo className="mb-8 ml-2 h-9 w-auto self-start" />
-        <nav aria-label="Main" className="flex flex-1 flex-col gap-1 overflow-y-auto">
+    <div className="min-h-dvh lg:flex">
+      <aside className="sticky top-0 hidden h-dvh w-64 shrink-0 flex-col border-r border-ink-100 bg-surface p-4 lg:flex">
+        <Logo variant="sidebar" className="mb-8 ml-2 self-start" />
+        <nav aria-label="Sidebar" className="flex flex-1 flex-col gap-1 overflow-y-auto">
           {nav.main.map((i) => (
             <SideLink key={i.to} item={i} />
           ))}
@@ -149,11 +156,32 @@ export function AppLayout() {
       </aside>
 
       <div className="flex min-w-0 flex-1 flex-col">
-        <header className="sticky top-0 z-30 flex items-center justify-between border-b border-ink-100 bg-surface/90 px-4 pt-[env(safe-area-inset-top)] backdrop-blur md:hidden">
-          <Logo className="my-2.5 h-8 w-auto" />
-          {me && <Avatar src={me.photo_url} first={me.first_name} last={me.last_name} size="sm" />}
+        <header className="sticky top-0 z-30 flex items-center justify-between border-b border-ink-100 bg-surface/90 px-4 pt-[env(safe-area-inset-top)] backdrop-blur lg:hidden">
+          <Logo variant="topbar" className="my-2.5" />
+          <div className="flex items-center gap-1">
+            {me && (
+              <Link
+                to="/app/profile"
+                aria-label="My profile"
+                className="flex size-11 items-center justify-center rounded-full"
+              >
+                <Avatar src={me.photo_url} first={me.first_name} last={me.last_name} size="sm" />
+              </Link>
+            )}
+            <button
+              type="button"
+              onClick={() => setMenuOpen(true)}
+              aria-label="Open menu"
+              aria-haspopup="dialog"
+              aria-expanded={menuOpen}
+              data-testid="mobile-menu-button"
+              className="flex size-11 items-center justify-center rounded-control text-ink-600 hover:bg-ink-50 hover:text-ink-900"
+            >
+              <Menu aria-hidden size={22} strokeWidth={1.5} />
+            </button>
+          </div>
         </header>
-        <main className="mx-auto w-full max-w-6xl flex-1 px-4 pt-5 pb-[calc(6rem+env(safe-area-inset-bottom))] sm:px-6 md:px-8 md:pt-8 md:pb-10">
+        <main className="mx-auto w-full max-w-6xl flex-1 px-4 pt-5 pb-[calc(6rem+env(safe-area-inset-bottom))] sm:px-6 lg:px-8 lg:pt-8 lg:pb-10">
           <AnimatePresence mode="wait" initial={false}>
             <motion.div
               key={location.pathname}
@@ -168,9 +196,35 @@ export function AppLayout() {
         </main>
       </div>
 
+      <Modal open={menuOpen} onClose={() => setMenuOpen(false)} title="Menu">
+        <nav aria-label="Full menu" className="flex flex-col gap-1">
+          {nav.main.map((i) => (
+            <SideLink key={i.to} item={i} activeId="menu-active" />
+          ))}
+          {nav.admin.length > 0 && (
+            <>
+              <p className="mt-4 mb-1 px-3 text-xs font-semibold tracking-wide text-ink-400 uppercase">
+                Administration
+              </p>
+              {nav.admin.map((i) => (
+                <SideLink key={i.to} item={i} activeId="menu-active" />
+              ))}
+            </>
+          )}
+          <button
+            type="button"
+            onClick={logout}
+            className="mt-4 flex min-h-11 items-center gap-3 rounded-control border-t border-ink-100 px-3 pt-2 text-sm font-medium text-ink-600 hover:bg-ink-50 hover:text-ink-900"
+          >
+            <LogOut aria-hidden size={18} strokeWidth={1.5} />
+            Sign out
+          </button>
+        </nav>
+      </Modal>
+
       <nav
-        aria-label="Main"
-        className="fixed inset-x-0 bottom-0 z-30 flex border-t border-ink-100 bg-surface pb-[env(safe-area-inset-bottom)] md:hidden"
+        aria-label="Bottom menu"
+        className="fixed inset-x-0 bottom-0 z-30 flex border-t border-ink-100 bg-surface pb-[env(safe-area-inset-bottom)] lg:hidden"
       >
         {nav.mobile.map(({ to, label, icon: Icon, end, badge }) => (
           <NavLink
