@@ -3,7 +3,7 @@
 Updated by the agents at the end of every work session.
 
 ## Current phase
-Phase 2 – Frontend foundations: **implemented (2026-11-12), ready for frontend-ui-designer** (then frontend-ux-tester). Report files expected: `docs/reports/phase-2-ui.md`, `docs/reports/phase-2-ux.md`.
+Phase 2 – Frontend foundations: **UI findings UI2-01..UI2-14 fixed (2026-11-12), ready for frontend-ui-designer re-review** (then frontend-ux-tester). Report files expected: `docs/reports/phase-2-ui.md`, `docs/reports/phase-2-ux.md`.
 
 ### Phase 2 – what was delivered
 - **Design system** (`src/ui`): Button (variants, loading), Field/Input/Select/Textarea/Segmented, Switch, Card/StatTile, Badge, Table, Modal (bottom sheet on phones, focus trap, Escape), Toast, Skeleton, EmptyState, PageHeader, Stepper, Alert, Pagination, Avatar, Spinner. Motion: staggered reveals, step slides, page transitions, animated errors; `MotionConfig reducedMotion="user"` + CSS reduced-motion. Icons only in the navigation (Lucide, 1.5 stroke). Colors only via theme tokens (lint rule).
@@ -21,16 +21,16 @@ Phase 2 – Frontend foundations: **implemented (2026-11-12), ready for frontend
 The API uses Bearer device tokens only (no cookies), so an HttpOnly cookie is not available. The token is kept **in memory** for requests and persisted in **IndexedDB** (not localStorage, never in URLs, cookies or logs) so the installed PWA stays signed in across launches; it is loaded once before the first render. No browser storage is fully out of reach of an XSS, so the real protections are: no third-party scripts, no HTML injection (React escaping, no `dangerouslySetInnerHTML`), a strict CSP at deployment (to configure with `attendance-deploy`), and server-side revocation (logout, 401, admin actions, idle expiry). Requests use `credentials: 'omit'` and `cache: 'no-store'`.
 
 ### Tests (2026-11-12)
-- Vitest: 33 tests (api client, session/IndexedDB store, permissions, settings parsing, image sizing, countdown, login error mapping, sign-in and sign-up components, design-system components).
+- Vitest: 42 tests (after UI fixes; was 33) (api client, session/IndexedDB store, permissions, settings parsing, image sizing, countdown, login error mapping, sign-in and sign-up components, design-system components).
 - Playwright (mocked API by route interception, iPhone 13 + desktop): 30 passing – shell, sign-up, first sign-in → forced change → profile completion, session persistence / 5xx does not sign out / logout, 401 reauth_limit, lockout, super admin code sign-in + recovery link, profile (details, photo, email), approve request, users (search, block, permissions), limited admin gating, create admin, settings with effective date + history, notifications, activity log.
 - Real backend: `e2e/signup-approval.real.spec.ts` (run with `E2E_REAL_API=1`, backend on :8000 with `MAIL_MAILER=log`, `QUEUE_CONNECTION=sync`, `CORS_ALLOWED_ORIGINS=http://localhost:4173`, super admin `boss@e2e.test`; codes read from the mail log): sign-up → super admin one-time code sign-in → approve → employee first sign-in with the emailed code → password change → profile: **passed**.
 - Lint (0 errors, 7 fast-refresh warnings), format, typecheck, build green; no source maps, no console calls in the bundle.
 
 ### Phase 2 – known limits / accepted for now
-- Single JS chunk > 500 kB minified (Vite warning). Route-level code splitting planned with phase 4 (PWA) work.
-- Logo: still the existing `public/logo.png`; high-quality SVG/PNG from the owner pending (PLAN section 8).
+- Route-level code splitting done: main chunk 397 kB minified (124 kB gzip), pages load on demand (one retry on a failed chunk download).
+- Logo: interim assets generated from `public/logo.png` by `scripts/make-logo.py` (rerun it when the official file arrives); official SVG/transparent PNG requested from the owner.
 - Backend emails link to `http://localhost:5173/login`; the PWA maps `/login` to `/sign-in`. `FRONTEND_URL` must point to the PWA in each environment.
-- One mocked e2e (recovery page in a second browser page) failed once under load and passed on 4 repeats; watch for flakiness.
+- The recovery/email-confirmation token reader now survives a discarded render (lazy routes): the flaky recovery e2e failed consistently with lazy routes before the fix and passes since.
 
 ## Phases
 
@@ -38,7 +38,7 @@ The API uses Bearer device tokens only (no cookies), so an HttpOnly cookie is no
 |---|---|---|---|
 | 0 – Preparation | Frontend skeleton done | – | Legacy v1 kept on `main` at `5f4de51a854ca91bf31c72e282b0f3519d2d3b4f` (tag `legacy-v1` not pushed: tag push not allowed from this session) |
 | 1 – Backend foundations | Not started | – | |
-| 2 – Frontend foundations | Implemented, ready for frontend-ui-designer | UI: pending, UX: pending | See "Phase 2 – what was delivered" |
+| 2 – Frontend foundations | UI findings fixed, ready for UI re-review | UI: `docs/reports/phase-2-ui.md` (14 fixed), UX: pending | See "Phase 2 – what was delivered" |
 | 3 – Attendance (manual) | Not started | – | |
 | 4 – PWA, Face ID, notifications | Not started | – | |
 | 5 – Tasks, clients, reports | Not started | – | |
@@ -54,6 +54,7 @@ The API uses Bearer device tokens only (no cookies), so an HttpOnly cookie is no
 - Backend test host: Render approved by the owner (account to create); Render procedure ready in `docs/DEPLOYMENT.md` (backend repo).
 
 ## Blocked / questions for the owner
+- **Logo (owner action)**: please provide the official Assistance Ghana logo as **SVG** (preferred) or a **transparent PNG** at least 2000 px wide with no margins, ideally also a square version of the mark for the home-screen icon. The current file is a JPEG with a white background; the app uses a best-effort cropped/transparent version until then (`scripts/make-logo.py`).
 - **Vercel (owner action, still blocked 2026-11-12)**: after the connector re-authorization the Vercel API still returns `403 forbidden: Not authorized: Trying to access resource under scope "benediction-ahouanse-s-projects" (team_7rhgiQNsRJIXGdFxd45Eihlj)`; the connection lists no team. The re-authorization did not grant that scope. Either (a) re-authorize the Vercel connector in claude.ai Settings > Connectors and explicitly tick the scope "benediction-ahouanse-s-projects" in the Vercel consent screen, then ask the deploy agent to retry; or (b) create it yourself: Add New > Project > import `Benediction-aho/frontend_Attendance` (install the Vercel GitHub app on that repo if asked), framework Vite, build `npm run build`, output `dist`, env `VITE_API_URL=https://api.example.invalid/api` (Preview + Production). Preview deployments of `claude/upbeat-noether-f7defe` are then automatic.
 - **Backend test host: Render approved by the owner.** Next step (owner): create the Render account (sign in with GitHub, give Render access to `Benediction-aho/backend_Attendance`), then tell us. Prepare, to be entered **only in Render secrets** (Environment tab of the service, never in chat or in the repository): the Supabase database password (Supabase dashboard > Project Settings > Database; reset it there if unknown), and later the Resend API key, Sentry DSN and VAPID keys. The deploy agent then creates the Docker web service, worker and cron following `docs/DEPLOYMENT.md` section 3.
 - Accounts to provide (see `PLAN_DEVELOPPEMENT.md` section 8): Supabase, Resend + sending domain, Vercel, backend test host.
@@ -76,3 +77,4 @@ _Not given yet._
 - Wi-Fi detection and automatic check-in removed; check-in = GPS perimeter + Face ID (passkey); fixed-time reminder at 08:05.
 - Phase 0 frontend: legacy v1 removed; new React + TypeScript + Vite skeleton (Tailwind v4 theme tokens, Motion, React Router, TanStack Query, RHF + Zod, lucide in the menu only), API client with backoff and 401-only sign-out, server-time helper stub, PWA (manifest, prompt-to-update service worker, app shell only, no API caching), production build without source maps/console/library names, ESLint + Prettier, Vitest (11 tests), Playwright smoke (iPhone + desktop), CI workflow, vercel.json SPA rewrites.
 - Phase 2 frontend: design system, sign-in/sign-up/super admin/recovery/email confirmation, forced code change and profile completion, device session (memory + IndexedDB), profile, admin accounts and permissions, settings with effective date and history, notifications, activity log; 33 unit tests, 30 mocked e2e + 1 real-API e2e passing. Ready for frontend-ui-designer.
+- Phase 2 UI review fixes (UI2-01..14): interim logo + icons, danger-ghost button and danger zone, onboarding timeline, phone filter sheet, dashboard next action, no repeated code at first sign-in + strength hint, bottom bar up to lg, phone menu button, consistent badges, en-GB dates, styled selects, text back links, route code splitting. 42 unit tests, 35 mocked e2e passing (+1 phone-only skipped on desktop). Ready for UI re-review.

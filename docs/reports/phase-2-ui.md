@@ -44,6 +44,22 @@ A solid, consistent, sober foundation: tokens, motion system, reduced-motion sup
 5. UI2-05 / UI2-06: highlight the next action on the dashboard, and remove the repeated code entry on first sign-in.
 
 ## Re-review status
-| ID | Status |
-|---|---|
-| UI2-01 … UI2-14 | Open |
+Fixes by `attendance-frontend` (2026-11-12, commits e0d33a7..26d1c99). Ready for re-review.
+
+| ID | Status | Fix |
+|---|---|---|
+| UI2-01 | Fixed (interim) | `scripts/make-logo.py` crops tightly and removes the white background; `public/brand/logo-{sidebar,topbar,signin}.png` (3x, transparent) shown at h-10 / h-7 / h-12 via `<Logo variant>`. PWA icons regenerated (stacked wordmark, maskable safe zone) + 180 px Apple touch icon. Official SVG/transparent PNG requested from the owner in PROGRESS.md. |
+| UI2-02 | Fixed | New `danger-ghost` Button variant (no className colour override); "Delete account" moved to a "Danger zone" block with `border-t`. Photo "Remove" also uses it. Unit test added. |
+| UI2-03 | Fixed | Brand panel shows a 4-step text timeline (current step in `secondary-400`, staggered 0.08 s). Step per page: sign-up 1, request sent 2, sign-in / welcome 4; none on recovery/email confirmation. |
+| UI2-04 | Fixed | `FilterPanel`: below `sm` only Search (Users) / Type (Logs) is shown, plus an outline "Filters" button (counter "Filters · N") opening a bottom sheet with the other fields, "Clear filters" and "Show results". |
+| UI2-05 | Fixed | Stat tiles share height (`h-full min-h-32`, `items-stretch`); requests tile gets `ring-secondary-300` and a "Review requests" call to action when > 0; grid is 2 columns at all widths ≥ sm. |
+| UI2-06 | Fixed | The code typed at sign-in is kept in memory only (`pendingCode.ts`, cleared on save/sign-out) and sent as `current_password`; the field is hidden (shown again after a reload or a `wrong_password` reply). Live strength hint under "New password". e2e covers both cases. |
+| UI2-07 | Fixed | Sidebar only from `lg` (1024 px); bottom bar + top bar below. |
+| UI2-08 | Fixed | Disabled (not loading) buttons use `bg-ink-100 text-ink-400`; "Undo" appears only when the permissions form is dirty. |
+| UI2-09 | Fixed | Type badges neutral everywhere (Requests too), role badges primary, status semantic; log level labels capitalised. |
+| UI2-10 | Fixed | `<html lang="en-GB">` (dd/mm/yyyy date inputs). |
+| UI2-11 | Fixed | Back links are text only: "Back to administration" / "Back to users". |
+| UI2-12 | Fixed | `.select-chevron` (appearance none, token-coloured chevron) + `pr-10` on every Select. |
+| UI2-13 | Fixed | Top bar avatar is a 44 px link to Profile (`aria-label="My profile"`). |
+| UI2-14 | Fixed | "Super admin sign-in" moved to a small footer outside the card; "Request an account" is the single secondary call to action. |
+| Extra | Done | Phones: a "Open menu" button (top bar, `aria-expanded`, `data-testid="mobile-menu-button"`) opens a sheet with every menu entry, including admin sections and Sign out; the bottom bar is labelled "Bottom menu", the sidebar "Sidebar". Route-level code splitting: main chunk 397 kB (was 730 kB), no Vite warning. |
