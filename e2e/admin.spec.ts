@@ -63,7 +63,7 @@ test('admin with limited tiers only sees what it is allowed to do', async ({ pag
   await expect(page.getByRole('button', { name: 'Block' })).toHaveCount(0);
   await expect(page.getByRole('button', { name: 'Delete account' })).toHaveCount(0);
   await page.goto('/app/admin/settings');
-  await expect(page).toHaveURL(/\/app$/);
+  await expect(page.getByText('You do not have access to this page')).toBeVisible();
 });
 
 test('super admin creates an admin with permissions', async ({ page }) => {
@@ -130,6 +130,7 @@ test('settings: change values with an effective date', async ({ page }) => {
   await page.getByLabel('Check-in perimeter radius (m)').fill('60');
   await page.getByRole('switch', { name: 'Face ID verification at check-in' }).click();
   await expect(page.getByText('2 unsaved changes')).toBeVisible();
+  await page.getByRole('button', { name: 'Schedule for later' }).click();
   await page.getByLabel('Apply from').fill('2026-12-01');
   await page.getByRole('button', { name: 'Schedule' }).click();
   await expect(page.getByText(/Changes scheduled for/)).toBeVisible();
