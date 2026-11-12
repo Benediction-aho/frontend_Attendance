@@ -32,7 +32,7 @@ Tester: `frontend-ux-tester` – 2026-11-12. Branch `claude/upbeat-noether-f7def
 | UX2-17 | Low | Plain-text emails show HTML entities in names (`Ama &lt;b&gt;…`); email links point to `/login` on the configured front URL | Fixed (re-test: text part shows the raw name; `/login` redirects to `/sign-in`; host comes from `FRONTEND_URL`, deployment config) |
 | UX2-18 | Low | Users list: super admin "Last sign-in" stays "–" after OTP sign-in; super admin shown with type "Employee" | Fixed (front accepts null type; server sends last sign-in) |
 | UX2-19 | Low | Back button on "Complete your profile" leaves the app (about:blank) | Fixed |
-| UX2-20 | Low | No warning before the 5th failed attempt ("1 attempt left") | Still open (backend: `remaining_attempts` is not sent to the browser, see re-test) |
+| UX2-20 | Low | No warning before the 5th failed attempt ("1 attempt left") | Accepted (by design): `remaining_attempts` is sent only for a known device of the account (anti-enumeration); the front shows it whenever present |
 
 ### UX2-01 – High – Code with a space is refused and counts as a failure
 - Role/device: new employee, iPhone. Script `e2e/ux/j1-signup.mjs` (first version) and curl check.
@@ -160,7 +160,7 @@ New helper scripts: `e2e/ux/mkuser.mjs` (create + approve a staff account throug
 | UX2-17 | Fixed (see table). |
 | UX2-18 | Fixed – super admin type "–", last sign-in filled. |
 | UX2-19 | Fixed – Back on the onboarding stays on `/welcome/code`. |
-| UX2-20 | Still open – 4 wrong passwords from the same browser never show "attempts left"; the API answers `{"code":"invalid_credentials"}` without `remaining_attempts` (only sent for the device scope, which the browser does not hit). Backend. |
+| UX2-20 | Accepted (by design, anti-enumeration) – 4 wrong passwords from the same browser never show "attempts left"; the API answers `{"code":"invalid_credentials"}` without `remaining_attempts` (only sent for the device scope, which the browser does not hit). Backend. |
 
 Regressions: none found on the re-run journeys (sign-up, approval, onboarding, profile, lockout, admin, limited admin, block/unblock, settings, super admin lock and recovery), iPhone 13, Android 360 and desktop.
 
@@ -168,10 +168,10 @@ Regressions: none found on the re-run journeys (sign-up, approval, onboarding, p
 
 | ID | Severity | Title | Status |
 |---|---|---|---|
-| UX2-21 | Medium | Onboarding Face ID step: the toast "Your password is set. Your other devices have been signed out." covers the "Do it later" link on iPhone | Open |
-| UX2-22 | Low | Profile photo: a 12 MB file named `.jpg` that is not an image gives no feedback at all | Open |
-| UX2-23 | Low | Sign-in reasons disappear on reload (blocked message, lockout countdown) | Open |
-| UX2-24 | Low | Every wrong password, even for active staff, shows the "awaiting approval" hint | Open |
+| UX2-21 | Medium | Onboarding Face ID step: the toast "Your password is set. Your other devices have been signed out." covers the "Do it later" link on iPhone | Fixed – toasts go to the top on full-screen pages outside the app shell (sign-in, onboarding); first sign-in says only "Your password is set." |
+| UX2-22 | Low | Profile photo: a 12 MB file named `.jpg` that is not an image gives no feedback at all | Fixed – "This photo could not be read. Try another one." or a size message (over 10 MB) |
+| UX2-23 | Low | Sign-in reasons disappear on reload (blocked message, lockout countdown) | Fixed – reason and countdown kept in sessionStorage with an expiry (end of the wait, or 30 min) |
+| UX2-24 | Low | Every wrong password, even for active staff, shows the "awaiting approval" hint | Fixed – hint only on a browser that never signed in and when the API sends no remaining attempts (unknown device) |
 
 #### UX2-21 – Medium – Toast hides "Do it later" on the Face ID step
 - Employee, iPhone 13. First sign-in → set password → Skip profile → "Set up Face ID". The success toast sits exactly over "Do it later" for several seconds (`ux-j12-faceid-step.png`). A user who does not want to set Face ID now cannot find the way out. Also "Your other devices have been signed out" is confusing on a first sign-in (there are no other devices). Expected: toast above or away from the actions (as done for sheets in UX2-10), and a simple "Your password is set." on first sign-in.

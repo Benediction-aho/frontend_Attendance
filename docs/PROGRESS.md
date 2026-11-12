@@ -3,6 +3,29 @@
 Updated by the agents at the end of every work session.
 
 ## Current phase
+**Phases 3 and 4 – frontend implemented, ready for frontend-ui-designer** (2026-11-12). Phase 2: UX re-test findings UX2-21..24 fixed, UX2-20 accepted (by design); ready for the final UX check. Report files expected: `docs/reports/phase-3-ui.md`, `docs/reports/phase-4-ui.md` (or one combined), then `-ux.md`.
+
+### Phases 3–4 – what was delivered (frontend)
+- **Today screen (employees, home `/app`)**: clock synchronised with `server_timestamp_ms` (half round-trip correction), day status (office/remote/day off/holiday/leave), "not expected today" note, check-in flow with a 3-step progress (Location → Face ID → Confirmed): GPS with `watchPosition`, accuracy target from `rules.max_accuracy_m`, visible readings and accuracy bar, automatic re-reading on API `low_accuracy` (up to 3 times); intent → `navigator.credentials.get` → confirm (retried, idempotent). Clear English message for: GPS off/unavailable, permission denied (iPhone/Android steps), timeout, low accuracy (values from the API), out of perimeter (distance + radius, mission suggested), offline (time comes from the server), Face ID cancelled/unsupported/failed, intent expired, 429, not a remote day. Nothing time/date-related is sent.
+- **Mission check-in** (reason, then Face ID; "waiting for approval" badge), **remote check-in in one tap** on remote days, **check-out** from anywhere (best-effort position, distance shown after: "At the office" / "3.2 km from the office" / "Position not available"), reason asked before `end_of_day` (display hint from the server clock; the server's 422 `reason_required` is authoritative), "check-out forgotten" in history.
+- **Check-in gate**: 403 `checkin_required` from any request sends the employee to the Today screen with one message (`onCheckInRequired` in the API client). Profile/notifications stay reachable (server never gates them).
+- **Work schedule**: one-time choice (Office/Remote/Day off per working day, limits from the API, confirmation, applies from tomorrow), then read-only; own leave and public holidays.
+- **History** (own; admins per employee): date filters, badges (lateness only when `is_late` is returned), reasons as plain text.
+- **Admin** (all gated by tiers, display only): daily list with figures (expected/checked in/not checked in/late only with `view_lateness`), per-employee history + working week (edit with effective date for `manage_work_schedules`) + leave (`manage_leaves`), refused check-ins (`view_lateness`), mission approvals with note (`approve_mission_checkins`, 409 already reviewed handled), check-in on behalf with reason (`checkin_for_employee`), leave and holidays page. Staff dashboard tiles: missions and Face ID devices waiting.
+- **Face ID**: registration at first sign-in (new onboarding step `/welcome/faceid` for employees, skippable), on Today and in Profile; states ready / not registered / pending approval / other device; JSON helpers with a fallback for Safari without `parse…FromJSON`/`toJSON`. Admin page `/app/admin/faceid-devices` (pending/approved/revoked, device details: system, browser, registered, first seen, IP, user agent; approve/reject; super admin revoke with confirmation).
+- **PWA**: install guide `/app/install` (iPhone Safari Add to Home Screen, Android install + native prompt when available), dismissible install card on Today; **Web Push**: prompt only in the installed app with an explanation, permission asked on tap, subscribe (`device_id` sent), 409 `push_endpoint_conflict` message, unsubscribe in Profile, re-subscribe after sign-in; service worker `public/push-sw.js` (imported by the generated SW): shows `{title, body, tag}`, opens in-app paths only on click. API responses still never cached.
+- **In-app browser** detection (WhatsApp, Facebook, Instagram, Android WebView): notice with "Open in Safari/Chrome" and copy-link button on sign-in, Today, onboarding and install pages.
+
+### Phases 3–4 – tests (2026-11-12)
+- Vitest: 81 tests (new: check-in error mapping, distances/check-out place, end-of-day hint, GPS accuracy loop with fake geolocation, clock sync, Today screen states, in-app detection, base64url/WebAuthn options, UX2-21..24).
+- Playwright (mocked API, iPhone 13 + desktop): 75 passed, 1 phone-only skip. New journeys with a **virtual WebAuthn authenticator (CDP)** and **geolocation emulation**: Face ID registration then GPS check-in with low-accuracy retry; out of perimeter then mission; remote one-tap then early check-out with server-required reason; location blocked / offline / pending device; schedule once then read-only; history (forgotten check-out); 403 checkin_required; WhatsApp in-app notice; install guide; staff without Today; admin daily list + on-behalf; mission approval (plain text); Face ID approve + revoke; limited Face ID admin; leave and holidays.
+- Lint 0 errors, format, typecheck, build green.
+
+### Phases 3–4 – known limits / questions
+- The early check-out reason field is shown up front by comparing the server-synchronised clock with `rules.end_of_day` (display only); the server decides with 422.
+- Admin "per employee" page title comes from the list (navigation state); a direct link shows "Employee" (no attendance-tier endpoint returns a name).
+- Push delivery and real Face ID must be validated on real iPhones/Android at the office (phase 4 validation; needs the test deployment with HTTPS and the final RP ID).
+
 Phase 2 – Frontend foundations: **UI signed off (re-review 1; UI2-12, 15-19 fixed), UX findings UX2-01..20 fixed on the frontend (UX2-17 backend) – ready for frontend-ux-tester re-test** (2026-11-12). Report files expected: `docs/reports/phase-2-ui.md`, `docs/reports/phase-2-ux.md`.
 
 ### Phase 2 – what was delivered
@@ -39,8 +62,8 @@ The API uses Bearer device tokens only (no cookies), so an HttpOnly cookie is no
 | 0 – Preparation | Frontend skeleton done | – | Legacy v1 kept on `main` at `5f4de51a854ca91bf31c72e282b0f3519d2d3b4f` (tag `legacy-v1` not pushed: tag push not allowed from this session) |
 | 1 – Backend foundations | Not started | – | |
 | 2 – Frontend foundations | Ready for UX re-test | UI: `docs/reports/phase-2-ui.md` (signed off, 20 fixed), UX: `docs/reports/phase-2-ux.md` (19 fixed, UX2-17 backend) | See "Phase 2 – what was delivered" |
-| 3 – Attendance (manual) | Not started | – | |
-| 4 – PWA, Face ID, notifications | Not started | – | |
+| 3 – Attendance (manual) | Frontend ready for frontend-ui-designer | – | See "Phases 3–4 – what was delivered" |
+| 4 – PWA, Face ID, notifications | Frontend ready for frontend-ui-designer | – | Real-device validation pending (test deployment) |
 | 5 – Tasks, clients, reports | Not started | – | |
 | 6 – Dashboards and logs | Not started | – | |
 | 7 – Quality and pilot | Not started | – | |
@@ -84,4 +107,5 @@ _Not given yet._
 - Phase 0 frontend: legacy v1 removed; new React + TypeScript + Vite skeleton (Tailwind v4 theme tokens, Motion, React Router, TanStack Query, RHF + Zod, lucide in the menu only), API client with backoff and 401-only sign-out, server-time helper stub, PWA (manifest, prompt-to-update service worker, app shell only, no API caching), production build without source maps/console/library names, ESLint + Prettier, Vitest (11 tests), Playwright smoke (iPhone + desktop), CI workflow, vercel.json SPA rewrites.
 - Phase 2 frontend: design system, sign-in/sign-up/super admin/recovery/email confirmation, forced code change and profile completion, device session (memory + IndexedDB), profile, admin accounts and permissions, settings with effective date and history, notifications, activity log; 33 unit tests, 30 mocked e2e + 1 real-API e2e passing. Ready for frontend-ui-designer.
 - Phase 2 UI review fixes (UI2-01..14): interim logo + icons, danger-ghost button and danger zone, onboarding timeline, phone filter sheet, dashboard next action, no repeated code at first sign-in + strength hint, bottom bar up to lg, phone menu button, consistent badges, en-GB dates, styled selects, text back links, route code splitting. 42 unit tests, 35 mocked e2e passing (+1 phone-only skipped on desktop). Ready for UI re-review.
+- Phases 3–4 frontend: Today/check-in (GPS accuracy retries, Face ID assertion, mission, remote, check-out), schedule, history, admin attendance/missions/attempts/leave/holidays, Face ID registration and device approval, install guide, Web Push, in-app browser notice; UX2-21..24 fixed, UX2-20 accepted. 81 unit tests, 75 mocked e2e. Ready for frontend-ui-designer.
 - Phase 2 UX fixes (UX2-01..20 front parts) and UI re-review fixes (UI2-12, 15-19): 56 unit tests, 45 mocked e2e passing (+1 skipped), lint/typecheck/build green. Ready for frontend-ux-tester re-test.
