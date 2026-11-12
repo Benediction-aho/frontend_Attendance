@@ -29,3 +29,11 @@ export async function resizeImage(file: File, max = 1024, quality = 0.85): Promi
     canvas.toBlob((b) => (b ? resolve(b) : reject(new Error('encode'))), 'image/jpeg', quality),
   );
 }
+
+/** Message when a picked file cannot be decoded as an image (UX2-22). */
+export function photoReadError(file: { size: number }): string {
+  const mb = file.size / (1024 * 1024);
+  if (mb > 10)
+    return `This file is too large (${Math.round(mb)} MB) and could not be read as a photo. Choose a photo under 10 MB.`;
+  return 'This photo could not be read. Try another one.';
+}

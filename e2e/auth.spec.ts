@@ -140,6 +140,10 @@ test('lockout: remaining time shown and generic messages', async ({ page }) => {
   };
   await page.getByRole('button', { name: 'Sign in' }).click();
   await expect(page.getByRole('button', { name: /Try again in (9|10) min/ })).toBeDisabled();
+  // UX2-23: the countdown survives a reload in the same tab.
+  await page.reload();
+  await expect(page.getByRole('button', { name: /Try again in (9|10) min/ })).toBeDisabled();
+  await page.evaluate(() => sessionStorage.clear());
   state.loginReply = { status: 423, body: { message: 'x', code: 'account_locked' } };
   await trySignIn(page, 'ama@assistance.test', 'x');
   await expect(page.getByText(/Ask an administrator to unlock your account/)).toBeVisible();

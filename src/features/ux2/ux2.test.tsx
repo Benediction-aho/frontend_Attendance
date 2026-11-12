@@ -198,6 +198,7 @@ describe('UX2-10 toasts and sheets', () => {
     );
   }
   it('moves toasts to the top while a sheet is open, and clear removes them', () => {
+    window.history.pushState({}, '', '/app');
     const r = render(
       <ToastProvider>
         <Harness open={false} />

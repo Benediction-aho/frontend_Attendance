@@ -4,7 +4,7 @@ import { Button } from '../../ui/Button';
 import { Modal } from '../../ui/Modal';
 import { useToast } from '../../ui/Toast';
 import { ApiError, api, errorMessage } from '../../lib/api';
-import { ACCEPTED_IMAGE_TYPES, resizeImage } from '../../lib/image';
+import { ACCEPTED_IMAGE_TYPES, photoReadError, resizeImage } from '../../lib/image';
 import type { User } from '../../lib/types';
 import { setMe } from '../auth/useSession';
 
@@ -33,12 +33,16 @@ export function PhotoCard({ user }: { user: User }) {
       );
       return;
     }
+    if (typeof createImageBitmap !== 'function') {
+      // Older browsers: send the original, the server checks type and size.
+      setPreview({ url: URL.createObjectURL(file), blob: file });
+      return;
+    }
     try {
       const blob = await resizeImage(file);
       setPreview({ url: URL.createObjectURL(blob), blob });
     } catch {
-      // Older browsers: send the original, the server checks type and size.
-      setPreview({ url: URL.createObjectURL(file), blob: file });
+      toast.show(photoReadError(file), 'danger');
     }
   };
 

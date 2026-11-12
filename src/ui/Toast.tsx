@@ -73,15 +73,18 @@ export function ToastProvider({ children }: { children: ReactNode }) {
   const clear = useCallback(() => setItems([]), []);
   const api = useMemo(() => ({ show, clear }), [show, clear]);
   const sheetOpen = useSheetOpen();
+  // Full-screen pages outside the app shell (sign-in, onboarding) have their
+  // actions at the bottom on phones: toasts go to the top there (UX2-21).
+  const top = sheetOpen || !globalThis.location?.pathname.startsWith('/app');
   return (
     <Ctx.Provider value={api}>
       {children}
       <div
         aria-live="polite"
-        data-position={sheetOpen ? 'top' : 'bottom'}
+        data-position={top ? 'top' : 'bottom'}
         className={cx(
           'pointer-events-none fixed z-[60] flex flex-col items-center gap-2 md:inset-x-auto md:top-4 md:right-4 md:bottom-auto md:items-end',
-          sheetOpen
+          top
             ? 'inset-x-4 top-[calc(1rem+env(safe-area-inset-top))]'
             : 'inset-x-4 bottom-[calc(5rem+env(safe-area-inset-bottom))]',
         )}

@@ -259,6 +259,24 @@ export async function signInUi(page: Page, email = 'ama@assistance.test', code =
   await page.getByLabel('Identification code or password').fill(code);
   await page.getByRole('button', { name: 'Sign in' }).click();
   await page.waitForURL((u) => !u.pathname.startsWith('/sign-in'));
+  // The token is written to IndexedDB asynchronously: wait for it before any reload.
+  await page.waitForFunction(
+    () =>
+      new Promise<boolean>((resolve) => {
+        // eslint-disable-next-line @typescript-eslint/no-explicit-any
+        const r = (globalThis as any).indexedDB.open('ag');
+        r.onerror = () => resolve(false);
+        r.onsuccess = () => {
+          try {
+            const g = r.result.transaction('kv').objectStore('kv').get('session.token');
+            g.onsuccess = () => resolve(Boolean(g.result));
+            g.onerror = () => resolve(false);
+          } catch {
+            resolve(false);
+          }
+        };
+      }),
+  );
 }
 
 /** Submits the sign-in form without waiting for success (error cases). */

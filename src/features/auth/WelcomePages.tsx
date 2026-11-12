@@ -50,7 +50,7 @@ export function WelcomeCodePage() {
           onDone={() => {
             forgetFirstCode();
             setDone(true);
-            toast.show('Your password is set. Your other devices have been signed out.');
+            toast.show('Your password is set.');
             navigate('/welcome/profile', { replace: true });
           }}
         />

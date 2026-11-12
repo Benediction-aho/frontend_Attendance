@@ -81,7 +81,8 @@ test('sign-in: last attempt warning and pending-approval hint', async ({ page })
   await expect(
     page.getByText('1 attempt left before sign-in is temporarily blocked.'),
   ).toBeVisible();
-  await expect(page.getByText(/may still be awaiting approval/)).toBeVisible();
+  // UX2-24: a known device (remaining attempts sent) does not get the approval hint.
+  await expect(page.getByText(/may still be awaiting approval/)).toHaveCount(0);
   const login = state.calls.find((c) => c.path === '/auth/login')?.body as { password: string };
   expect(login.password).toBe('WRONG1');
 });

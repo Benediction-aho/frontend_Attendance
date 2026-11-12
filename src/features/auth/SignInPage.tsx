@@ -16,6 +16,13 @@ import { signIn } from './useSession';
 import { rememberFirstCode } from './pendingCode';
 import { useCountdown } from './useCountdown';
 import { takeSignOutReason } from '../../lib/session';
+import {
+  clearNotice,
+  hasSignedInHere,
+  loadNotice,
+  markSignedInHere,
+  saveNotice,
+} from './signInNotice';
 import { ApiError } from '../../lib/api';
 import { signOutMessage } from './signOutReason';
 
@@ -33,13 +40,22 @@ export function SignInPage() {
   const navigate = useNavigate();
   const location = useLocation();
   const from = (location.state as { from?: string } | null)?.from;
-  const [error, setError] = useState<
-    (LoginErrorView & { at: number; pendingHint?: boolean }) | null
-  >(null);
+  type ErrorState = LoginErrorView & { at: number; pendingHint?: boolean };
+  // Restored after a reload in the same tab (UX2-23).
+  const [stored] = useState(() => loadNotice<ErrorState>());
+  const [error, setErrorState] = useState<ErrorState | null>(stored?.error ?? null);
   const [reason] = useState(() => {
     const r = takeSignOutReason();
-    return r ? signOutMessage(r) : null;
+    const msg = r ? signOutMessage(r) : (stored?.reason ?? null);
+    if (r) saveNotice({ reason: msg });
+    return msg;
   });
+  const setError = (e: ErrorState | null) => {
+    setErrorState(e);
+    if (!e) return;
+    const ttl = e.retryAfter ? e.retryAfter * 1000 : undefined;
+    if (e.retryAfter || e.locked) saveNotice({ error: e, reason }, ttl);
+  };
   const remaining = useCountdown(error?.retryAfter, error?.at);
   const waiting = remaining > 0;
   const {
@@ -56,6 +72,8 @@ export function SignInPage() {
     try {
       const secret = normalizeSecret(v.password);
       const res = await signIn(v.email, secret);
+      clearNotice();
+      markSignedInHere();
       if (res.must_change_password) {
         rememberFirstCode(secret);
         navigate('/welcome/code', { replace: true });
@@ -65,7 +83,13 @@ export function SignInPage() {
       setError(
         stamped({
           ...view,
-          pendingHint: e instanceof ApiError && e.code === 'invalid_credentials',
+          // Only for a browser that never signed in (the API sends remaining
+          // attempts for known devices): not on every typo of active staff (UX2-24).
+          pendingHint:
+            e instanceof ApiError &&
+            e.code === 'invalid_credentials' &&
+            e.remainingAttempts === undefined &&
+            !hasSignedInHere(),
         }),
       );
     }
