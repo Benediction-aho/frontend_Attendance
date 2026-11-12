@@ -10,6 +10,7 @@ import { Alert } from '../../ui/Alert';
 import { fadeUp, stagger } from '../../ui/motion';
 import { formatCountdown } from '../../lib/format';
 import { AuthLayout, AuthTitle } from './AuthLayout';
+import { InAppBrowserNotice } from '../pwa/InAppBrowserNotice';
 import { describeLoginError, normalizeSecret, stamped, type LoginErrorView } from './loginErrors';
 import { signIn } from './useSession';
 import { rememberFirstCode } from './pendingCode';
@@ -83,6 +84,7 @@ export function SignInPage() {
       }
     >
       <motion.div variants={stagger} initial="hidden" animate="show">
+        <InAppBrowserNotice className="mb-5" />
         <motion.div variants={fadeUp}>
           <AuthTitle
             title="Sign in"

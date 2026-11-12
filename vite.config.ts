@@ -40,6 +40,8 @@ export default defineConfig({
         navigateFallback: '/index.html',
         navigateFallbackDenylist: [/^\/api\//],
         runtimeCaching: [],
+        // Push and notification-click handlers (public/push-sw.js).
+        importScripts: ['push-sw.js'],
         cleanupOutdatedCaches: true,
         sourcemap: false,
       },

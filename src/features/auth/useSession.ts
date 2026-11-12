@@ -12,6 +12,7 @@ import {
   subscribe,
 } from '../../lib/session';
 import type { LoginResponse, User } from '../../lib/types';
+import { resyncPush } from '../../lib/push';
 
 export const ME_KEY = ['me'] as const;
 
@@ -44,6 +45,8 @@ export async function signIn(email: string, password: string): Promise<LoginResp
   queryClient.clear();
   setToken(res.token);
   setMe({ ...res.user, must_change_password: res.must_change_password });
+  // The server drops this device's push subscription on sign-out: send it again.
+  void resyncPush();
   return res;
 }
 

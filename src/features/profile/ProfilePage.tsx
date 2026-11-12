@@ -12,6 +12,23 @@ import { EmailForm } from './EmailForm';
 import { PasswordForm } from './PasswordForm';
 import { PersonalForm } from './PersonalForm';
 import { PhotoCard } from './PhotoCard';
+import { PushSettingsCard } from '../pwa/PushSettings';
+import { FaceIdSetup } from '../faceid/FaceIdSetup';
+import { useMyFaceId } from '../faceid/useFaceId';
+import { Skeleton } from '../../ui/Skeleton';
+
+function FaceIdCard() {
+  const q = useMyFaceId();
+  return (
+    <Card>
+      <CardHeader title="Face ID on this phone" />
+      <CardBody>
+        {q.isPending && <Skeleton className="h-12 w-full" />}
+        {q.data && <FaceIdSetup state={q.data.state} compact />}
+      </CardBody>
+    </Card>
+  );
+}
 
 export function ProfilePage() {
   const { data: me } = useMe();
@@ -82,6 +99,14 @@ export function ProfilePage() {
               </Card>
             </motion.div>
           )}
+          {me.role === 'employee' && (
+            <motion.div variants={fadeUp}>
+              <FaceIdCard />
+            </motion.div>
+          )}
+          <motion.div variants={fadeUp}>
+            <PushSettingsCard />
+          </motion.div>
           <motion.div variants={fadeUp}>
             <Button
               variant="outline"

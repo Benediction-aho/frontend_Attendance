@@ -11,8 +11,14 @@ import { AuthLayout, AuthTitle } from './AuthLayout';
 import { signOut, useMe } from './useSession';
 import { forgetFirstCode, peekFirstCode } from './pendingCode';
 import { useStayOnPage } from './useStayOnPage';
+import type { FaceIdState } from '../../lib/attendance';
+import { FaceIdSetup } from '../faceid/FaceIdSetup';
+import { useMyFaceId } from '../faceid/useFaceId';
+import { InAppBrowserNotice } from '../pwa/InAppBrowserNotice';
 
-const STEPS = ['Sign in', 'Your password', 'Your profile'];
+const BASE_STEPS = ['Sign in', 'Your password', 'Your profile'];
+/** Employees also set up Face ID (needed to check in). */
+const stepsFor = (role?: string) => (role === 'employee' ? [...BASE_STEPS, 'Face ID'] : BASE_STEPS);
 
 /** Forced replacement of the identification code after the first sign-in. */
 export function WelcomeCodePage() {
@@ -26,7 +32,7 @@ export function WelcomeCodePage() {
   return (
     <AuthLayout step={3}>
       <div className="mb-6">
-        <Stepper steps={STEPS} current={1} />
+        <Stepper steps={stepsFor(me?.role)} current={1} />
       </div>
       <AuthTitle
         title={me ? `Welcome, ${me.first_name}` : 'Welcome'}
@@ -69,10 +75,11 @@ export function WelcomeProfilePage() {
   const navigate = useNavigate();
   const { data: me } = useMe();
   const toast = useToast();
+  const next = me?.role === 'employee' ? '/welcome/faceid' : '/app';
   return (
     <AuthLayout step={3}>
       <div className="mb-6">
-        <Stepper steps={STEPS} current={2} />
+        <Stepper steps={stepsFor(me?.role)} current={2} />
       </div>
       <AuthTitle
         title="Complete your profile"
@@ -86,14 +93,69 @@ export function WelcomeProfilePage() {
           submitLabel="Save and continue"
           onDone={() => {
             toast.show('Profile saved.');
-            navigate('/app', { replace: true });
+            navigate(next, { replace: true });
           }}
           secondary={
-            <Button variant="ghost" size="lg" onClick={() => navigate('/app', { replace: true })}>
+            <Button variant="ghost" size="lg" onClick={() => navigate(next, { replace: true })}>
               Skip for now
             </Button>
           }
         />
+      )}
+    </AuthLayout>
+  );
+}
+
+/** Face ID registration right after the first sign-in (employees). */
+export function WelcomeFaceIdPage() {
+  useStayOnPage();
+  const navigate = useNavigate();
+  const { data: me } = useMe();
+  const faceid = useMyFaceId(me?.role === 'employee');
+  const [state, setState] = useState<FaceIdState | null>(null);
+  if (me && me.role !== 'employee') return <Navigate to="/app" replace />;
+  const current = state ?? faceid.data?.state ?? null;
+  return (
+    <AuthLayout step={3}>
+      <div className="mb-6">
+        <Stepper steps={stepsFor('employee')} current={3} />
+      </div>
+      <InAppBrowserNotice className="mb-4" />
+      <AuthTitle
+        title={
+          current === 'ready'
+            ? 'Face ID is ready'
+            : current === 'pending_approval'
+              ? 'Almost there'
+              : 'Set up Face ID'
+        }
+        subtitle={
+          current === 'ready'
+            ? 'You will confirm each check-in with Face ID (or your fingerprint).'
+            : current === 'pending_approval'
+              ? 'An administrator must approve this phone before you can check in.'
+              : 'You need it to check in. It takes a few seconds.'
+        }
+      />
+      {current && current !== 'ready' && current !== 'pending_approval' && (
+        <FaceIdSetup state={current} compact onDone={(s) => setState(s)} />
+      )}
+      {current === 'pending_approval' && <FaceIdSetup state={current} compact />}
+      {current === 'ready' && (
+        <Button size="lg" block onClick={() => navigate('/app', { replace: true })}>
+          Continue to check-in
+        </Button>
+      )}
+      {current !== 'ready' && (
+        <Button
+          variant="ghost"
+          size="lg"
+          block
+          className="mt-3"
+          onClick={() => navigate('/app', { replace: true })}
+        >
+          {current === 'pending_approval' ? 'Continue' : 'Do it later'}
+        </Button>
       )}
     </AuthLayout>
   );
