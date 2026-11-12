@@ -55,6 +55,8 @@
   --color-success-700: #1d7a48;
   --color-danger-50: #fdeeee;
   --color-danger-700: #b42828;
+  --color-danger-800: #962020;
+  --color-danger-900: #7a1a1a;
 
   /* Radii */
   --radius-control: 0.625rem;
