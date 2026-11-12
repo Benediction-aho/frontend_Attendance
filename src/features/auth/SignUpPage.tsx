@@ -83,7 +83,7 @@ export function SignUpPage() {
   );
 
   return (
-    <AuthLayout>
+    <AuthLayout step={0}>
       <AuthTitle
         title="Request an account"
         subtitle="An administrator reviews every request. No password is needed now."

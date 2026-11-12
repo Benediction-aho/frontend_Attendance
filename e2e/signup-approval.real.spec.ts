@@ -65,7 +65,8 @@ test('real API: sign-up, approval by super admin, first sign-in, code change, pr
   await employee.getByLabel('Identification code or password').fill(code);
   await employee.getByRole('button', { name: 'Sign in' }).click();
   await expect(employee).toHaveURL(/\/welcome\/code$/);
-  await employee.getByLabel('Identification code (from the email)').fill(code);
+  // The code typed at sign-in is reused; it is not asked again.
+  await expect(employee.getByLabel('Identification code (from the email)')).toHaveCount(0);
   await employee.getByLabel('New password', { exact: true }).fill('Kumasi2026pass');
   await employee.getByLabel('Confirm new password').fill('Kumasi2026pass');
   await employee.getByRole('button', { name: 'Save my password' }).click();

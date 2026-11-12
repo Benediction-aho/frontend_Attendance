@@ -12,6 +12,7 @@ import { formatCountdown } from '../../lib/format';
 import { AuthLayout, AuthTitle } from './AuthLayout';
 import { describeLoginError, stamped, type LoginErrorView } from './loginErrors';
 import { signIn } from './useSession';
+import { rememberFirstCode } from './pendingCode';
 import { useCountdown } from './useCountdown';
 import { takeSignOutReason } from '../../lib/session';
 
@@ -51,15 +52,27 @@ export function SignInPage() {
     setError(null);
     try {
       const res = await signIn(v.email, v.password);
-      if (res.must_change_password) navigate('/welcome/code', { replace: true });
-      else navigate(from && from.startsWith('/app') ? from : '/app', { replace: true });
+      if (res.must_change_password) {
+        rememberFirstCode(v.password);
+        navigate('/welcome/code', { replace: true });
+      } else navigate(from && from.startsWith('/app') ? from : '/app', { replace: true });
     } catch (e) {
       setError(stamped(describeLoginError(e)));
     }
   });
 
   return (
-    <AuthLayout>
+    <AuthLayout
+      step={3}
+      footer={
+        <Link
+          to="/sign-in/super-admin"
+          className="inline-flex min-h-11 items-center px-2 hover:text-primary-700 hover:underline"
+        >
+          Super admin sign-in
+        </Link>
+      }
+    >
       <motion.div variants={stagger} initial="hidden" animate="show">
         <motion.div variants={fadeUp}>
           <AuthTitle
@@ -120,14 +133,6 @@ export function SignInPage() {
             </Link>
           </p>
           <p className="mt-2">Lost your code? Ask an administrator to send you a new one.</p>
-          <p className="mt-4">
-            <Link
-              to="/sign-in/super-admin"
-              className="inline-flex min-h-11 items-center font-medium text-ink-500 hover:text-primary-700"
-            >
-              Super admin sign-in
-            </Link>
-          </p>
         </motion.div>
       </motion.div>
     </AuthLayout>

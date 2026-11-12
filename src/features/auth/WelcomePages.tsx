@@ -9,6 +9,7 @@ import { PasswordForm } from '../profile/PasswordForm';
 import { PersonalForm } from '../profile/PersonalForm';
 import { AuthLayout, AuthTitle } from './AuthLayout';
 import { signOut, useMe } from './useSession';
+import { forgetFirstCode, peekFirstCode } from './pendingCode';
 
 const STEPS = ['Sign in', 'Your password', 'Your profile'];
 
@@ -18,21 +19,28 @@ export function WelcomeCodePage() {
   const { data: me } = useMe();
   const toast = useToast();
   const [done, setDone] = useState(false);
+  const [knownCode] = useState(peekFirstCode);
   if (me && !me.must_change_password && !done) return <Navigate to="/app" replace />;
   return (
-    <AuthLayout>
+    <AuthLayout step={3}>
       <div className="mb-6">
         <Stepper steps={STEPS} current={1} />
       </div>
       <AuthTitle
         title={me ? `Welcome, ${me.first_name}` : 'Welcome'}
-        subtitle="Before you continue, replace your identification code with a password only you know."
+        subtitle={
+          knownCode
+            ? 'Before you continue, choose a password only you know. It replaces your identification code.'
+            : 'Before you continue, replace your identification code with a password only you know.'
+        }
       />
       <motion.div variants={fadeUp} initial="hidden" animate="show">
         <PasswordForm
           currentLabel="Identification code (from the email)"
           submitLabel="Save my password"
+          knownCurrent={knownCode}
           onDone={() => {
+            forgetFirstCode();
             setDone(true);
             toast.show('Your password is set. Your other devices have been signed out.');
             navigate('/welcome/profile', { replace: true });
@@ -41,7 +49,10 @@ export function WelcomeCodePage() {
       </motion.div>
       <button
         type="button"
-        onClick={() => void signOut().then(() => navigate('/sign-in', { replace: true }))}
+        onClick={() => {
+          forgetFirstCode();
+          void signOut().then(() => navigate('/sign-in', { replace: true }));
+        }}
         className="mt-5 inline-flex min-h-11 items-center text-sm font-medium text-ink-500 hover:text-primary-700"
       >
         Sign out
@@ -56,7 +67,7 @@ export function WelcomeProfilePage() {
   const { data: me } = useMe();
   const toast = useToast();
   return (
-    <AuthLayout>
+    <AuthLayout step={3}>
       <div className="mb-6">
         <Stepper steps={STEPS} current={2} />
       </div>

@@ -22,7 +22,7 @@ const NEXT = [
 export function SignUpSentPage() {
   const name = (useLocation().state as { firstName?: string } | null)?.firstName;
   return (
-    <AuthLayout>
+    <AuthLayout step={1}>
       <div className="mb-6">
         <Stepper steps={['About you', 'Your position', 'Approval']} current={2} />
       </div>

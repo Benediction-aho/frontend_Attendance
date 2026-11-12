@@ -1,3 +1,4 @@
+import { forgetFirstCode } from './pendingCode';
 import { useSyncExternalStore } from 'react';
 import { useQuery } from '@tanstack/react-query';
 import { api } from '../../lib/api';
@@ -48,6 +49,7 @@ export async function signIn(email: string, password: string): Promise<LoginResp
 
 /** Signs this device out. The local session ends even if the server cannot be reached. */
 export async function signOut(): Promise<void> {
+  forgetFirstCode();
   try {
     await api.post('/auth/logout', undefined, { retries: 1 });
   } catch {

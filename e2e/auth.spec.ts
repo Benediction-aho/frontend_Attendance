@@ -45,10 +45,16 @@ test('first sign-in: code, forced password change, profile completion, then home
   await mockApi(page, state);
   await signInUi(page);
   await expect(page).toHaveURL(/\/welcome\/code$/);
-  // The app cannot be reached before the code is replaced.
+  // The code typed at sign-in is not asked again (kept in memory only).
+  await expect(page.getByLabel('Identification code (from the email)')).toHaveCount(0);
+  // The app cannot be reached before the code is replaced. After a full reload
+  // the code is no longer in memory, so the form asks for it.
   await page.goto('/app/profile');
   await expect(page).toHaveURL(/\/welcome\/code$/);
   await page.getByLabel('Identification code (from the email)').fill('CODE123456');
+  await expect(page.getByText('Weak:', { exact: false })).toHaveCount(0);
+  await page.getByLabel('New password', { exact: true }).fill('abc');
+  await expect(page.getByText(/^Weak:/)).toBeVisible();
   await page.getByLabel('New password', { exact: true }).fill('mysecret2026');
   await page.getByLabel('Confirm new password').fill('mysecret2026');
   await page.getByRole('button', { name: 'Save my password' }).click();
@@ -62,6 +68,21 @@ test('first sign-in: code, forced password change, profile completion, then home
   expect(String(login.device_id)).toMatch(/^[A-Za-z0-9_-]{16,128}$/);
   expect(state.calls.find((c) => c.path === '/me' && c.method === 'PATCH')?.body).toMatchObject({
     phone: '+233 24 123 4567',
+  });
+});
+
+test('first sign-in without reload sends the remembered code', async ({ page }) => {
+  const state = newState({ must_change_password: true });
+  await mockApi(page, state);
+  await signInUi(page);
+  await expect(page).toHaveURL(/\/welcome\/code$/);
+  await expect(page.getByLabel('Identification code (from the email)')).toHaveCount(0);
+  await page.getByLabel('New password', { exact: true }).fill('mysecret2026');
+  await page.getByLabel('Confirm new password').fill('mysecret2026');
+  await page.getByRole('button', { name: 'Save my password' }).click();
+  await expect(page.getByRole('heading', { name: 'Complete your profile' })).toBeVisible();
+  expect(state.calls.find((c) => c.path === '/me/password')?.body).toMatchObject({
+    current_password: 'CODE123456',
   });
 });
 
