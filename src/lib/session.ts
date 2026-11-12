@@ -47,7 +47,7 @@ export function setToken(value: string | null): void {
 /** Called only when the server says the session is invalid (HTTP 401). */
 export function invalidateSession(reason?: string): void {
   if (token === null) return;
-  signOutReason = reason ?? null;
+  signOutReason = reason ?? 'session_ended';
   setToken(null);
 }
 

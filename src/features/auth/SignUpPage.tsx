@@ -9,7 +9,7 @@ import { Input, Segmented } from '../../ui/Field';
 import { Alert } from '../../ui/Alert';
 import { Stepper } from '../../ui/Stepper';
 import { stepVariants } from '../../ui/motion';
-import { ApiError, api } from '../../lib/api';
+import { ApiError, api, roughWait } from '../../lib/api';
 import { AuthLayout, AuthTitle } from './AuthLayout';
 
 const schema = z.object({
@@ -71,7 +71,10 @@ export function SignUpPage() {
           if (firstStep === 0) back();
           setError('Please check the highlighted fields.');
         } else if (e instanceof ApiError && e.status === 429) {
-          setError('Too many requests from this network. Please try again later.');
+          const wait = e.retryAfterSeconds;
+          setError(
+            `Too many sign-up requests right now. Try again ${wait ? `in ${roughWait(wait)}` : 'later'}, or ask an administrator to create your account.`,
+          );
         } else {
           setError(e instanceof ApiError ? e.message : 'Something went wrong. Please try again.');
         }

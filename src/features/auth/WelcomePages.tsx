@@ -10,11 +10,13 @@ import { PersonalForm } from '../profile/PersonalForm';
 import { AuthLayout, AuthTitle } from './AuthLayout';
 import { signOut, useMe } from './useSession';
 import { forgetFirstCode, peekFirstCode } from './pendingCode';
+import { useStayOnPage } from './useStayOnPage';
 
 const STEPS = ['Sign in', 'Your password', 'Your profile'];
 
 /** Forced replacement of the identification code after the first sign-in. */
 export function WelcomeCodePage() {
+  useStayOnPage();
   const navigate = useNavigate();
   const { data: me } = useMe();
   const toast = useToast();
@@ -63,6 +65,7 @@ export function WelcomeCodePage() {
 
 /** Optional profile completion right after the password is set. */
 export function WelcomeProfilePage() {
+  useStayOnPage();
   const navigate = useNavigate();
   const { data: me } = useMe();
   const toast = useToast();

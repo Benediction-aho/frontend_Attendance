@@ -6,7 +6,7 @@ import { Input } from '../../ui/Field';
 import { Alert } from '../../ui/Alert';
 import { Stepper } from '../../ui/Stepper';
 import { stepVariants } from '../../ui/motion';
-import { api, errorMessage } from '../../lib/api';
+import { ApiError, api, errorMessage } from '../../lib/api';
 import { formatCountdown } from '../../lib/format';
 import { getDeviceId } from '../../lib/session';
 import { AuthLayout, AuthTitle } from './AuthLayout';
@@ -27,6 +27,7 @@ export function SuperAdminSignInPage() {
   const [notice, setNotice] = useState<string | null>(null);
   const [error, setError] = useState<(LoginErrorView & { at: number }) | null>(null);
   const remaining = useCountdown(error?.retryAfter, error?.at);
+  const signInWait = error?.requestOnly ? 0 : remaining;
 
   const requestCode = async (e?: React.FormEvent) => {
     e?.preventDefault();
@@ -44,7 +45,16 @@ export function SuperAdminSignInPage() {
       );
       setStep(1);
     } catch (err) {
-      setError(stamped({ message: errorMessage(err) }));
+      setNotice(null);
+      // Throttled: the last code received still works, so show the code step.
+      if (err instanceof ApiError && err.code === 'too_many_code_requests') setStep(1);
+      setError(
+        stamped(
+          err instanceof ApiError && err.status === 429
+            ? describeLoginError(err)
+            : { message: errorMessage(err) },
+        ),
+      );
     } finally {
       setBusy(false);
     }
@@ -60,9 +70,10 @@ export function SuperAdminSignInPage() {
     setFieldError(undefined);
     setBusy(true);
     try {
-      await signIn(email, code.trim());
+      await signIn(email, code.replace(/\s/g, ''));
       navigate('/app', { replace: true });
     } catch (err) {
+      setNotice(null);
       setError(stamped(describeLoginError(err)));
     } finally {
       setBusy(false);
@@ -112,7 +123,7 @@ export function SuperAdminSignInPage() {
               onChange={(e) => setEmail(e.target.value)}
               error={fieldError}
             />
-            <Button type="submit" size="lg" block loading={busy}>
+            <Button type="submit" size="lg" block loading={busy} disabled={remaining > 0}>
               Send me a code
             </Button>
           </motion.form>
@@ -139,7 +150,7 @@ export function SuperAdminSignInPage() {
               error={fieldError}
               hint={`Sent to ${email.trim()}`}
             />
-            <Button type="submit" size="lg" block loading={busy} disabled={remaining > 0}>
+            <Button type="submit" size="lg" block loading={busy} disabled={signInWait > 0}>
               Sign in
             </Button>
             <div className="flex flex-wrap justify-between gap-2">
@@ -154,7 +165,12 @@ export function SuperAdminSignInPage() {
               >
                 Change email
               </Button>
-              <Button variant="ghost" size="sm" onClick={() => void requestCode()} disabled={busy}>
+              <Button
+                variant="ghost"
+                size="sm"
+                onClick={() => void requestCode()}
+                disabled={busy || remaining > 0}
+              >
                 Send a new code
               </Button>
             </div>
@@ -163,7 +179,7 @@ export function SuperAdminSignInPage() {
       </AnimatePresence>
       <div className="mt-6 border-t border-ink-100 pt-5 text-sm text-ink-600">
         <p>
-          Sign-in locked?{' '}
+          Blocked or locked out?{' '}
           <Link to="/recover" className="font-semibold text-primary-700 hover:underline">
             Get a recovery link
           </Link>

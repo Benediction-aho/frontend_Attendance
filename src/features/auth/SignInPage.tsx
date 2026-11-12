@@ -10,11 +10,13 @@ import { Alert } from '../../ui/Alert';
 import { fadeUp, stagger } from '../../ui/motion';
 import { formatCountdown } from '../../lib/format';
 import { AuthLayout, AuthTitle } from './AuthLayout';
-import { describeLoginError, stamped, type LoginErrorView } from './loginErrors';
+import { describeLoginError, normalizeSecret, stamped, type LoginErrorView } from './loginErrors';
 import { signIn } from './useSession';
 import { rememberFirstCode } from './pendingCode';
 import { useCountdown } from './useCountdown';
 import { takeSignOutReason } from '../../lib/session';
+import { ApiError } from '../../lib/api';
+import { signOutMessage } from './signOutReason';
 
 const schema = z.object({
   email: z
@@ -30,12 +32,12 @@ export function SignInPage() {
   const navigate = useNavigate();
   const location = useLocation();
   const from = (location.state as { from?: string } | null)?.from;
-  const [error, setError] = useState<(LoginErrorView & { at: number }) | null>(null);
+  const [error, setError] = useState<
+    (LoginErrorView & { at: number; pendingHint?: boolean }) | null
+  >(null);
   const [reason] = useState(() => {
     const r = takeSignOutReason();
-    if (r === 'reauth_limit')
-      return 'For your security you were signed out after too many incorrect password attempts. Sign in again.';
-    return r ? 'Your session has ended. Please sign in again.' : null;
+    return r ? signOutMessage(r) : null;
   });
   const remaining = useCountdown(error?.retryAfter, error?.at);
   const waiting = remaining > 0;
@@ -51,13 +53,20 @@ export function SignInPage() {
   const onSubmit = handleSubmit(async (v) => {
     setError(null);
     try {
-      const res = await signIn(v.email, v.password);
+      const secret = normalizeSecret(v.password);
+      const res = await signIn(v.email, secret);
       if (res.must_change_password) {
-        rememberFirstCode(v.password);
+        rememberFirstCode(secret);
         navigate('/welcome/code', { replace: true });
       } else navigate(from && from.startsWith('/app') ? from : '/app', { replace: true });
     } catch (e) {
-      setError(stamped(describeLoginError(e)));
+      const view = describeLoginError(e);
+      setError(
+        stamped({
+          ...view,
+          pendingHint: e instanceof ApiError && e.code === 'invalid_credentials',
+        }),
+      );
     }
   });
 
@@ -91,6 +100,13 @@ export function SignInPage() {
                   Try again in{' '}
                   <strong className="tabular-nums">{formatCountdown(remaining)}</strong>.
                 </>
+              )}
+              {error.hint && <span className="mt-1 block font-semibold">{error.hint}</span>}
+              {error.pendingHint && (
+                <span className="mt-1 block text-sm">
+                  If you recently signed up, your request may still be awaiting approval. You will
+                  receive an email once it is approved.
+                </span>
               )}
             </Alert>
           )}

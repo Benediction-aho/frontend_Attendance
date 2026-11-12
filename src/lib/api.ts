@@ -7,13 +7,22 @@ export class ApiError extends Error {
   readonly kind: ApiErrorKind;
   readonly status: number | null;
   readonly body: unknown;
+  /** Seconds from the Retry-After header, when the server sent one. */
+  readonly retryAfterHeader: number | undefined;
 
-  constructor(kind: ApiErrorKind, status: number | null, message: string, body?: unknown) {
+  constructor(
+    kind: ApiErrorKind,
+    status: number | null,
+    message: string,
+    body?: unknown,
+    retryAfterHeader?: number,
+  ) {
     super(message);
     this.name = 'ApiError';
     this.kind = kind;
     this.status = status;
     this.body = body;
+    this.retryAfterHeader = retryAfterHeader;
   }
 
   /** Transient errors are retried and never end the session. */
@@ -29,7 +38,17 @@ export class ApiError extends Error {
 
   get retryAfterSeconds(): number | undefined {
     const b = this.body as { retry_after_seconds?: unknown } | null;
-    return b && typeof b.retry_after_seconds === 'number' ? b.retry_after_seconds : undefined;
+    return b && typeof b.retry_after_seconds === 'number'
+      ? b.retry_after_seconds
+      : this.retryAfterHeader;
+  }
+
+  /** Sign-in attempts left before a temporary block, when the API says so. */
+  get remainingAttempts(): number | undefined {
+    const b = this.body as { remaining_attempts?: unknown; attempts_remaining?: unknown } | null;
+    if (!b) return undefined;
+    const v = b.remaining_attempts ?? b.attempts_remaining;
+    return typeof v === 'number' && Number.isFinite(v) ? v : undefined;
   }
 
   /** 422 field errors: field => first message. */
@@ -68,6 +87,15 @@ const forbiddenListeners = new Set<Listener>();
 export function onPasswordChangeRequired(l: Listener): () => void {
   forbiddenListeners.add(l);
   return () => forbiddenListeners.delete(l);
+}
+
+/** Retry-After as seconds (number or HTTP date); undefined when absent or invalid. */
+export function parseRetryAfter(value: string | null, now = Date.now()): number | undefined {
+  if (!value) return undefined;
+  const v = value.trim();
+  if (/^\d+$/.test(v)) return Number(v);
+  const t = Date.parse(v);
+  return Number.isNaN(t) ? undefined : Math.max(0, Math.round((t - now) / 1000));
 }
 
 const defaultSleep = (ms: number) => new Promise<void>((r) => setTimeout(r, ms));
@@ -146,6 +174,7 @@ export function createApiClient(config: ApiClientConfig) {
       res.status,
       serverMessage ?? 'The request could not be completed.',
       data,
+      parseRetryAfter(res.headers.get('Retry-After')),
     );
     if (res.status === 403 && err.code === 'password_change_required') {
       forbiddenListeners.forEach((l) => l(err));
@@ -194,8 +223,29 @@ export function qs(params: Record<string, string | number | boolean | undefined 
   return s ? `?${s}` : '';
 }
 
+/** "9 min", "45 s" – rough remaining time for rate-limit messages. */
+export function roughWait(seconds: number): string {
+  const s = Math.max(1, Math.ceil(seconds));
+  if (s < 60) return `${s} s`;
+  const m = Math.ceil(s / 60);
+  return `${m} minute${m > 1 ? 's' : ''}`;
+}
+
+/** Clear message for an HTTP 429: what happened, how long to wait, what to do next. */
+export function throttleMessage(e: ApiError): string {
+  const wait = e.retryAfterSeconds;
+  const when = wait !== undefined && wait > 0 ? `in ${roughWait(wait)}` : 'in a few minutes';
+  switch (e.code) {
+    case 'too_many_code_requests':
+      return `You asked for several codes. Use the last code you received, or ask for a new one ${when}.`;
+    default:
+      return `Too many requests. Please wait and try again ${when}.`;
+  }
+}
+
 /** User-facing message for any error. */
 export function errorMessage(e: unknown): string {
+  if (e instanceof ApiError && e.status === 429) return throttleMessage(e);
   if (e instanceof ApiError) return e.message;
   return 'Something went wrong. Please try again.';
 }

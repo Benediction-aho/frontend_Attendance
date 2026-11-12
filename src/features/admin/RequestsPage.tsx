@@ -85,7 +85,9 @@ export function RequestsPage() {
                       <p className="font-semibold text-ink-900">{u.full_name}</p>
                       <p className="truncate text-sm text-ink-500">{u.email}</p>
                       <p className="mt-1 flex flex-wrap items-center gap-2 text-sm text-ink-600">
-                        <Badge tone="neutral">{TYPE_LABEL[u.employee_type]}</Badge>
+                        {u.employee_type && (
+                          <Badge tone="neutral">{TYPE_LABEL[u.employee_type]}</Badge>
+                        )}
                         <span>{u.job_title ?? '–'}</span>
                         <span className="text-xs text-ink-400">
                           · {formatDateTime(u.created_at)}

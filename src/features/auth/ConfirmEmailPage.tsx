@@ -8,20 +8,43 @@ import { AuthLayout, AuthTitle } from './AuthLayout';
 import { useToken } from './useSession';
 import { useUrlToken } from './useUrlToken';
 
+type Outcome = { tone: 'success' | 'info' | 'danger'; message: string };
+const RESULT_KEY = 'confirm-email.result';
+
+function saveOutcome(o: Outcome) {
+  try {
+    sessionStorage.setItem(RESULT_KEY, JSON.stringify(o));
+  } catch {
+    /* storage unavailable: a reload shows the generic message */
+  }
+}
+
+/** Result of the confirmation already done in this tab (survives a reload). */
+function lastOutcome(): Outcome | null {
+  try {
+    const raw = sessionStorage.getItem(RESULT_KEY);
+    const o = raw ? (JSON.parse(raw) as Outcome) : null;
+    return o && typeof o.message === 'string' ? o : null;
+  } catch {
+    return null;
+  }
+}
+
 export function ConfirmEmailPage() {
   const token = useUrlToken();
   const signedIn = Boolean(useToken());
-  const [state, setState] = useState<{
-    tone: 'success' | 'info' | 'danger';
-    message: string;
-  } | null>(
+  const [state, setStateRaw] = useState<Outcome | null>(() =>
     token
       ? null
-      : {
+      : (lastOutcome() ?? {
           tone: 'danger',
           message: 'This link is incomplete. Open the link from your email again.',
-        },
+        }),
   );
+  const setState = (o: Outcome) => {
+    saveOutcome(o);
+    setStateRaw(o);
+  };
   const done = useRef(false);
 
   useEffect(() => {

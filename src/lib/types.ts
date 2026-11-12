@@ -9,7 +9,7 @@ export interface User {
   full_name: string;
   email: string;
   role: Role;
-  employee_type: EmployeeType;
+  employee_type: EmployeeType | null;
   job_title: string | null;
   status: UserStatus;
   photo_url?: string | null;
@@ -24,6 +24,8 @@ export interface User {
   approved_at?: string | null;
   last_login_at?: string | null;
   created_at?: string;
+  /** Password policy from the API settings (when provided). */
+  password_min_length?: number;
 }
 
 export interface PageMeta {
@@ -56,6 +58,9 @@ export interface Setting {
   value: unknown;
   default: unknown;
   scheduled: { value: unknown; effective_from: string }[];
+  /** Bounds from the setting definition, when the API provides them. */
+  min?: number | null;
+  max?: number | null;
 }
 
 export interface SettingHistoryEntry {

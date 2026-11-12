@@ -7,7 +7,8 @@ import { Input } from '../../ui/Field';
 import { Alert } from '../../ui/Alert';
 import { ApiError, api } from '../../lib/api';
 import type { User } from '../../lib/types';
-import { setMe } from '../auth/useSession';
+import { setMe, useMe } from '../auth/useSession';
+import { normalizeSecret } from '../auth/loginErrors';
 import { formatCountdown } from '../../lib/format';
 import { cx } from '../../ui/cx';
 import { passwordStrength } from './passwordStrength';
@@ -54,12 +55,22 @@ export function PasswordForm({
     resolver: zodResolver(schema),
     defaultValues: { current_password: knownCurrent ?? '' },
   });
+  const minLength = useMe().data?.password_min_length;
   const strength = passwordStrength(useWatch({ control, name: 'new_password' }) ?? '');
 
   const onSubmit = handleSubmit(async (v) => {
     setError(null);
     try {
-      const res = await api.put<{ data: User }>('/me/password', v);
+      if (minLength && v.new_password.length < minLength) {
+        setFieldError('new_password', {
+          message: `Use at least ${minLength} characters.`,
+        });
+        return;
+      }
+      const res = await api.put<{ data: User }>('/me/password', {
+        ...v,
+        current_password: normalizeSecret(v.current_password),
+      });
       reset();
       // Navigate first so the onboarding guard never sees a half-finished state.
       onDone?.(res.data);
@@ -106,7 +117,11 @@ export function PasswordForm({
         label="New password"
         type="password"
         autoComplete="new-password"
-        hint="Use letters and digits. Avoid common passwords."
+        hint={
+          minLength
+            ? `At least ${minLength} characters, with letters and digits. Avoid common passwords.`
+            : 'Use a long password with letters and digits. Avoid common passwords.'
+        }
         error={errors.new_password?.message}
         {...register('new_password')}
       />

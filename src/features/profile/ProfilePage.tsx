@@ -53,7 +53,7 @@ export function ProfilePage() {
               <CardHeader title="Account" />
               <CardBody className="flex flex-wrap gap-2">
                 <Badge tone="primary">{ROLE_LABEL[me.role]}</Badge>
-                <Badge>{TYPE_LABEL[me.employee_type]}</Badge>
+                {me.employee_type && <Badge>{TYPE_LABEL[me.employee_type]}</Badge>}
               </CardBody>
             </Card>
           </motion.div>

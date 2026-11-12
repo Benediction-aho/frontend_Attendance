@@ -37,7 +37,8 @@ function FlowTimeline({ current }: { current?: OnboardingStep }) {
             key={label}
             variants={fadeUp}
             aria-current={state === 'current' ? 'step' : undefined}
-            className="relative flex gap-4 pb-6 last:pb-0"
+            data-state={state}
+            className={cx('relative flex gap-4 pb-6 last:pb-0', state === 'todo' && 'opacity-60')}
           >
             {i < ONBOARDING_STEPS.length - 1 && (
               <span
@@ -59,9 +60,12 @@ function FlowTimeline({ current }: { current?: OnboardingStep }) {
             <span
               className={cx(
                 'pt-1 text-sm',
-                state === 'current' ? 'font-semibold text-white' : 'text-primary-100',
+                state === 'current' && 'font-semibold text-white',
+                state === 'done' && 'text-white',
+                state === 'todo' && 'text-primary-100',
               )}
             >
+              {state === 'done' && <span className="sr-only">Done: </span>}
               {label}
             </span>
           </motion.li>
