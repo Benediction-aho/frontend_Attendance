@@ -2,25 +2,40 @@ import { createBrowserRouter, Navigate } from 'react-router';
 import { AppLayout } from './AppLayout';
 import { RequireAuth, RedirectIfSignedIn, Gate } from '../features/auth/guards';
 import { SignInPage } from '../features/auth/SignInPage';
-import { SignUpPage } from '../features/auth/SignUpPage';
-import { SignUpSentPage } from '../features/auth/SignUpSentPage';
-import { SuperAdminSignInPage } from '../features/auth/SuperAdminSignInPage';
-import { RecoverPage } from '../features/auth/RecoverPage';
-import { ConfirmEmailPage } from '../features/auth/ConfirmEmailPage';
-import { WelcomeCodePage, WelcomeProfilePage } from '../features/auth/WelcomePages';
 import { DashboardPage } from '../features/dashboard/DashboardPage';
-import { ProfilePage } from '../features/profile/ProfilePage';
-import { NotificationsPage } from '../features/notifications/NotificationsPage';
-import { AdminHubPage } from '../features/admin/AdminHubPage';
-import { RequestsPage } from '../features/admin/RequestsPage';
-import { UsersPage } from '../features/admin/UsersPage';
-import { UserDetailPage } from '../features/admin/UserDetailPage';
-import { CreateUserPage } from '../features/admin/CreateUserPage';
-import { SettingsPage } from '../features/admin/SettingsPage';
-import { LogsPage } from '../features/admin/LogsPage';
 import { useMe } from '../features/auth/useSession';
+import { lazyPage } from './lazyPage';
 import { can, canManageAccounts, canViewLogs, isSuperAdmin } from '../lib/permissions';
 import type { User } from '../lib/types';
+
+const SignUpPage = lazyPage(() => import('../features/auth/SignUpPage'), 'SignUpPage');
+const SignUpSentPage = lazyPage(() => import('../features/auth/SignUpSentPage'), 'SignUpSentPage');
+const SuperAdminSignInPage = lazyPage(
+  () => import('../features/auth/SuperAdminSignInPage'),
+  'SuperAdminSignInPage',
+);
+const RecoverPage = lazyPage(() => import('../features/auth/RecoverPage'), 'RecoverPage');
+const ConfirmEmailPage = lazyPage(
+  () => import('../features/auth/ConfirmEmailPage'),
+  'ConfirmEmailPage',
+);
+const WelcomeCodePage = lazyPage(() => import('../features/auth/WelcomePages'), 'WelcomeCodePage');
+const WelcomeProfilePage = lazyPage(
+  () => import('../features/auth/WelcomePages'),
+  'WelcomeProfilePage',
+);
+const ProfilePage = lazyPage(() => import('../features/profile/ProfilePage'), 'ProfilePage');
+const NotificationsPage = lazyPage(
+  () => import('../features/notifications/NotificationsPage'),
+  'NotificationsPage',
+);
+const AdminHubPage = lazyPage(() => import('../features/admin/AdminHubPage'), 'AdminHubPage');
+const RequestsPage = lazyPage(() => import('../features/admin/RequestsPage'), 'RequestsPage');
+const UsersPage = lazyPage(() => import('../features/admin/UsersPage'), 'UsersPage');
+const UserDetailPage = lazyPage(() => import('../features/admin/UserDetailPage'), 'UserDetailPage');
+const CreateUserPage = lazyPage(() => import('../features/admin/CreateUserPage'), 'CreateUserPage');
+const SettingsPage = lazyPage(() => import('../features/admin/SettingsPage'), 'SettingsPage');
+const LogsPage = lazyPage(() => import('../features/admin/LogsPage'), 'LogsPage');
 
 function Allowed({
   check,
