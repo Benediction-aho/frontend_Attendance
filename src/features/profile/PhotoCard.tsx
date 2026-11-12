@@ -84,7 +84,7 @@ export function PhotoCard({ user }: { user: User }) {
             {user.photo_url ? 'Change photo' : 'Add a photo'}
           </Button>
           {user.photo_url && (
-            <Button variant="ghost" size="sm" onClick={() => setConfirmRemove(true)}>
+            <Button variant="danger-ghost" size="sm" onClick={() => setConfirmRemove(true)}>
               Remove
             </Button>
           )}

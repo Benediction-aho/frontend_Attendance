@@ -256,21 +256,29 @@ export function UserDetailPage() {
                   </Button>
                 )}
                 {can.remove && (
-                  <Button
-                    variant="ghost"
-                    className="text-danger-700 hover:bg-danger-50"
-                    onClick={() =>
-                      ask({
-                        action: { kind: 'delete' },
-                        title: `Delete ${u.full_name}?`,
-                        body: 'The account is closed and signed out everywhere. History keeps the name.',
-                        cta: 'Delete account',
-                        variant: 'danger',
-                      })
-                    }
-                  >
-                    Delete account
-                  </Button>
+                  <div className="mt-2 w-full border-t border-ink-100 pt-4">
+                    <p className="text-xs font-semibold tracking-wide text-danger-700 uppercase">
+                      Danger zone
+                    </p>
+                    <p className="mt-1 mb-2 text-sm text-ink-600">
+                      Closes the account for good. This cannot be undone.
+                    </p>
+                    <Button
+                      variant="danger-ghost"
+                      className="-ml-3"
+                      onClick={() =>
+                        ask({
+                          action: { kind: 'delete' },
+                          title: `Delete ${u.full_name}?`,
+                          body: 'The account is closed and signed out everywhere. History keeps the name.',
+                          cta: 'Delete account',
+                          variant: 'danger',
+                        })
+                      }
+                    >
+                      Delete account
+                    </Button>
+                  </div>
                 )}
               </CardBody>
             </Card>

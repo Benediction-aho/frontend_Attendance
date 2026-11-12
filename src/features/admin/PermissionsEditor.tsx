@@ -91,9 +91,11 @@ export function PermissionsEditor({
       />
       <div className="flex flex-wrap items-center justify-end gap-3">
         {dirty && <span className="text-sm text-secondary-800">Unsaved changes</span>}
-        <Button variant="outline" disabled={!dirty} onClick={() => setValue(initial)}>
-          Undo
-        </Button>
+        {dirty && (
+          <Button variant="outline" onClick={() => setValue(initial)}>
+            Undo
+          </Button>
+        )}
         <Button disabled={!dirty} loading={saving} onClick={() => onSave(value)}>
           Save permissions
         </Button>
