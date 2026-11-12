@@ -1,5 +1,9 @@
 import {
   Bell,
+  CalendarDays,
+  Clock3,
+  ScanFace,
+  CalendarClock,
   ClipboardList,
   LayoutDashboard,
   LogOut,
@@ -12,7 +16,9 @@ import {
   type LucideIcon,
 } from 'lucide-react';
 import { AnimatePresence, motion } from 'motion/react';
-import { useState } from 'react';
+import { useEffect, useState } from 'react';
+import { onCheckInRequired } from '../lib/api';
+import { useToast } from '../ui/Toast';
 import { Link, NavLink, useLocation, useNavigate, useOutlet } from 'react-router';
 import { Modal } from '../ui/Modal';
 import { Logo } from '../ui/Logo';
@@ -21,7 +27,14 @@ import { cx } from '../ui/cx';
 import { duration, easing } from '../ui/motion';
 import { signOut, useMe } from '../features/auth/useSession';
 import { useUnreadCount } from '../features/notifications/useNotifications';
-import { can, canManageAccounts, canViewLogs, isSuperAdmin } from '../lib/permissions';
+import {
+  can,
+  canManageAccounts,
+  canViewAttendance,
+  canViewLogs,
+  isEmployee,
+  isSuperAdmin,
+} from '../lib/permissions';
 import type { User } from '../lib/types';
 
 interface NavItem {
@@ -33,7 +46,11 @@ interface NavItem {
 }
 
 export function navFor(user: User | undefined, unread = 0) {
-  const home: NavItem = { to: '/app', label: 'Home', icon: LayoutDashboard, end: true };
+  const employee = isEmployee(user);
+  const home: NavItem = employee
+    ? { to: '/app', label: 'Today', icon: Clock3, end: true }
+    : { to: '/app', label: 'Home', icon: LayoutDashboard, end: true };
+  const history: NavItem = { to: '/app/attendance/history', label: 'History', icon: CalendarClock };
   const alerts: NavItem = {
     to: '/app/notifications',
     label: 'Notifications',
@@ -41,8 +58,14 @@ export function navFor(user: User | undefined, unread = 0) {
     badge: unread,
   };
   const profile: NavItem = { to: '/app/profile', label: 'Profile', icon: UserRound };
-  const main: NavItem[] = [home, alerts, profile];
+  const main: NavItem[] = employee ? [home, history, alerts, profile] : [home, alerts, profile];
   const admin: NavItem[] = [];
+  if (canViewAttendance(user))
+    admin.push({ to: '/app/admin/attendance', label: 'Attendance', icon: Clock3 });
+  if (can(user, 'approve_faceid_devices'))
+    admin.push({ to: '/app/admin/faceid-devices', label: 'Face ID devices', icon: ScanFace });
+  if (isSuperAdmin(user) || can(user, 'manage_leaves'))
+    admin.push({ to: '/app/admin/leave', label: 'Leave and holidays', icon: CalendarDays });
   if (can(user, 'approve_users'))
     admin.push({ to: '/app/admin/requests', label: 'Sign-up requests', icon: ClipboardList });
   if (canManageAccounts(user))
@@ -52,7 +75,7 @@ export function navFor(user: User | undefined, unread = 0) {
   if (canViewLogs(user))
     admin.push({ to: '/app/admin/logs', label: 'Activity log', icon: ScrollText });
   // Phones: at most four entries; admin sections are grouped behind "Admin".
-  const mobile: NavItem[] = [home, alerts];
+  const mobile: NavItem[] = employee ? [home, history, alerts] : [home, alerts];
   if (admin.length) mobile.push({ to: '/app/admin', label: 'Admin', icon: ShieldCheck });
   mobile.push(profile);
   return { main, admin, mobile };
@@ -110,6 +133,18 @@ export function AppLayout() {
   // The element (not <Outlet/>) is captured so an exiting page keeps its own content.
   const outlet = useOutlet();
   const navigate = useNavigate();
+  const toast = useToast();
+  // Gate: an employee who has not checked in today is sent to the check-in screen.
+  useEffect(() => {
+    let last = 0;
+    return onCheckInRequired(() => {
+      // Several requests can be refused at once: one message is enough.
+      if (Date.now() - last > 5000)
+        toast.show('Please check in first to use the app today.', 'info');
+      last = Date.now();
+      navigate('/app', { replace: true });
+    });
+  }, [navigate, toast]);
   const logout = () => void signOut().then(() => navigate('/sign-in', { replace: true }));
   // The phone menu belongs to the page it was opened on: navigating closes it.
   const [menuPath, setMenuPath] = useState<string | null>(null);

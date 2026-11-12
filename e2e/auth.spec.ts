@@ -61,9 +61,10 @@ test('first sign-in: code, forced password change, profile completion, then home
   await expect(page.getByRole('heading', { name: 'Complete your profile' })).toBeVisible();
   await page.getByLabel('Phone').fill('+233 24 123 4567');
   await page.getByRole('button', { name: 'Save and continue' }).click();
-  await expect(
-    page.getByRole('heading', { name: /Good (morning|afternoon|evening), Ama/ }),
-  ).toBeVisible();
+  // Employees then set up Face ID (needed to check in); it can be done later.
+  await expect(page.getByRole('heading', { name: 'Face ID is ready' })).toBeVisible();
+  await page.getByRole('button', { name: 'Continue to check-in' }).click();
+  await expect(page.getByRole('heading', { name: 'Hello Ama' })).toBeVisible();
   const login = state.calls.find((c) => c.path === '/auth/login')?.body as Record<string, unknown>;
   expect(String(login.device_id)).toMatch(/^[A-Za-z0-9_-]{16,128}$/);
   expect(state.calls.find((c) => c.path === '/me' && c.method === 'PATCH')?.body).toMatchObject({

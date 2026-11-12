@@ -3,6 +3,7 @@ import type { AppNotification } from '../../lib/types';
 /** Known screens per notification kind (used when the path is missing or points elsewhere). */
 const BY_KIND: Record<string, string> = {
   signup_request: '/app/admin/requests',
+  checkin_reminder: '/app',
 };
 
 /**

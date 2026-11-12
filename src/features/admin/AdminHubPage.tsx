@@ -10,6 +10,10 @@ const DESCRIPTIONS: Record<string, string> = {
   '/app/admin/users': 'Search accounts, block, unlock, send new codes and manage access.',
   '/app/admin/settings': 'Office location, working hours, reports and security rules.',
   '/app/admin/logs': 'Everything that happens on each account, read-only.',
+  '/app/admin/attendance':
+    "Today's check-ins, history per employee, missions and refused attempts.",
+  '/app/admin/faceid-devices': 'Approve or reject new phones registered for Face ID.',
+  '/app/admin/leave': 'Declare leave for employees and manage public holidays.',
 };
 
 /** Phone entry point to the administration sections. */

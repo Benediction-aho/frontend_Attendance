@@ -89,6 +89,14 @@ export function onPasswordChangeRequired(l: Listener): () => void {
   return () => forbiddenListeners.delete(l);
 }
 
+const checkinListeners = new Set<Listener>();
+
+/** Notified when the API answers 403 checkin_required (employee must check in first). */
+export function onCheckInRequired(l: Listener): () => void {
+  checkinListeners.add(l);
+  return () => checkinListeners.delete(l);
+}
+
 /** Retry-After as seconds (number or HTTP date); undefined when absent or invalid. */
 export function parseRetryAfter(value: string | null, now = Date.now()): number | undefined {
   if (!value) return undefined;
@@ -178,6 +186,9 @@ export function createApiClient(config: ApiClientConfig) {
     );
     if (res.status === 403 && err.code === 'password_change_required') {
       forbiddenListeners.forEach((l) => l(err));
+    }
+    if (res.status === 403 && err.code === 'checkin_required') {
+      checkinListeners.forEach((l) => l(err));
     }
     throw err;
   }

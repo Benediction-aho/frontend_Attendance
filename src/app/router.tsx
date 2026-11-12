@@ -5,7 +5,15 @@ import { SignInPage } from '../features/auth/SignInPage';
 import { DashboardPage } from '../features/dashboard/DashboardPage';
 import { useMe } from '../features/auth/useSession';
 import { lazyPage } from './lazyPage';
-import { can, canManageAccounts, canViewLogs, isSuperAdmin } from '../lib/permissions';
+import {
+  can,
+  canManageAccounts,
+  canViewAttendance,
+  canViewLogs,
+  isEmployee,
+  isSuperAdmin,
+} from '../lib/permissions';
+import { TodayPage } from '../features/attendance/TodayPage';
 import type { User } from '../lib/types';
 
 const SignUpPage = lazyPage(() => import('../features/auth/SignUpPage'), 'SignUpPage');
@@ -36,6 +44,53 @@ const UserDetailPage = lazyPage(() => import('../features/admin/UserDetailPage')
 const CreateUserPage = lazyPage(() => import('../features/admin/CreateUserPage'), 'CreateUserPage');
 const SettingsPage = lazyPage(() => import('../features/admin/SettingsPage'), 'SettingsPage');
 const LogsPage = lazyPage(() => import('../features/admin/LogsPage'), 'LogsPage');
+const WelcomeFaceIdPage = lazyPage(
+  () => import('../features/auth/WelcomePages'),
+  'WelcomeFaceIdPage',
+);
+const MyHistoryPage = lazyPage(
+  () => import('../features/attendance/MyAttendancePages'),
+  'MyHistoryPage',
+);
+const SchedulePage = lazyPage(
+  () => import('../features/attendance/MyAttendancePages'),
+  'SchedulePage',
+);
+const AdminAttendancePage = lazyPage(
+  () => import('../features/attendance/admin/AdminAttendancePage'),
+  'AdminAttendancePage',
+);
+const EmployeeAttendancePage = lazyPage(
+  () => import('../features/attendance/admin/EmployeeAttendancePage'),
+  'EmployeeAttendancePage',
+);
+const MissionsPage = lazyPage(
+  () => import('../features/attendance/admin/MissionsPage'),
+  'MissionsPage',
+);
+const AttemptsPage = lazyPage(
+  () => import('../features/attendance/admin/MissionsPage'),
+  'AttemptsPage',
+);
+const LeavePage = lazyPage(() => import('../features/attendance/admin/LeavePage'), 'LeavePage');
+const FaceIdDevicesPage = lazyPage(
+  () => import('../features/faceid/FaceIdDevicesPage'),
+  'FaceIdDevicesPage',
+);
+const InstallPage = lazyPage(() => import('../features/pwa/InstallGuide'), 'InstallPage');
+
+/** Employees land on today's check-in; staff on their dashboard. */
+function HomePage() {
+  const { data } = useMe();
+  return isEmployee(data) ? <TodayPage /> : <DashboardPage />;
+}
+
+/** /app/attendance (notification target): today for employees, the day list for staff. */
+function AttendanceEntry() {
+  const { data } = useMe();
+  if (isEmployee(data)) return <Navigate to="/app" replace />;
+  return <Navigate to="/app/admin/attendance" replace />;
+}
 
 function Allowed({
   check,
@@ -49,7 +104,12 @@ function Allowed({
 }
 
 const anyAdmin = (u: User | undefined) =>
-  can(u, 'approve_users') || canManageAccounts(u) || canViewLogs(u);
+  can(u, 'approve_users') ||
+  canManageAccounts(u) ||
+  canViewLogs(u) ||
+  canViewAttendance(u) ||
+  can(u, 'approve_faceid_devices');
+const leaveAdmin = (u: User | undefined) => can(u, 'manage_leaves');
 
 export const router = createBrowserRouter([
   { path: '/', element: <Navigate to="/app" replace /> },
@@ -70,6 +130,7 @@ export const router = createBrowserRouter([
     children: [
       { path: '/welcome/code', element: <WelcomeCodePage /> },
       { path: '/welcome/profile', element: <WelcomeProfilePage /> },
+      { path: '/welcome/faceid', element: <WelcomeFaceIdPage /> },
     ],
   },
   {
@@ -79,7 +140,73 @@ export const router = createBrowserRouter([
         path: '/app',
         element: <AppLayout />,
         children: [
-          { index: true, element: <DashboardPage /> },
+          { index: true, element: <HomePage /> },
+          { path: 'install', element: <InstallPage /> },
+          { path: 'attendance', element: <AttendanceEntry /> },
+          {
+            path: 'attendance/history',
+            element: (
+              <Allowed check={isEmployee}>
+                <MyHistoryPage />
+              </Allowed>
+            ),
+          },
+          {
+            path: 'attendance/schedule',
+            element: (
+              <Allowed check={isEmployee}>
+                <SchedulePage />
+              </Allowed>
+            ),
+          },
+          {
+            path: 'admin/attendance',
+            element: (
+              <Allowed check={canViewAttendance}>
+                <AdminAttendancePage />
+              </Allowed>
+            ),
+          },
+          {
+            path: 'admin/attendance/users/:id',
+            element: (
+              <Allowed check={canViewAttendance}>
+                <EmployeeAttendancePage />
+              </Allowed>
+            ),
+          },
+          {
+            path: 'admin/attendance/missions',
+            element: (
+              <Allowed check={(u) => can(u, 'approve_mission_checkins')}>
+                <MissionsPage />
+              </Allowed>
+            ),
+          },
+          {
+            path: 'admin/attendance/attempts',
+            element: (
+              <Allowed check={(u) => can(u, 'view_lateness')}>
+                <AttemptsPage />
+              </Allowed>
+            ),
+          },
+          {
+            path: 'admin/leave',
+            element: (
+              <Allowed check={(u) => isSuperAdmin(u) || leaveAdmin(u)}>
+                <LeavePage />
+              </Allowed>
+            ),
+          },
+          {
+            path: 'admin/faceid-devices',
+            element: (
+              <Allowed check={(u) => can(u, 'approve_faceid_devices')}>
+                <FaceIdDevicesPage />
+              </Allowed>
+            ),
+          },
           { path: 'profile', element: <ProfilePage /> },
           { path: 'notifications', element: <NotificationsPage /> },
           {

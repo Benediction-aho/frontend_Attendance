@@ -2,7 +2,7 @@ import { useQuery } from '@tanstack/react-query';
 import { motion } from 'motion/react';
 import { Link } from 'react-router';
 import { api, qs } from '../../lib/api';
-import { can } from '../../lib/permissions';
+import { can, canViewAttendance } from '../../lib/permissions';
 import { serverNow } from '../../lib/serverTime';
 import type { Paginated, User } from '../../lib/types';
 import { Card, CardBody, StatTile } from '../../ui/Card';
@@ -43,6 +43,18 @@ export function DashboardPage() {
     queryFn: () =>
       api.get<Paginated<User>>(`/admin/users${qs({ status: 'pending', per_page: 1 })}`),
     enabled: approver,
+    select: (r) => r.meta.total,
+  });
+  const missions = useQuery({
+    queryKey: ['admin', 'missions', 'pending-count'],
+    queryFn: () => api.get<Paginated<unknown>>('/admin/attendance/missions?status=pending'),
+    enabled: can(me, 'approve_mission_checkins'),
+    select: (r) => r.meta.total,
+  });
+  const devices = useQuery({
+    queryKey: ['admin', 'faceid', 'pending-count'],
+    queryFn: () => api.get<Paginated<unknown>>('/admin/faceid/credentials?status=pending'),
+    enabled: can(me, 'approve_faceid_devices'),
     select: (r) => r.meta.total,
   });
   // Server-corrected time, never the raw device clock.
@@ -89,23 +101,60 @@ export function DashboardPage() {
             </Link>
           </motion.div>
         )}
-        <motion.div variants={fadeUp} className="sm:col-span-2">
-          <Card>
-            <CardBody>
-              <h2 className="text-base font-semibold text-ink-900">Attendance</h2>
-              <p className="mt-1 text-sm text-ink-600">
-                Check-in with GPS and Face ID arrives in the next update. Your profile and
-                notifications are already available.
-              </p>
-              <Link
-                to="/app/profile"
-                className="mt-4 inline-flex min-h-11 items-center text-sm font-semibold text-primary-700 hover:underline"
-              >
-                Review my profile
-              </Link>
-            </CardBody>
-          </Card>
-        </motion.div>
+        {can(me, 'approve_mission_checkins') && (
+          <motion.div variants={fadeUp} className="h-full">
+            <Link
+              to="/app/admin/attendance/missions"
+              className="block h-full rounded-card focus-visible:outline-offset-4"
+            >
+              <StatTile
+                label="Mission check-ins waiting"
+                value={
+                  missions.isPending ? <Skeleton className="h-8 w-10" /> : (missions.data ?? 0)
+                }
+                highlight={Boolean(missions.data)}
+                hint={
+                  missions.data ? 'Employees working outside the office.' : 'Nothing to review.'
+                }
+                cta={missions.data ? 'Review missions' : undefined}
+              />
+            </Link>
+          </motion.div>
+        )}
+        {can(me, 'approve_faceid_devices') && (
+          <motion.div variants={fadeUp} className="h-full">
+            <Link
+              to="/app/admin/faceid-devices"
+              className="block h-full rounded-card focus-visible:outline-offset-4"
+            >
+              <StatTile
+                label="Face ID devices waiting"
+                value={devices.isPending ? <Skeleton className="h-8 w-10" /> : (devices.data ?? 0)}
+                highlight={Boolean(devices.data)}
+                hint={devices.data ? 'New phones to approve.' : 'Nothing to review.'}
+                cta={devices.data ? 'Review devices' : undefined}
+              />
+            </Link>
+          </motion.div>
+        )}
+        {canViewAttendance(me) && (
+          <motion.div variants={fadeUp} className="sm:col-span-2">
+            <Card>
+              <CardBody>
+                <h2 className="text-base font-semibold text-ink-900">Attendance</h2>
+                <p className="mt-1 text-sm text-ink-600">
+                  See who has checked in today and each employee&apos;s history.
+                </p>
+                <Link
+                  to="/app/admin/attendance"
+                  className="mt-4 inline-flex min-h-11 items-center text-sm font-semibold text-primary-700 hover:underline"
+                >
+                  Open today&apos;s attendance
+                </Link>
+              </CardBody>
+            </Card>
+          </motion.div>
+        )}
       </motion.div>
     </>
   );

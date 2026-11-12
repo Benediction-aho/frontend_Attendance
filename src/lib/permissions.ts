@@ -44,3 +44,20 @@ export function accountActions(actor: User | null | undefined, target: User) {
     editPermissions: superA && target.role === 'admin',
   };
 }
+
+/** Tiers that open the admin attendance views (mirrors the server gate `view-attendance`). */
+export const ATTENDANCE_TIERS = [
+  'view_lateness',
+  'view_activities',
+  'view_performance',
+  'approve_mission_checkins',
+  'checkin_for_employee',
+  'manage_leaves',
+  'manage_work_schedules',
+];
+
+export function canViewAttendance(user: User | null | undefined): boolean {
+  return ATTENDANCE_TIERS.some((p) => can(user, p));
+}
+
+export const isEmployee = (u: User | null | undefined) => u?.role === 'employee';

@@ -194,8 +194,49 @@ export async function mockApi(page: Page, state: MockState) {
       return send(200, page1(l));
     }
     if (path === '/client-errors') return send(202, {});
+    // Defaults so employee pages load in tests that do not exercise attendance.
+    if (path === '/attendance/today') return send(200, defaultToday());
+    if (path === '/me/work-schedule')
+      return send(200, {
+        selected: true,
+        locked: true,
+        max_days_off_per_week: 2,
+        max_remote_days_per_week: 2,
+        working_days: [1, 2, 3, 4, 5],
+        current: { days_off: [], remote_days: [] },
+        upcoming: [],
+      });
+    if (path === '/me/faceid') return send(200, { state: 'ready', data: [] });
+    if (path === '/push/public-key') return send(200, { public_key: null });
     return send(404, { message: 'Not found.' });
   });
+}
+
+export function defaultToday(o: Record<string, unknown> = {}) {
+  const now = Date.now();
+  return {
+    server_time: new Date(now).toISOString(),
+    server_timestamp_ms: now,
+    timezone: 'Africa/Accra',
+    work_date: '2026-11-12',
+    day_status: 'working',
+    expected: true,
+    holiday_name: null,
+    checked_in: false,
+    checked_out: false,
+    attendance: null,
+    available_check_ins: ['gps', 'mission'],
+    rules: {
+      radius_m: 50,
+      max_accuracy_m: 50,
+      late_after: '08:10',
+      end_of_day: '17:00',
+      early_checkout_reason_required: true,
+      faceid_required: true,
+    },
+    faceid_state: 'ready',
+    ...o,
+  };
 }
 
 export function newState(me: Partial<U> = {}, users: U[] = []): MockState {
