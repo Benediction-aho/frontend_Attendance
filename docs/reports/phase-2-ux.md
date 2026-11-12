@@ -29,10 +29,10 @@ Tester: `frontend-ux-tester` – 2026-11-12. Branch `claude/upbeat-noether-f7def
 | UX2-14 | Low | Notification "New account request" is not clickable / does not open Sign-up requests | Fixed |
 | UX2-15 | Low | Limited admin opening a forbidden deep link is silently sent to Home | Fixed |
 | UX2-16 | Low | Reloading the email-confirmation page shows only the title | Fixed |
-| UX2-17 | Low | Plain-text emails show HTML entities in names (`Ama &lt;b&gt;…`); email links point to `/login` on the configured front URL | Open (backend) |
+| UX2-17 | Low | Plain-text emails show HTML entities in names (`Ama &lt;b&gt;…`); email links point to `/login` on the configured front URL | Fixed (re-test: text part shows the raw name; `/login` redirects to `/sign-in`; host comes from `FRONTEND_URL`, deployment config) |
 | UX2-18 | Low | Users list: super admin "Last sign-in" stays "–" after OTP sign-in; super admin shown with type "Employee" | Fixed (front accepts null type; server sends last sign-in) |
 | UX2-19 | Low | Back button on "Complete your profile" leaves the app (about:blank) | Fixed |
-| UX2-20 | Low | No warning before the 5th failed attempt ("1 attempt left") | Fixed (front; shown when API sends `remaining_attempts`) |
+| UX2-20 | Low | No warning before the 5th failed attempt ("1 attempt left") | Still open (backend: `remaining_attempts` is not sent to the browser, see re-test) |
 
 ### UX2-01 – High – Code with a space is refused and counts as a failure
 - Role/device: new employee, iPhone. Script `e2e/ux/j1-signup.mjs` (first version) and curl check.
@@ -132,3 +132,58 @@ Tester: `frontend-ux-tester` – 2026-11-12. Branch `claude/upbeat-noether-f7def
 - UX2-19: onboarding pages keep a guard history entry; Back stays in the app.
 - Tests: `src/features/ux2/ux2.test.tsx` (14 unit tests), `e2e/ux2.spec.ts` (5 journeys x 2 devices).
 - Waiting on the backend (frontend ready): `min`/`max` in `GET /admin/settings`, `password_min_length` on `/me`, `remaining_attempts` on `invalid_credentials`, optional `code: account_blocked` on the 401 after a block.
+
+## Re-test (2026-11-12, `frontend-ux-tester`)
+
+Same set-up (real API on :8000, `attendance_e2e`, log mailer, sync queue, CORS via env). Backend pulled at `547ebb3`; a new migration (`revoked_sessions`) landed mid-run: pulled, migrated and restarted, then the affected journeys were re-run. Environment notes: the shared `dist/` was rebuilt by another agent during the run (API base became relative, every call went to :4173 and returned 404), so the preview is now served from a private build (`vite build --outDir` in the scratch folder). `otp_requests_per_hour` raised in the e2e database only (scripts sign the super admin in many times). Face ID check-in (phase 4) out of scope; the new Face ID onboarding step was only skipped.
+
+New helper scripts: `e2e/ux/mkuser.mjs` (create + approve a staff account through the API, prints email and code), `j12-blocked-live`, `j13-settings-retest`, `j14-otp-throttle`, `j15-recover-during-block`, `j16-misc-retest`, `j17-startup-down`. `j1`/`j2` adapted (code field after reload, logo image).
+
+| ID | Re-test result |
+|---|---|
+| UX2-01 | Fixed – email in capitals with spaces + code typed as `ABCDE FGHIJ ` signs in (Android 360). |
+| UX2-02 | Fixed – server limit now 50/h per IP, front shows wait time (not re-hit). |
+| UX2-03 | Fixed – staff blocked while signed in on iPhone: next navigation lands on sign-in with "Your account has been blocked. Contact an administrator." (`ux-j12-blocked-phone.png`). See UX2-23 for reload. |
+| UX2-04 | Fixed – plain messages ("Minimum 10.", "Maximum 5000."). |
+| UX2-05 | Fixed – hint "Between 10 and 5000.", Save disabled on invalid value, focused field stays visible above the compact bar on iPhone (`ux-j13-settings-invalid-focused.png`). |
+| UX2-06 | Fixed – "Leave without saving?" dialog with Stay / Discard; Save now persists after reload. |
+| UX2-07 | Fixed – "You asked for several codes. Use the last code you received. Try again in 37 min 18 s." (`ux-j14-otp-throttled.png`). |
+| UX2-08 | Fixed – during the 10-min block, "Get a recovery link" emails a link; it restores access and a new code signs in. |
+| UX2-09 | Fixed – email visible in the phone users list. |
+| UX2-10 | Fixed – no toast over "Use this photo" (`ux-j2-06-profile-photo.png`). |
+| UX2-11 | Fixed – hint about pending approval shown (see UX2-24 for side effect). |
+| UX2-12 | Fixed – with the API answering 503 at launch the signed-in user sees the splash, the app retries and opens the dashboard once the API is back; no sign-out. |
+| UX2-13 | Fixed – "At least 10 characters, with letters and digits." shown before submitting. |
+| UX2-14 | Fixed – "New account request" opens Sign-up requests. |
+| UX2-15 | Fixed – "You do not have access to this page" + Go to Home for a limited admin. |
+| UX2-16 | Fixed – result shown again after reload. |
+| UX2-17 | Fixed (see table). |
+| UX2-18 | Fixed – super admin type "–", last sign-in filled. |
+| UX2-19 | Fixed – Back on the onboarding stays on `/welcome/code`. |
+| UX2-20 | Still open – 4 wrong passwords from the same browser never show "attempts left"; the API answers `{"code":"invalid_credentials"}` without `remaining_attempts` (only sent for the device scope, which the browser does not hit). Backend. |
+
+Regressions: none found on the re-run journeys (sign-up, approval, onboarding, profile, lockout, admin, limited admin, block/unblock, settings, super admin lock and recovery), iPhone 13, Android 360 and desktop.
+
+### New findings
+
+| ID | Severity | Title | Status |
+|---|---|---|---|
+| UX2-21 | Medium | Onboarding Face ID step: the toast "Your password is set. Your other devices have been signed out." covers the "Do it later" link on iPhone | Open |
+| UX2-22 | Low | Profile photo: a 12 MB file named `.jpg` that is not an image gives no feedback at all | Open |
+| UX2-23 | Low | Sign-in reasons disappear on reload (blocked message, lockout countdown) | Open |
+| UX2-24 | Low | Every wrong password, even for active staff, shows the "awaiting approval" hint | Open |
+
+#### UX2-21 – Medium – Toast hides "Do it later" on the Face ID step
+- Employee, iPhone 13. First sign-in → set password → Skip profile → "Set up Face ID". The success toast sits exactly over "Do it later" for several seconds (`ux-j12-faceid-step.png`). A user who does not want to set Face ID now cannot find the way out. Also "Your other devices have been signed out" is confusing on a first sign-in (there are no other devices). Expected: toast above or away from the actions (as done for sheets in UX2-10), and a simple "Your password is set." on first sign-in.
+
+#### UX2-22 – Low – Silent failure for a broken/oversized photo
+- Employee, iPhone. Profile → Add a photo → pick a 12 MB `big.jpg` that is not a real image: nothing happens, no message (`j2-onboard.mjs`). Expected: "This photo could not be read. Try another one." or a size message.
+
+#### UX2-23 – Low – Reason lost after reload
+- Blocked staff (iPhone): the message is shown once; after a reload the sign-in page is plain. Locked staff (j4): after reload the countdown is gone and the form looks usable, the next try shows the block again. Expected: keep the reason/countdown for the tab (as for UX2-16).
+
+#### UX2-24 – Low – Approval hint on every wrong password
+- An active employee who mistypes their password reads "If you recently signed up, your request may still be awaiting approval…" each time. Slightly misleading; consider showing it only on the first failure or only when the account has never signed in on this device.
+
+### Journeys that passed (re-test)
+Sign-up → admin email + notification → approval → code email → first sign-in with a spaced code → password → profile (skip and save) → Face ID step reachable; profile edit and photo; employee lockout; admin create/permissions/block/unblock/new code; limited admin forbidden pages; live block on another device; settings invalid value, leave guard and save; super admin OTP throttling, temporary block, recovery link during the block; start-up with API down; confirm-email reload; notification links.
