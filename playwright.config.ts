@@ -4,6 +4,7 @@ const executablePath = process.env.PW_CHROMIUM_PATH ?? '/opt/pw-browsers/chromiu
 
 export default defineConfig({
   testDir: './e2e',
+  testIgnore: process.env.E2E_REAL_API ? [] : ['**/*.real.spec.ts'],
   timeout: 30_000,
   use: {
     baseURL: 'http://localhost:4173',
@@ -18,7 +19,7 @@ export default defineConfig({
     { name: 'desktop', use: { ...devices['Desktop Chrome'], launchOptions: { executablePath } } },
   ],
   webServer: {
-    command: 'npm run build && npm run preview',
+    command: 'VITE_API_URL=http://localhost:8000/api npm run build && npm run preview',
     url: 'http://localhost:4173',
     reuseExistingServer: !process.env.CI,
     timeout: 120_000,
