@@ -1,5 +1,5 @@
 import { Fragment, useState } from 'react';
-import { useQuery } from '@tanstack/react-query';
+import { useMutation, useQuery } from '@tanstack/react-query';
 import { AnimatePresence, motion } from 'motion/react';
 import { useSearchParams } from 'react-router';
 import { Alert } from '../../ui/Alert';
@@ -13,9 +13,10 @@ import { PageHeader } from '../../ui/PageHeader';
 import { Pagination } from '../../ui/Pagination';
 import { SkeletonRows } from '../../ui/Skeleton';
 import { api, errorMessage, qs } from '../../lib/api';
+import { exportErrorMessage } from '../../lib/logs';
 import { formatDateTime } from '../../lib/format';
-import { canManageAccounts } from '../../lib/permissions';
-import type { ActivityLog, Paginated, User } from '../../lib/types';
+import { canManageAccounts, isSuperAdmin } from '../../lib/permissions';
+import type { ActivityLog, Paginated, Setting, User } from '../../lib/types';
 import { useMe } from '../auth/useSession';
 
 const LEVEL_TONE: Record<ActivityLog['level'], Tone> = {
@@ -37,6 +38,61 @@ const LEVEL_LABEL: Record<ActivityLog['level'], string> = {
   critical: 'Critical',
 };
 const FILTERS = ['user_id', 'type', 'level', 'from', 'to', 'event'] as const;
+
+function saveFile(blob: Blob, name: string) {
+  const url = URL.createObjectURL(blob);
+  const a = document.createElement('a');
+  a.href = url;
+  a.download = name;
+  document.body.appendChild(a);
+  a.click();
+  a.remove();
+  setTimeout(() => URL.revokeObjectURL(url), 10_000);
+}
+
+function ExportCsv({ filters, total }: { filters: Record<string, string>; total?: number }) {
+  const settings = useQuery({
+    queryKey: ['admin', 'settings'],
+    queryFn: async () => (await api.get<{ data: Setting[] }>('/admin/settings')).data,
+    staleTime: 5 * 60_000,
+  });
+  const raw = settings.data?.find((x) => x.key === 'log_export_max_rows')?.value;
+  const max = typeof raw === 'number' ? raw : undefined;
+  const exp = useMutation({
+    mutationFn: () =>
+      api.get<{ blob: Blob; filename: string | null }>(
+        `/admin/activity-logs/export${qs(filters)}`,
+        { raw: true, retries: 0 },
+      ),
+    onSuccess: (r) => saveFile(r.blob, r.filename ?? 'activity_log.csv'),
+  });
+  const capped = max !== undefined && total !== undefined && total > max;
+  return (
+    <div className="mb-4 flex flex-col gap-2" data-testid="log-export">
+      <div className="flex flex-wrap items-center gap-3">
+        <Button variant="outline" size="sm" loading={exp.isPending} onClick={() => exp.mutate()}>
+          Export CSV
+        </Button>
+        <p className="text-xs text-ink-500">
+          Uses the current filters, newest first
+          {max !== undefined ? `, at most ${max.toLocaleString('en-GB')} rows` : ''}.
+        </p>
+      </div>
+      {capped && (
+        <Alert tone="warning">
+          {total?.toLocaleString('en-GB')} entries match. Only the newest{' '}
+          {max?.toLocaleString('en-GB')} will be exported. Narrow the dates to get the rest.
+        </Alert>
+      )}
+      {exp.isSuccess && (
+        <p role="status" className="text-sm text-success-700">
+          Export downloaded.
+        </p>
+      )}
+      {exp.isError && <Alert tone="danger">{exportErrorMessage(exp.error)}</Alert>}
+    </div>
+  );
+}
 
 function Details({ log }: { log: ActivityLog }) {
   return (
@@ -199,6 +255,12 @@ export function LogsPage() {
           </>
         }
       />
+      {isSuperAdmin(me) && (
+        <ExportCsv
+          filters={filters}
+          total={logs.data && !logs.isPlaceholderData ? logs.data.meta.total : undefined}
+        />
+      )}
       <Card>
         {logs.isPending ? (
           <SkeletonRows rows={6} />

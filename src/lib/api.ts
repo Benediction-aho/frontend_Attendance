@@ -70,6 +70,8 @@ export interface RequestOptions {
   signal?: AbortSignal;
   /** Retries for network/5xx errors. Defaults to 3 for GET, 0 otherwise (non-idempotent). */
   retries?: number;
+  /** Return `{ blob, filename }` instead of parsing JSON (file downloads). */
+  raw?: boolean;
 }
 
 export interface ApiClientConfig {
@@ -153,6 +155,11 @@ export function createApiClient(config: ApiClientConfig) {
     }
 
     recordServerDate(res.headers.get('Date'));
+    if (opts.raw && res.ok) {
+      const cd = res.headers.get('Content-Disposition') ?? '';
+      const filename = /filename\*?=(?:UTF-8'')?"?([^";]+)"?/i.exec(cd)?.[1] ?? null;
+      return { blob: await res.blob(), filename } as T;
+    }
     const data: unknown = await res.json().catch(() => null);
 
     if (res.ok) return data as T;
