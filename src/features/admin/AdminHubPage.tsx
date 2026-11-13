@@ -13,6 +13,7 @@ const DESCRIPTIONS: Record<string, string> = {
   '/app/admin/attendance':
     "Today's check-ins, history per employee, missions and refused attempts.",
   '/app/admin/faceid-devices': 'Approve or reject new phones registered for Face ID.',
+  '/app/admin/reports': 'Daily work, weekly PDF reports and who has not sent theirs.',
   '/app/admin/leave': 'Declare leave for employees and manage public holidays.',
 };
 

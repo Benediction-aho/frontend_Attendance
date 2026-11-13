@@ -61,3 +61,10 @@ export function canViewAttendance(user: User | null | undefined): boolean {
 }
 
 export const isEmployee = (u: User | null | undefined) => u?.role === 'employee';
+
+/** Daily reports and per-employee weekly summaries (server tier `view_reports`). */
+export const canViewReports = (u: User | null | undefined) => can(u, 'view_reports');
+
+/** Weekly PDF list and files (server: `view_reports` or `receive_weekly_reports`). */
+export const canSeeWeeklyPdfs = (u: User | null | undefined) =>
+  can(u, 'view_reports') || can(u, 'receive_weekly_reports');

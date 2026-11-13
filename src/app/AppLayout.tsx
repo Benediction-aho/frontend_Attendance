@@ -5,6 +5,8 @@ import {
   ScanFace,
   CalendarClock,
   ClipboardList,
+  FileText,
+  ListChecks,
   LayoutDashboard,
   LogOut,
   Menu,
@@ -30,6 +32,7 @@ import { useUnreadCount } from '../features/notifications/useNotifications';
 import {
   can,
   canManageAccounts,
+  canSeeWeeklyPdfs,
   canViewAttendance,
   canViewLogs,
   isEmployee,
@@ -58,10 +61,15 @@ export function navFor(user: User | undefined, unread = 0) {
     badge: unread,
   };
   const profile: NavItem = { to: '/app/profile', label: 'Profile', icon: UserRound };
-  const main: NavItem[] = employee ? [home, history, alerts, profile] : [home, alerts, profile];
+  const work: NavItem = { to: '/app/work', label: 'My work', icon: ListChecks };
+  const main: NavItem[] = employee
+    ? [home, work, history, alerts, profile]
+    : [home, alerts, profile];
   const admin: NavItem[] = [];
   if (canViewAttendance(user))
     admin.push({ to: '/app/admin/attendance', label: 'Attendance', icon: Clock3 });
+  if (canSeeWeeklyPdfs(user))
+    admin.push({ to: '/app/admin/reports', label: 'Reports', icon: FileText });
   if (can(user, 'approve_faceid_devices'))
     admin.push({ to: '/app/admin/faceid-devices', label: 'Face ID devices', icon: ScanFace });
   if (isSuperAdmin(user) || can(user, 'manage_leaves'))
@@ -75,7 +83,8 @@ export function navFor(user: User | undefined, unread = 0) {
   if (canViewLogs(user))
     admin.push({ to: '/app/admin/logs', label: 'Activity log', icon: ScrollText });
   // Phones: at most four entries; admin sections are grouped behind "Admin".
-  const mobile: NavItem[] = employee ? [home, history, alerts] : [home, alerts];
+  // Employees: History stays reachable from the Today screen.
+  const mobile: NavItem[] = employee ? [home, work, alerts] : [home, alerts];
   if (admin.length) mobile.push({ to: '/app/admin', label: 'Admin', icon: ShieldCheck });
   mobile.push(profile);
   return { main, admin, mobile };

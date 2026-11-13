@@ -9,7 +9,9 @@ import { lazyPage } from './lazyPage';
 import {
   can,
   canManageAccounts,
+  canSeeWeeklyPdfs,
   canViewAttendance,
+  canViewReports,
   canViewLogs,
   isEmployee,
   isSuperAdmin,
@@ -78,6 +80,31 @@ const FaceIdDevicesPage = lazyPage(
   () => import('../features/faceid/FaceIdDevicesPage'),
   'FaceIdDevicesPage',
 );
+const WorkPage = lazyPage(() => import('../features/reports/WorkPage'), 'WorkPage');
+const DailyReportPage = lazyPage(
+  () => import('../features/reports/ReportPages'),
+  'DailyReportPage',
+);
+const WeeklyReportPage = lazyPage(
+  () => import('../features/reports/ReportPages'),
+  'WeeklyReportPage',
+);
+const AdminDailyReportsPage = lazyPage(
+  () => import('../features/reports/admin/AdminReportsPages'),
+  'AdminDailyReportsPage',
+);
+const AdminWeeklyReportsPage = lazyPage(
+  () => import('../features/reports/admin/AdminReportsPages'),
+  'AdminWeeklyReportsPage',
+);
+const AdminSubmissionPage = lazyPage(
+  () => import('../features/reports/admin/AdminReportsPages'),
+  'AdminSubmissionPage',
+);
+const AdminUserWeeklyPage = lazyPage(
+  () => import('../features/reports/admin/AdminReportsPages'),
+  'AdminUserWeeklyPage',
+);
 const InstallPage = lazyPage(() => import('../features/pwa/InstallGuide'), 'InstallPage');
 
 /** Employees land on today's check-in; staff on their dashboard. */
@@ -109,7 +136,8 @@ const anyAdmin = (u: User | undefined) =>
   canManageAccounts(u) ||
   canViewLogs(u) ||
   canViewAttendance(u) ||
-  can(u, 'approve_faceid_devices');
+  can(u, 'approve_faceid_devices') ||
+  canSeeWeeklyPdfs(u);
 const leaveAdmin = (u: User | undefined) => can(u, 'manage_leaves');
 
 export const router = createBrowserRouter([
@@ -207,6 +235,62 @@ export const router = createBrowserRouter([
             element: (
               <Allowed check={(u) => can(u, 'approve_faceid_devices')}>
                 <FaceIdDevicesPage />
+              </Allowed>
+            ),
+          },
+          {
+            path: 'work',
+            element: (
+              <Allowed check={isEmployee}>
+                <WorkPage />
+              </Allowed>
+            ),
+          },
+          {
+            path: 'reports/daily',
+            element: (
+              <Allowed check={isEmployee}>
+                <DailyReportPage />
+              </Allowed>
+            ),
+          },
+          {
+            path: 'reports/weekly',
+            element: (
+              <Allowed check={isEmployee}>
+                <WeeklyReportPage />
+              </Allowed>
+            ),
+          },
+          {
+            path: 'admin/reports',
+            element: (
+              <Allowed check={canSeeWeeklyPdfs}>
+                <AdminDailyReportsPage />
+              </Allowed>
+            ),
+          },
+          {
+            path: 'admin/reports/weekly',
+            element: (
+              <Allowed check={canSeeWeeklyPdfs}>
+                <AdminWeeklyReportsPage />
+              </Allowed>
+            ),
+          },
+          {
+            path: 'admin/reports/weekly/submissions/:id',
+            element: (
+              <Allowed check={canSeeWeeklyPdfs}>
+                <AdminSubmissionPage />
+              </Allowed>
+            ),
+          },
+          {
+            path: 'admin/reports/users/:id/weekly',
+            element: (
+              <Allowed check={canViewReports}>
+                <AdminUserWeeklyPage />
               </Allowed>
             ),
           },
