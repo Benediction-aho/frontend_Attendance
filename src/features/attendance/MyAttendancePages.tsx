@@ -248,7 +248,7 @@ export function SchedulePage() {
                     <span className="font-semibold text-ink-900">
                       {formatDate(l.start_date)} – {formatDate(l.end_date)}
                     </span>
-                    {l.note && <span className="block break-words text-ink-600">{l.note}</span>}
+                    {l.note && <span className="block wrap-anywhere text-ink-600">{l.note}</span>}
                   </li>
                 ))}
               </ul>

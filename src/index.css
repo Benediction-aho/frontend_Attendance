@@ -84,6 +84,15 @@
   }
   body {
     @apply bg-canvas font-sans text-ink-800 antialiased;
+    /* Safe wrap (UX5-01): long words, URLs and file names never widen the page. */
+    overflow-wrap: anywhere;
+  }
+  /* Flex/grid children may shrink below their content width. */
+  main,
+  li,
+  td,
+  th {
+    min-width: 0;
   }
   :focus-visible {
     outline: 2px solid var(--color-primary-600);

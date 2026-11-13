@@ -3,7 +3,7 @@ import { Link } from 'react-router';
 import { AnimatePresence, motion } from 'motion/react';
 import { useToday } from '../attendance/useAttendance';
 import type { ClientEntry, Task } from '../../lib/reports';
-import { writeErrorMessage } from '../../lib/reports';
+import { clientFieldErrors, quantityError, writeErrorMessage } from '../../lib/reports';
 import { formatTime } from '../../lib/attendance';
 import { Alert } from '../../ui/Alert';
 import { Button } from '../../ui/Button';
@@ -116,7 +116,7 @@ export function TasksCard({ locked }: { locked: boolean }) {
             disabled={locked}
             error={error}
             onChange={(e) => setTitle(e.target.value)}
-            placeholder="For example: prepare the visa file of a client"
+            placeholder="e.g. Prepare the visa file"
           />
           <div className="grid grid-cols-2 gap-2">
             <Button type="submit" disabled={locked} loading={add.isPending && !add.variables?.done}>
@@ -170,7 +170,7 @@ export function TasksCard({ locked }: { locked: boolean }) {
                   <span className="min-w-0">
                     <span
                       className={cx(
-                        'block text-sm break-words transition-colors',
+                        'block text-sm wrap-anywhere transition-colors',
                         t.status === 'done' ? 'text-ink-500 line-through' : 'text-ink-900',
                       )}
                     >
@@ -183,17 +183,13 @@ export function TasksCard({ locked }: { locked: boolean }) {
                     )}
                   </span>
                 </label>
-                <Button variant="ghost" size="sm" disabled={locked} onClick={() => setEditing(t)}>
-                  Edit<span className="sr-only"> task {t.title}</span>
-                </Button>
-                <Button
-                  variant="danger-ghost"
-                  size="sm"
-                  disabled={locked}
-                  onClick={() => setDeleting(t)}
-                >
-                  Delete<span className="sr-only"> task {t.title}</span>
-                </Button>
+                <RowActions
+                  kind="task"
+                  label={t.title}
+                  locked={locked}
+                  onEdit={() => setEditing(t)}
+                  onDelete={() => setDeleting(t)}
+                />
               </motion.li>
             ))}
           </AnimatePresence>
@@ -270,6 +266,82 @@ function EditTaskForm({ task, onClose }: { task: Task; onClose: () => void }) {
   );
 }
 
+/**
+ * Edit / Delete of a row. Phones: one quiet "Options" button opening a sheet,
+ * so long titles keep the row width. From `sm`: inline, Delete neutral until hover/focus.
+ */
+export function RowActions({
+  kind,
+  label,
+  locked,
+  onEdit,
+  onDelete,
+}: {
+  kind: 'task' | 'client';
+  label: string;
+  locked: boolean;
+  onEdit: () => void;
+  onDelete: () => void;
+}) {
+  const [open, setOpen] = useState(false);
+  const pick = (fn: () => void) => () => {
+    setOpen(false);
+    fn();
+  };
+  return (
+    <>
+      <Button
+        variant="quiet"
+        size="sm"
+        className="shrink-0 sm:hidden"
+        disabled={locked}
+        aria-haspopup="dialog"
+        onClick={() => setOpen(true)}
+      >
+        Options
+        <span className="sr-only">
+          {' '}
+          for {kind} {label}
+        </span>
+      </Button>
+      <div className="hidden shrink-0 gap-1 sm:flex">
+        <Button variant="ghost" size="sm" disabled={locked} onClick={onEdit}>
+          Edit
+          <span className="sr-only">
+            {' '}
+            {kind} {label}
+          </span>
+        </Button>
+        <Button variant="quiet-danger" size="sm" disabled={locked} onClick={onDelete}>
+          Delete
+          <span className="sr-only">
+            {' '}
+            {kind} {label}
+          </span>
+        </Button>
+      </div>
+      <Modal
+        open={open}
+        onClose={() => setOpen(false)}
+        title={kind === 'task' ? 'Task options' : 'Client options'}
+        description={<span className="line-clamp-3">{label}</span>}
+      >
+        <div className="flex flex-col gap-2" data-testid="row-options">
+          <Button variant="outline" block onClick={pick(onEdit)}>
+            Edit {kind}
+          </Button>
+          <Button variant="danger-outline" block onClick={pick(onDelete)}>
+            Delete {kind}
+          </Button>
+          <Button variant="quiet" block onClick={() => setOpen(false)}>
+            Cancel
+          </Button>
+        </div>
+      </Modal>
+    </>
+  );
+}
+
 function ConfirmDelete({
   open,
   title,
@@ -290,7 +362,7 @@ function ConfirmDelete({
       open={open}
       onClose={onClose}
       title={title}
-      description={text ? <span className="break-words">{text}</span> : undefined}
+      description={text}
       footer={
         <div className="grid grid-cols-2 gap-2">
           <Button variant="outline" onClick={onClose}>
@@ -332,7 +404,7 @@ export function ClientsCard({ locked }: { locked: boolean }) {
                   setFormKey((k) => k + 1);
                   toast.show('Client added.', 'success');
                 },
-                onError: (err) => setError(writeErrorMessage(err)),
+                onError: setError,
               })
             }
           />
@@ -370,30 +442,21 @@ export function ClientsCard({ locked }: { locked: boolean }) {
                   <motion.li
                     key={c.id}
                     {...listItem}
-                    className="flex flex-wrap items-center gap-2 px-5 py-2.5"
+                    className="flex items-center gap-2 px-5 py-2.5"
                   >
                     <div className="min-w-0 flex-1">
-                      <p className="text-sm font-medium break-words text-ink-900">{c.name}</p>
-                      <p className="text-xs break-words text-ink-500">
+                      <p className="text-sm font-medium wrap-anywhere text-ink-900">{c.name}</p>
+                      <p className="text-xs wrap-anywhere text-ink-500">
                         {c.service} · quantity {c.quantity}
                       </p>
                     </div>
-                    <Button
-                      variant="ghost"
-                      size="sm"
-                      disabled={locked}
-                      onClick={() => setEditing(c)}
-                    >
-                      Edit<span className="sr-only"> client {c.name}</span>
-                    </Button>
-                    <Button
-                      variant="danger-ghost"
-                      size="sm"
-                      disabled={locked}
-                      onClick={() => setDeleting(c)}
-                    >
-                      Delete<span className="sr-only"> client {c.name}</span>
-                    </Button>
+                    <RowActions
+                      kind="client"
+                      label={c.name}
+                      locked={locked}
+                      onEdit={() => setEditing(c)}
+                      onDelete={() => setDeleting(c)}
+                    />
                   </motion.li>
                 ))}
               </AnimatePresence>
@@ -446,7 +509,7 @@ function EditClientModal({ client, onClose }: { client: ClientEntry | null; onCl
                   toast.show('Client updated.', 'success');
                   onClose();
                 },
-                onError: (err) => setError(writeErrorMessage(err)),
+                onError: setError,
               },
             )
           }
@@ -477,7 +540,7 @@ export function ClientForm({
   disabled?: boolean;
   submitLabel: string;
   loading: boolean;
-  onSubmit: (v: ClientInput, setError: (m: string) => void) => void;
+  onSubmit: (v: ClientInput, onError: (err: unknown) => void) => void;
   onCancel?: () => void;
 }) {
   const [name, setName] = useState(initial?.name ?? '');
@@ -485,6 +548,7 @@ export function ClientForm({
   const [quantity, setQuantity] = useState(String(initial?.quantity ?? 1));
   const [errors, setErrors] = useState<{ name?: string; service?: string; quantity?: string }>({});
   const [formError, setFormError] = useState<string>();
+  const [maxQty, setMaxQty] = useState<number>();
   const [focused, setFocused] = useState(false);
   const q = useDebounced(service.trim(), 250);
   const sugg = useServiceSuggestions(q, focused && !disabled);
@@ -498,12 +562,18 @@ export function ClientForm({
     const errs = {
       name: name.trim() ? undefined : 'Enter the client name.',
       service: service.trim() ? undefined : 'Enter the service.',
-      quantity: Number.isInteger(n) && n >= 1 ? undefined : 'Enter a whole number, 1 or more.',
+      quantity: quantityError(quantity, maxQty),
     };
     setErrors(errs);
     setFormError(undefined);
     if (errs.name || errs.service || errs.quantity) return;
-    onSubmit({ name: name.trim(), service: service.trim(), quantity: n }, setFormError);
+    onSubmit({ name: name.trim(), service: service.trim(), quantity: n }, (err) => {
+      const f = clientFieldErrors(err);
+      if (f.max) setMaxQty(f.max);
+      if (f.name || f.service || f.quantity)
+        setErrors({ name: f.name, service: f.service, quantity: f.quantity });
+      else setFormError(writeErrorMessage(err));
+    });
   };
 
   return (
@@ -546,7 +616,7 @@ export function ClientForm({
                     type="button"
                     onMouseDown={(e) => e.preventDefault()}
                     onClick={() => setService(s.service)}
-                    className="min-h-11 rounded-control border border-ink-200 bg-surface px-3 text-left text-sm break-words text-ink-800 hover:border-primary-300 hover:bg-primary-50"
+                    className="min-h-11 rounded-control border border-ink-200 bg-surface px-3 text-left text-sm wrap-anywhere text-ink-800 hover:border-primary-300 hover:bg-primary-50"
                   >
                     {s.service}
                   </button>
@@ -561,6 +631,7 @@ export function ClientForm({
         type="number"
         inputMode="numeric"
         min={1}
+        max={maxQty}
         step={1}
         value={quantity}
         disabled={disabled}

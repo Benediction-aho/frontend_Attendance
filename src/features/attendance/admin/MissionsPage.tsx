@@ -76,9 +76,9 @@ function MissionCard({ m, pending }: { m: Mission; pending: boolean }) {
         </div>
         <p className="mt-3 text-sm text-ink-500">Reason</p>
         {/* Plain text only: never interpreted as HTML. */}
-        <p className="break-words whitespace-pre-line text-sm text-ink-900">{m.reason ?? '–'}</p>
+        <p className="wrap-anywhere whitespace-pre-line text-sm text-ink-900">{m.reason ?? '–'}</p>
         {m.mission_note && (
-          <p className="mt-2 break-words text-sm text-ink-600">Note: {m.mission_note}</p>
+          <p className="mt-2 wrap-anywhere text-sm text-ink-600">Note: {m.mission_note}</p>
         )}
         {pending && (
           <div className="mt-4 flex flex-col gap-3">

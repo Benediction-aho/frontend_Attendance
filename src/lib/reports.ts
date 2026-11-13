@@ -83,7 +83,7 @@ export interface WeeklySubmission {
   is_late: boolean;
   forwarded_at: string | null;
   /** Temporary download link (expires). */
-  file_url: string;
+  file_url: string | null;
 }
 
 export interface SubmissionStatus {
@@ -129,6 +129,8 @@ export interface AdminWeeklyList {
   expected_count: number;
   received_count: number;
   data: { user: EmployeeSummary; expected: boolean; submission: WeeklySubmission | null }[];
+  /** Expected employees without a report (server list). */
+  missing?: EmployeeSummary[];
 }
 
 export interface AdminSubmissionDetail extends WeeklySubmission {
@@ -238,6 +240,53 @@ export function writeErrorMessage(e: unknown): string {
   return errorMessage(e);
 }
 
+/** Plain-English field errors for a client entry (server 422 messages are Laravel text). */
+export function clientFieldErrors(e: unknown): {
+  name?: string;
+  service?: string;
+  quantity?: string;
+  max?: number;
+} {
+  if (!(e instanceof ApiError) || e.status !== 422 || e.code) return {};
+  const f = e.fieldErrors;
+  const out: { name?: string; service?: string; quantity?: string; max?: number } = {};
+  if (f.quantity) {
+    const max = /(?:greater than|between 1 and) (\d+)/i.exec(f.quantity)?.[1];
+    if (max) {
+      out.max = Number(max);
+      out.quantity = /between/i.test(f.quantity) ? f.quantity : `Enter a number from 1 to ${max}.`;
+    } else if (!/ field /i.test(f.quantity)) out.quantity = f.quantity;
+    else if (/at least|minimum|min/i.test(f.quantity))
+      out.quantity = 'Quantity must be at least 1.';
+    else out.quantity = 'Enter a whole number, 1 or more.';
+  }
+  // Server messages are plain English now; only rewrite raw framework text.
+  const plain = (m: string) => !/ field /i.test(m);
+  if (f.name)
+    out.name = plain(f.name)
+      ? f.name
+      : /greater than (\d+)/i.test(f.name)
+        ? 'This name is too long.'
+        : 'Check the client name.';
+  if (f.service)
+    out.service = plain(f.service)
+      ? f.service
+      : /greater than (\d+)/i.test(f.service)
+        ? 'This service is too long.'
+        : 'Check the service.';
+  return out;
+}
+
+/** Client-side quantity check; `max` only when the API told us its limit. */
+export function quantityError(raw: string, max?: number): string | undefined {
+  if (raw.trim() === '') return 'Enter the quantity.';
+  const n = Number(raw);
+  if (!Number.isFinite(n) || !Number.isInteger(n)) return 'Enter a whole number, 1 or more.';
+  if (n < 1) return 'Quantity must be at least 1.';
+  if (max !== undefined && n > max) return `Enter a number from 1 to ${max}.`;
+  return undefined;
+}
+
 export type WindowPhase = 'before' | 'open' | 'after';
 
 /** Where "now" (server time) sits relative to the window the API returned. */
@@ -260,6 +309,7 @@ export function countdown(toIso: string, now: Date): string {
   const r = s % 60;
   if (d > 0) return `${d} d ${h} h`;
   if (h > 0) return `${h} h ${String(m).padStart(2, '0')} min`;
+  if (m >= 10) return `${m} min`;
   if (m > 0) return `${m} min ${String(r).padStart(2, '0')} s`;
   return `${r} s`;
 }

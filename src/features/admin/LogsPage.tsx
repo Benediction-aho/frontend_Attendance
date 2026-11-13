@@ -43,7 +43,7 @@ function Details({ log }: { log: ActivityLog }) {
     <dl className="grid gap-x-6 gap-y-2 text-xs sm:grid-cols-2">
       <div>
         <dt className="text-ink-500">Event</dt>
-        <dd className="font-mono break-all text-ink-800">{log.event}</dd>
+        <dd className="font-mono wrap-anywhere text-ink-800">{log.event}</dd>
       </div>
       <div>
         <dt className="text-ink-500">By</dt>
@@ -55,11 +55,11 @@ function Details({ log }: { log: ActivityLog }) {
       </div>
       <div>
         <dt className="text-ink-500">Device</dt>
-        <dd className="font-mono break-all text-ink-800">{log.device_id ?? '–'}</dd>
+        <dd className="font-mono wrap-anywhere text-ink-800">{log.device_id ?? '–'}</dd>
       </div>
       <div className="sm:col-span-2">
         <dt className="text-ink-500">Browser</dt>
-        <dd className="break-words text-ink-800">{log.user_agent ?? '–'}</dd>
+        <dd className="wrap-anywhere text-ink-800">{log.user_agent ?? '–'}</dd>
       </div>
       {log.context && Object.keys(log.context).length > 0 && (
         <div className="sm:col-span-2">

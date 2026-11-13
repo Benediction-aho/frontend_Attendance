@@ -36,7 +36,7 @@ function Detail({ label, value }: { label: string; value: string | null | undefi
   return (
     <div>
       <dt className="text-ink-500">{label}</dt>
-      <dd className="break-words text-ink-900">{value || '–'}</dd>
+      <dd className="wrap-anywhere text-ink-900">{value || '–'}</dd>
     </div>
   );
 }
@@ -112,7 +112,7 @@ function DeviceCard({ c, onRevoke }: { c: FaceIdCredential; onRevoke?: () => voi
           {r?.user_agent && (
             <div className="sm:col-span-2">
               <dt className="text-ink-500">Technical details</dt>
-              <dd className="break-all text-xs text-ink-600">{r.user_agent}</dd>
+              <dd className="wrap-anywhere text-xs text-ink-600">{r.user_agent}</dd>
             </div>
           )}
         </dl>

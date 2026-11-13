@@ -1,9 +1,18 @@
+import type React from 'react';
 import type { ButtonHTMLAttributes } from 'react';
 import { cx } from './cx';
 import { Spinner } from './Spinner';
 
 export type ButtonVariant =
-  'primary' | 'secondary' | 'outline' | 'ghost' | 'danger' | 'danger-ghost' | 'danger-outline';
+  | 'primary'
+  | 'secondary'
+  | 'outline'
+  | 'ghost'
+  | 'danger'
+  | 'danger-ghost'
+  | 'danger-outline'
+  | 'quiet'
+  | 'quiet-danger';
 type Size = 'md' | 'lg' | 'sm';
 
 const styles: Record<ButtonVariant, string> = {
@@ -16,6 +25,11 @@ const styles: Record<ButtonVariant, string> = {
   'danger-ghost': 'bg-transparent text-danger-700 hover:bg-danger-50 active:bg-danger-100',
   'danger-outline':
     'border border-danger-200 bg-surface text-danger-700 hover:bg-danger-50 active:bg-danger-100',
+  /** Secondary row action: neutral text, no accent. */
+  quiet: 'bg-transparent font-medium text-ink-600 hover:bg-ink-50 active:bg-ink-100',
+  /** Destructive row action that only turns red on hover/focus. */
+  'quiet-danger':
+    'bg-transparent font-medium text-ink-600 hover:bg-danger-50 hover:text-danger-700 focus-visible:text-danger-700 active:bg-danger-100',
 };
 
 /** Disabled (not loading): neutral grey so it never reads as an available action. */
@@ -27,6 +41,8 @@ const disabledStyles: Record<ButtonVariant, string> = {
   ghost: 'bg-transparent text-ink-400',
   'danger-ghost': 'bg-transparent text-ink-400',
   'danger-outline': 'border border-ink-100 bg-surface text-ink-400',
+  quiet: 'bg-transparent text-ink-400',
+  'quiet-danger': 'bg-transparent text-ink-400',
 };
 
 const sizes: Record<Size, string> = {
@@ -40,6 +56,7 @@ export interface ButtonProps extends ButtonHTMLAttributes<HTMLButtonElement> {
   size?: Size;
   loading?: boolean;
   block?: boolean;
+  ref?: React.Ref<HTMLButtonElement>;
 }
 
 export function Button({

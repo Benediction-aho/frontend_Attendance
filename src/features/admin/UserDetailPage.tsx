@@ -39,7 +39,7 @@ function Row({ label, children }: { label: string; children: ReactNode }) {
   return (
     <div className="grid grid-cols-[8.5rem_minmax(0,1fr)] gap-3 py-2.5 text-sm">
       <dt className="text-ink-500">{label}</dt>
-      <dd className="break-words text-ink-800">{children || '–'}</dd>
+      <dd className="wrap-anywhere text-ink-800">{children || '–'}</dd>
     </div>
   );
 }

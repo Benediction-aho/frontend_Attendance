@@ -48,7 +48,7 @@ export function LeaveRows({ leaves, names }: { leaves: Leave[]; names?: Map<numb
             <p className="text-ink-800">
               {formatDate(l.start_date)} – {formatDate(l.end_date)}
             </p>
-            {l.note && <p className="break-words text-ink-500">{l.note}</p>}
+            {l.note && <p className="wrap-anywhere text-ink-500">{l.note}</p>}
           </div>
           <Button
             variant="danger-ghost"
