@@ -38,3 +38,35 @@ Professional and sober; one High layout bug (UI6-01) blocks sign-off. The rest i
 3. UI6-03 / UI6-04 – card header alignment and "Closes" as secondary text.
 4. UI6-05 – clear link affordance on pending items.
 5. UI6-11 – 429 as a warning with a disabled button until the retry time.
+
+## Re-review r2 (frontend-ui-designer, 2026-11-13, after 4c5d028)
+Method: private build in scratch, preview on port 4393, mocked API, Playwright iPhone 13 profile at 360 / 768 / 1440. Screens: `docs/reports/screens/phase-6/r2-<state>-<width>.png`.
+
+**Mocked e2e suite (first run): 101 passed, 1 skipped (real API), 0 failed** – the recovery-URL harness issue is gone.
+
+No horizontal overflow at any width (measured).
+
+| ID | Status | Evidence |
+|---|---|---|
+| UI6-01 | **Fixed** | Quantities one line at all widths (cell height 37 px = row height; only the long service name wraps to 57 px at 360, number stays on one line, top aligned). r2-super-full-360/768/1440.png |
+| UI6-02 | **Fixed** (see UI6-13) | 3 key figures + secondary line "1 on leave · 2 remote · 4 not working"; refused check-ins as a link; missions removed from Today. |
+| UI6-03 | **Fixed** | Header links baseline-aligned; short labels "Open" / "Reports" on phones, full labels on desktop. |
+| UI6-04 | **Fixed** | "Closes 13 Nov 2026, 16:27" as secondary amber text under 5 of 12. |
+| UI6-05 | **Fixed** | Rows sorted non-zero first, "Review" in primary, focus ring visible (r2-pending-focus-*.png). |
+| UI6-06 | **Fixed** | Single "Nothing to review." + quiet "See sign-up requests" link. r2-admin-limited-approve-*.png |
+| UI6-07 | **Fixed** | Month labels "Present / Late / Clients", no wrap at 360. r2-employee-360.png |
+| UI6-08 | **Fixed** | Both homes use the server work_date in the same "Friday 13 November" format (employee mock work_date is 12 Nov, shown as such). |
+| UI6-09 | **Fixed** | Export CSV in the header, hint below. r2-logs-cap-*.png |
+| UI6-10 | **Fixed** | "Change dates" link in the cap box opens the Filters sheet (r2-logs-change-dates-360.png). |
+| UI6-11 | **Fixed** | 429 shown as amber warning, button disabled with "Available again at HH:MM". r2-logs-429-*.png |
+| UI6-12 | **Fixed** | Error alert after ~1.9–2.4 s. r2-error-*.png |
+
+### New findings
+| ID | Screen / width | Screenshot | Severity | Problem | Recommendation |
+|---|---|---|---|---|---|
+| UI6-13 | Admin home, Today / 360 | r2-super-full-360.png | Low | The 3-column figure row is cramped at 360: "Not checked in yet" wraps on 3 lines and pushes "3" below "9 of 12"; caption "Of expected today" wraps on 3 lines. Figures no longer share a baseline. | Below `sm`: 2 columns (Checked in full width on row 1, Not checked in + Late on row 2), or shorter label "Not in yet"; drop the "Of expected today" caption on phones (the "of 12" already says it). |
+| UI6-14 | Top services / all | r2-super-full-1440.png | Low | Large quantities have no thousands separator ("1250") while other figures use en-GB formatting. | Format with `toLocaleString('en-GB')` and `tabular-nums` on the quantity column. |
+| UI6-15 | Activity log, cap + 429 / 360 | r2-logs-429-360.png | Low | When both apply, two stacked amber boxes repeat context; "Change dates" is offered while export is disabled anyway. | When rate-limited, show only the 429 warning (hide the cap box or merge it into one box). |
+
+### Verdict r2
+All UI6-01..12 fixed; no Critical/High/Medium open. Phase 6 UI signed off; UI6-13..15 are polish.
