@@ -125,7 +125,14 @@ describe('Admin DashboardPage', () => {
         data: {
           server_time: '2026-11-13T09:00:00Z',
           work_date: '2026-11-13',
-          today: { expected: 10, checked_in: 7, missing: 3, on_leave: 0, remote: 1, not_working: 2 },
+          today: {
+            expected: 10,
+            checked_in: 7,
+            missing: 3,
+            on_leave: 0,
+            remote: 1,
+            not_working: 2,
+          },
           pending: { sign_up_requests: 2 },
         },
       },
