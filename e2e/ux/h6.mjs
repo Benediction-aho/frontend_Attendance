@@ -3,7 +3,7 @@
 import * as h from './helpers.mjs';
 // Phase 6 copy of h34 with own ports (API :8016, front :4196).
 export { h };
-export const API = 'http://localhost:8016/api';
+export const API = process.env.UX_API ?? 'http://localhost:8016/api';
 export const BASE = process.env.UX_BASE ?? 'http://localhost:4196';
 export const SHOTS = '/home/user/frontend_Attendance/docs/reports/screens/phase-3-4';
 export const OFFICE = { latitude: 5.595223, longitude: -0.216703 };
@@ -233,7 +233,7 @@ export async function checkIn(p, waitMs = 6000) {
 }
 export const SHOTS6 = '/home/user/frontend_Attendance/docs/reports/screens/phase-6';
 export async function shot6(page, name) {
-  await page.screenshot({ path: `${SHOTS6}/ux-${name}.png`, fullPage: true });
+  await page.screenshot({ path: `${SHOTS6}/ux-${name}${process.env.UX_SUFFIX ?? ""}.png`, fullPage: true });
 }
 import { execSync } from 'node:child_process';
 export const sql = (q) =>

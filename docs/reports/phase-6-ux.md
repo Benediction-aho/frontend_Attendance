@@ -10,16 +10,28 @@
 
 | ID | Severity | Finding | Status |
 |---|---|---|---|
-| UX6-01 | High | The employee dashboard is not refreshed after check-in: the card says "Late" but "This week" shows "Days present 0 of 1, Late arrivals 0" for up to 5 min | **Fixed (every successful write refreshes both dashboards)** |
-| UX6-02 | Medium | Admin "Waiting for you" counts are stale right after an approval (sign-up, mission): returning Home still shows the old count | **Fixed (approvals refresh the admin dashboard)** |
-| UX6-03 | Medium | Admin "Day off" counts people on leave too: it shows 2 when the day list has 1 day off and 1 on leave | **Fixed (distinct day_off / holiday from the API; unexpected check-ins shown)** |
-| UX6-04 | Medium | Top services: a long service name squeezes the quantity column, so "15" wraps to "1 / 5" (reads as 1 and 5) | **Fixed (fixed nowrap quantity column)** |
-| UX6-05 | Low | Every CSV is saved as `activity_log.csv`: the server name `activity_log_2026-11-13_061020.csv` is not readable cross-origin because `Content-Disposition` is not in `Access-Control-Expose-Headers` | **Fixed (server file name; dated fallback)** |
-| UX6-06 | Low | The 429 message "Try again later." does not say when; the CSV "Device" column holds an internal id ("1", "215") that means nothing to the reader | **Fixed front (time of availability, disabled button); Device column: backend** |
-| UX6-07 | Low | Employee "This week 9 Nov – 15 Nov" while the weekly report page says "9 Nov – 13 Nov" (Monday to Friday) | **Fixed (week_end from the API, Mon–Fri)** |
-| UX6-08 | Low | Admin daily reports for a past day show "0 of 108 employees" on 12 Nov, but most of those accounts were created on 13 Nov (the denominator ignores account creation) | **Open (backend)** |
-| UX6-09 | Low | Admin "Weekly reports – Closes" date wraps onto two lines on the iPhone ("13 Nov 2026, / 17:00") | **Fixed (Closes as secondary text)** |
+| UX6-01 | High | The employee dashboard is not refreshed after check-in: the card says "Late" but "This week" shows "Days present 0 of 1, Late arrivals 0" for up to 5 min | **Fixed – re-tested on real API** (dashboard refetched 3 ms after check-in confirm: 0 of 1 → 1 of 1) |
+| UX6-02 | Medium | Admin "Waiting for you" counts are stale right after an approval (sign-up, mission): returning Home still shows the old count | **Fixed – re-tested** (Missions 2 → 1, Sign-up requests 6 → 5 right after approval) |
+| UX6-03 | Medium | Admin "Day off" counts people on leave too: it shows 2 when the day list has 1 day off and 1 on leave | **Fixed – re-tested** ("1 on leave · 1 remote · 1 day off" = API day_off 1 / leave 1) |
+| UX6-04 | Medium | Top services: a long service name squeezes the quantity column, so "15" wraps to "1 / 5" (reads as 1 and 5) | **Fixed – re-tested** (iPhone: 17 / 14 / 2 on one line next to a 100-char name) |
+| UX6-05 | Low | Every CSV is saved as `activity_log.csv`: the server name `activity_log_2026-11-13_061020.csv` is not readable cross-origin because `Content-Disposition` is not in `Access-Control-Expose-Headers` | **Fixed – re-tested** (`activity_log_2026-11-13_063350.csv`, desktop and iPhone) |
+| UX6-06 | Low | The 429 message "Try again later." does not say when; the CSV "Device" column holds an internal id ("1", "215") that means nothing to the reader | **Fixed – re-tested** ("Export is available again at 07:09", button disabled; Device = "Windows – Chrome") |
+| UX6-07 | Low | Employee "This week 9 Nov – 15 Nov" while the weekly report page says "9 Nov – 13 Nov" (Monday to Friday) | **Fixed – re-tested** (Home, API week_end and weekly page all "9 Nov – 13 Nov") |
+| UX6-08 | Low | Admin daily reports for a past day show "0 of 108 employees" on 12 Nov, but most of those accounts were created on 13 Nov (the denominator ignores account creation) | **Fixed – re-tested** (12 Nov: "0 of 50", API rows 50 = accounts existing that day) |
+| UX6-09 | Low | Admin "Weekly reports – Closes" date wraps onto two lines on the iPhone ("13 Nov 2026, / 17:00") | **Fixed – re-tested** ("Closes 13 Nov 2026, 17:00" on one line, iPhone) |
 | UX5-11 | – | Back links keep the day and the week | **Fixed** (re-tested) |
+| UX6-10 | Low | Desktop: the cap warning reads "…to get the rest.Change dates" (no space before the inline button) | **Open (front)** |
+
+## Re-test (frontend `4c5d028`, backend after `1bf4548`, real API)
+- Own ports: backend :8026 (`attendance_e2e`, `migrate` only, mail log, sync queue, CORS/WebAuthn origin :4206), private build on :4206 (`UX_API` / `UX_BASE` env vars added to `h6.mjs`). Screenshots: `docs/reports/screens/phase-6/*-rt.png`.
+- First attempt hit a stale preview from the previous run still listening on :4196 (old bundle): UX6-01 looked open. Re-run on the fresh build: fixed. `p6-rt-net.mjs` traces the requests: intent → dashboard refetch, confirm → dashboard refetch with `presence_days: 1`.
+- The temporary `log_export_max_rows` / `log_export_per_hour` rows were deleted after `p6-j6-csv.mjs` (checked in SQL).
+- `checked_in_not_expected` is 0 in the data, so its display was not seen with real data.
+- Weekly deadline 16 Nov before a check-in and 13 Nov after it is the intended absent-Friday grace (`WeeklyWindow::deadlineFor`). This is not a bug.
+- Regressions: none. j1 (Android), j2 (iPhone), j3 (iPhone), j4 tiers, j5, j6 (desktop and iPhone), j7, j8 and the cross-check all passed.
+
+### UX6-10 – Low – Missing space before "Change dates"
+- Super admin, desktop. Screenshot `ux-j6-02-cap-desktop-rt.png`. Text: "Narrow the dates to get the rest.Change dates". On phones the button wraps, so it looks fine. Fix: a space or `ml-1`.
 
 ## Details
 
