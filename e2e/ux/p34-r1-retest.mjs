@@ -15,7 +15,11 @@ async function approveDevice(email) {
   await k.bossSignIn(ap);
   await ap.goto(k.BASE + '/app/admin/faceid-devices');
   await ap.getByText(email).first().waitFor({ timeout: 8000 });
-  const card = ap.locator('article, section, li, div').filter({ hasText: email }).filter({ has: ap.getByRole('button', { name: 'Approve device' }) }).last();
+  const card = ap
+    .locator('article, section, li, div')
+    .filter({ hasText: email })
+    .filter({ has: ap.getByRole('button', { name: 'Approve device' }) })
+    .last();
   await card.getByRole('button', { name: 'Approve device' }).click();
   await ap.waitForTimeout(1500);
   await k.shot(ap, 'r1-admin-approved');
@@ -34,8 +38,13 @@ if (sc === 'lost') {
     await re.click();
     await p.waitForTimeout(1500);
     const dlg = p.locator('[role=dialog]');
-    if (await dlg.count()) { k.out('dlg', (await dlg.innerText()).replace(/\s+/g, ' ')); await dlg.getByRole('button').last().click(); }
-    else { k.out('confirm step', (await k.mainText(p)).slice(0, 300)); await p.getByRole('button', { name: 'Register Face ID again' }).first().click(); }
+    if (await dlg.count()) {
+      k.out('dlg', (await dlg.innerText()).replace(/\s+/g, ' '));
+      await dlg.getByRole('button').last().click();
+    } else {
+      k.out('confirm step', (await k.mainText(p)).slice(0, 300));
+      await p.getByRole('button', { name: 'Register Face ID again' }).first().click();
+    }
     await p.waitForTimeout(4000);
     k.out('after re-register', await k.mainText(p));
     await k.shot(p, 'r1-lost-pending');
@@ -48,7 +57,10 @@ if (sc === 'lost') {
   }
 } else if (sc === 'slow') {
   const { p, c } = await k.ready(b, {});
-  await c.route('**/api/**', async (r) => { await k.sleep(6000); r.continue(); });
+  await c.route('**/api/**', async (r) => {
+    await k.sleep(6000);
+    r.continue();
+  });
   await p.getByRole('button', { name: 'Check in at the office' }).click();
   const t0 = Date.now();
   for (let i = 0; i < 12; i++) {
@@ -60,7 +72,8 @@ if (sc === 'lost') {
 } else if (sc === 'lowacc' || sc === 'edge') {
   const s = [];
   const lat = sc === 'edge' ? k.OFFICE.latitude + 70 / 111320 : k.OFFICE.latitude;
-  for (let i = 0; i < 60; i++) s.push({ lat, lng: k.OFFICE.longitude, acc: sc === 'edge' ? 30 : 220, delay: 1000 });
+  for (let i = 0; i < 60; i++)
+    s.push({ lat, lng: k.OFFICE.longitude, acc: sc === 'edge' ? 30 : 220, delay: 1000 });
   const c0 = await k.ctx(b, 'iphone');
   await k.scriptedGeo(c0, s);
   const u = await k.staff('ama');

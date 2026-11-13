@@ -7,7 +7,8 @@ const far = { latitude: 5.6037, longitude: -0.187 }; // ~3.4 km
 const near = (m) => ({ lat: 5.595223 + m / 111320, lng: -0.216703 });
 let extra = {};
 if (sc === 'outside') extra = { geolocation: { ...far, accuracy: 15 } };
-if (sc === 'lowacc') extra = { geolocation: { latitude: near(30).lat, longitude: near(30).lng, accuracy: 220 } };
+if (sc === 'lowacc')
+  extra = { geolocation: { latitude: near(30).lat, longitude: near(30).lng, accuracy: 220 } };
 if (sc === 'denied') extra = { permissions: [] };
 const r = await k.ready(b, { dev, extra });
 const { p, c } = r;

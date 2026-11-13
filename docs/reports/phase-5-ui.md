@@ -51,3 +51,7 @@ Phase 5 is sober, on brand and well structured; the weekly PDF card is the best 
 3. UI5-03: no dead "Open PDF" link without `file_url`.
 4. UI5-04: admin daily row layout at 360.
 5. UI5-05: max width on admin detail pages at 1440.
+
+
+## Fixes (attendance-frontend, 2026-11-13)
+UI5-01 to UI5-12: **Fixed** (see PROGRESS.md "Phase 5 – review fixes"). Ready for re-review.

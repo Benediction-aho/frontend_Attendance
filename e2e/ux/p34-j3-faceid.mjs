@@ -5,10 +5,19 @@ const b = await k.h.launch();
 const r = await k.ready(b, {});
 const { p, c, auth } = r;
 const reqs = [];
-p.on('request', (q) => q.url().includes('/attendance/') && q.method() === 'POST' && reqs.push(q.url().split('/api')[1]));
+p.on(
+  'request',
+  (q) =>
+    q.url().includes('/attendance/') &&
+    q.method() === 'POST' &&
+    reqs.push(q.url().split('/api')[1]),
+);
 if (sc === 'cancel') {
   await p.evaluate(() => {
-    navigator.credentials.get = () => Promise.reject(new DOMException('The operation either timed out or was not allowed.', 'NotAllowedError'));
+    navigator.credentials.get = () =>
+      Promise.reject(
+        new DOMException('The operation either timed out or was not allowed.', 'NotAllowedError'),
+      );
   });
   k.out('cancel', await k.checkIn(p, 4000));
   await k.shot(p, 'j3-faceid-cancel');
@@ -39,7 +48,10 @@ if (sc === 'cancel') {
     const g = navigator.credentials.get.bind(navigator.credentials);
     navigator.credentials.get = (o) => new Promise((res) => setTimeout(() => res(g(o)), 2500));
   });
-  await p.getByRole('button', { name: /Check in at the office|Try again/ }).first().click();
+  await p
+    .getByRole('button', { name: /Check in at the office|Try again/ })
+    .first()
+    .click();
   await p.waitForTimeout(1500);
   await c.setOffline(true);
   await p.waitForTimeout(12000);
@@ -49,12 +61,24 @@ if (sc === 'cancel') {
   await p.waitForTimeout(3000);
   k.out('back online', await k.mainText(p));
 } else if (sc === 'slow') {
-  await p.route('**/api/**', async (route) => { await new Promise((r) => setTimeout(r, 6000)); await route.continue(); });
+  await p.route('**/api/**', async (route) => {
+    await new Promise((r) => setTimeout(r, 6000));
+    await route.continue();
+  });
   await p.getByRole('button', { name: 'Check in at the office' }).click();
-  for (let i = 0; i < 6; i++) { await p.waitForTimeout(4000); k.out('slow t' + i * 4, (await k.mainText(p)).slice(60, 300)); }
+  for (let i = 0; i < 6; i++) {
+    await p.waitForTimeout(4000);
+    k.out('slow t' + i * 4, (await k.mainText(p)).slice(60, 300));
+  }
   await k.shot(p, 'j3-slow');
 } else if (sc === 'server500') {
-  await p.route('**/check-in/confirm', (route) => route.fulfill({ status: 500, body: '{"message":"Server Error"}', contentType: 'application/json' }));
+  await p.route('**/check-in/confirm', (route) =>
+    route.fulfill({
+      status: 500,
+      body: '{"message":"Server Error"}',
+      contentType: 'application/json',
+    }),
+  );
   k.out('500', await k.checkIn(p, 9000));
   await k.shot(p, 'j3-500');
 }

@@ -408,7 +408,7 @@ test('work schedule: chosen once within the limits, then read-only', async ({ pa
   await page.getByRole('button', { name: 'Save my days' }).click();
   await expect(page.getByRole('dialog').getByText('Wednesday')).toBeVisible();
   await page.getByRole('dialog').getByRole('button', { name: 'Save' }).click();
-  await expect(page.getByText('They apply from tomorrow', { exact: false })).toBeVisible();
+  await expect(page.getByText('Your days are saved. They apply from tomorrow.')).toBeVisible();
   const saved = state.calls.find((c) => c.path === '/me/work-schedule' && c.method === 'POST');
   expect(saved?.body).toEqual({ days_off: [3], remote_days: [5] });
   await page.goto('/app/attendance/schedule');

@@ -54,7 +54,12 @@ export async function staff(prefix = 'ama', type = 'employee', { onboard = true 
     employee_type: type,
     job_title: 'Officer',
   });
-  const list = await call('GET', '/admin/users?status=pending&search=' + encodeURIComponent(email), null, tok);
+  const list = await call(
+    'GET',
+    '/admin/users?status=pending&search=' + encodeURIComponent(email),
+    null,
+    tok,
+  );
   const u = (list.body.data ?? []).find((x) => x.email === email);
   const o = h.logSize();
   await call('POST', `/admin/users/${u.id}/approve`, {}, tok);
@@ -132,11 +137,21 @@ export async function shot(page, name) {
   await page.screenshot({ path: `${SHOTS}/ux-${name}.png`, fullPage: true });
 }
 export const mainText = async (page) =>
-  (await page.locator('main').innerText().catch(() => '')).replace(/\s+/g, ' ').slice(0, 900);
+  (
+    await page
+      .locator('main')
+      .innerText()
+      .catch(() => '')
+  )
+    .replace(/\s+/g, ' ')
+    .slice(0, 900);
 export const sleep = (ms) => new Promise((r) => setTimeout(r, ms));
 
 /** Onboarded employee signed in on a fresh context with Face ID registered. */
-export async function ready(browser, { dev = 'iphone', prefix = 'ama', type = 'employee', extra = {}, register = true } = {}) {
+export async function ready(
+  browser,
+  { dev = 'iphone', prefix = 'ama', type = 'employee', extra = {}, register = true } = {},
+) {
   const u = await staff(prefix, type);
   const c = await ctx(browser, dev, extra);
   const p = await c.newPage();
@@ -148,9 +163,16 @@ export async function ready(browser, { dev = 'iphone', prefix = 'ama', type = 'e
     const btn = p.getByRole('button', { name: 'Set up Face ID' }).first();
     await btn.waitFor({ timeout: 8000 });
     await btn.click();
-    await p.getByText('Face ID is ready').first().waitFor({ timeout: 8000 }).catch(() => out('no ready text'));
+    await p
+      .getByText('Face ID is ready')
+      .first()
+      .waitFor({ timeout: 8000 })
+      .catch(() => out('no ready text'));
     await p.goto(BASE + '/app');
-    await p.getByRole('button', { name: 'Check in at the office' }).waitFor({ timeout: 8000 }).catch(() => out('no check-in button'));
+    await p
+      .getByRole('button', { name: 'Check in at the office' })
+      .waitFor({ timeout: 8000 })
+      .catch(() => out('no check-in button'));
   }
   return { u, c, p, auth };
 }
@@ -167,7 +189,11 @@ export async function scriptedGeo(c, script) {
           setTimeout(() => {
             if (stopped) return;
             if (step.error) err({ code: step.error, message: 'scripted' });
-            else ok({ coords: { latitude: step.lat, longitude: step.lng, accuracy: step.acc }, timestamp: Date.now() });
+            else
+              ok({
+                coords: { latitude: step.lat, longitude: step.lng, accuracy: step.acc },
+                timestamp: Date.now(),
+              });
             next();
           }, step.delay ?? 300);
         };
@@ -176,17 +202,31 @@ export async function scriptedGeo(c, script) {
         (window.__watches ??= {})[id] = () => (stopped = true);
         return id;
       },
-      clearWatch(id) { window.__watches?.[id]?.(); },
+      clearWatch(id) {
+        window.__watches?.[id]?.();
+      },
       getCurrentPosition(ok, err) {
         const step = s.find((x) => !x.error) ?? s[0];
-        setTimeout(() => (step.error ? err({ code: step.error, message: 's' }) : ok({ coords: { latitude: step.lat, longitude: step.lng, accuracy: step.acc }, timestamp: Date.now() })), 200);
+        setTimeout(
+          () =>
+            step.error
+              ? err({ code: step.error, message: 's' })
+              : ok({
+                  coords: { latitude: step.lat, longitude: step.lng, accuracy: step.acc },
+                  timestamp: Date.now(),
+                }),
+          200,
+        );
       },
     };
     Object.defineProperty(navigator, 'geolocation', { value: geo, configurable: true });
   }, script);
 }
 export async function checkIn(p, waitMs = 6000) {
-  await p.getByRole('button', { name: /Check in at the office|Try again/ }).first().click();
+  await p
+    .getByRole('button', { name: /Check in at the office|Try again/ })
+    .first()
+    .click();
   await p.waitForTimeout(waitMs);
   return mainText(p);
 }

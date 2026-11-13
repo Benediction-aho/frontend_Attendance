@@ -8,23 +8,45 @@ const b = await h.launch();
 const p = await (await b.newContext({ ...h.DEV.android })).newPage();
 await p.goto(h.BASE + '/sign-in');
 await p.getByLabel('Email').fill('  ' + email.toUpperCase() + ' ');
-await p.getByLabel('Identification code or password').fill(' ' + code.slice(0, 5) + ' ' + code.slice(5) + ' ');
-await p.getByRole('button', { name: 'Sign in' }).click(); await p.waitForTimeout(2500);
-out('UX2-01 spaced code', p.url(), (await p.locator('[role=alert], [id$=error]').allInnerTexts()).join('|')); await h.shot(p, 'j16-spaced-code');
+await p
+  .getByLabel('Identification code or password')
+  .fill(' ' + code.slice(0, 5) + ' ' + code.slice(5) + ' ');
+await p.getByRole('button', { name: 'Sign in' }).click();
+await p.waitForTimeout(2500);
+out(
+  'UX2-01 spaced code',
+  p.url(),
+  (await p.locator('[role=alert], [id$=error]').allInnerTexts()).join('|'),
+);
+await h.shot(p, 'j16-spaced-code');
 const a = await (await b.newContext({ ...h.DEV.android })).newPage();
 await h.superSignIn(a);
-await a.goto(h.BASE + '/app/admin/users'); await a.waitForTimeout(1200);
+await a.goto(h.BASE + '/app/admin/users');
+await a.waitForTimeout(1200);
 await h.shot(a, 'j16-users-phone');
-out('UX2-09 email visible on phone', await a.getByText(email.toLowerCase()).locator('visible=true').count());
-await a.goto(h.BASE + '/app/notifications'); await a.waitForTimeout(1000);
-await a.getByText('New account request').first().click(); await a.waitForTimeout(1200);
+out(
+  'UX2-09 email visible on phone',
+  await a.getByText(email.toLowerCase()).locator('visible=true').count(),
+);
+await a.goto(h.BASE + '/app/notifications');
+await a.waitForTimeout(1000);
+await a.getByText('New account request').first().click();
+await a.waitForTimeout(1200);
 out('UX2-14 notif click ->', a.url());
-await a.goto(h.BASE + '/confirm-email?token=bogus123'); await a.waitForTimeout(1500);
-out('UX2-16 first', await txt(a)); await a.reload(); await a.waitForTimeout(1500); out('UX2-16 reload', await txt(a));
+await a.goto(h.BASE + '/confirm-email?token=bogus123');
+await a.waitForTimeout(1500);
+out('UX2-16 first', await txt(a));
+await a.reload();
+await a.waitForTimeout(1500);
+out('UX2-16 reload', await txt(a));
 const c = await (await b.newContext({ ...h.DEV.iphone })).newPage();
 let fail = true;
 await c.route('**/api/me', (r) => (fail ? r.fulfill({ status: 503, body: '{}' }) : r.continue()));
-await c.goto(h.BASE + '/app'); await c.waitForTimeout(2000);
-out('UX2-12 down', await txt(c)); await h.shot(c, 'j16-startup-down');
-fail = false; await c.waitForTimeout(7000); out('UX2-12 after recover', c.url(), await txt(c));
+await c.goto(h.BASE + '/app');
+await c.waitForTimeout(2000);
+out('UX2-12 down', await txt(c));
+await h.shot(c, 'j16-startup-down');
+fail = false;
+await c.waitForTimeout(7000);
+out('UX2-12 after recover', c.url(), await txt(c));
 await b.close();

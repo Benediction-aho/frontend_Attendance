@@ -3,7 +3,18 @@
 Updated by the agents at the end of every work session.
 
 ## Current phase
-**Phase 5 – Tasks, clients and reports: frontend done – ready for frontend-ui-designer** (2026-11-13). Wired to backend contract 0.5 (9d619bb). Phases 3–4: UI34/UX34 fixes delivered (ba78ffa), re-check pending as before.
+**Phase 5 – Tasks, clients and reports: UI5-01..12 and UX5-01, 03..07 fixed – ready for frontend-ui-designer and frontend-ux-tester re-check** (2026-11-13).
+
+### Phase 5 – review fixes (frontend)
+- UX5-01: global safe wrap (`overflow-wrap:anywhere` on body, `wrap-anywhere` instead of `break-words`/`break-all`, `min-width:0` on main/li/td/th); e2e at 360 px checks `scrollWidth <= innerWidth` on My work, daily and weekly.
+- UI5-01: rows use one quiet "Options" button (sheet with Edit / Delete) below `sm`; inline Edit + neutral Delete (red on hover/focus) from `sm`.
+- UI5-02..12 done (outline Replace once sent, "Link not available" without `file_url`, admin daily row on two lines at 360, `max-w-3xl` detail pages and 4-column figures, day without year, no repeated late line, file name wrap, shorter placeholder, no seconds above 10 min, singular "employee", aligned links).
+- UX5-03: missing list from `missing: EmployeeSummary[]` (backend d580c7d; falls back to the rows), one per line with job title/email, collapsed after 10.
+- UX5-04: upload fails at once offline (`networkMode: 'always'`), clear message, automatic resend on `online`, success toast with the version. A lost connection while online asks to check versions (no blind resend, avoids duplicate versions).
+- UX5-05/06: client check (min 1, whole number); server field messages shown per field in plain English; the max learned from the server message (the API does not expose `client_quantity_max` to employees – optional backend request).
+- UX5-07: back link depends on origin (`?from=daily` → "Back to daily reports"); daily details now link to the week summary.
+- UX5-02 (server) and UX5-08 (owner question) are outside the frontend.
+ Wired to backend contract 0.5 (9d619bb). Phases 3–4: UI34/UX34 fixes delivered (ba78ffa), re-check pending as before.
 
 ### Phase 5 – what was delivered (frontend)
 - **My work** (`/app/work`, employees; nav "My work", on phones in the bottom bar instead of History, which stays linked from Today): tasks for today (plan, "Add as done", tick/untick with optimistic tick, edit, delete with confirmation; "Done at" from the server's `completed_at`), clients (name, free-text service with suggestions from `GET /clients/services` rendered as plain text buttons, quantity), end-of-day client list with services totals. Before the check-in (from `/attendance/today`) a notice explains why writes are disabled; the global 403 `checkin_required` gate still applies. Nothing time-related is sent.

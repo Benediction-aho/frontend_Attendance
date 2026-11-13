@@ -14,13 +14,13 @@ Tester: `frontend-ux-tester` – 2026-11-13 (00:50–01:15 server time, a Friday
 
 | ID | Severity | Title | Status |
 |---|---|---|---|
-| UX5-01 | High | A long word with no spaces (task title, client name, URL) makes the whole page wider than the phone; the Plan/Edit/Delete buttons go off-screen | Open |
+| UX5-01 | High | A long word with no spaces (task title, client name, URL) makes the whole page wider than the phone; the Plan/Edit/Delete buttons go off-screen | Fixed (frontend) |
 | UX5-02 | Medium | Weekly close "catch-up" for the previous week counts employees who did not exist that week ("0 of 76 received" for the week of 2 Nov, with accounts created on 12–13 Nov) | Open (backend) |
-| UX5-03 | Medium | "Not received" list (admin weekly page and close email) shows names only: homonyms cannot be told apart, and the list is one long comma-separated paragraph | Open |
-| UX5-04 | Medium | Upload while offline: the Send button keeps the spinner with no message; the user does not know if the report was sent | Open |
-| UX5-05 | Low | Quantity 0 is saved silently as 1 (no message) | Open |
-| UX5-06 | Low | Quantity above 999 shows the raw server text "The quantity field must not be greater than 999." | Open |
-| UX5-07 | Low | Per-employee weekly page reached from the daily reports says "Back to weekly reports" | Open |
+| UX5-03 | Medium | "Not received" list (admin weekly page and close email) shows names only: homonyms cannot be told apart, and the list is one long comma-separated paragraph | Fixed (frontend) |
+| UX5-04 | Medium | Upload while offline: the Send button keeps the spinner with no message; the user does not know if the report was sent | Fixed (frontend) |
+| UX5-05 | Low | Quantity 0 is saved silently as 1 (no message) | Fixed (frontend) |
+| UX5-06 | Low | Quantity above 999 shows the raw server text "The quantity field must not be greater than 999." | Fixed (frontend) |
+| UX5-07 | Low | Per-employee weekly page reached from the daily reports says "Back to weekly reports" | Fixed (frontend) |
 | UX5-08 | Low | Monthly PDF: homonyms appear as identical rows ("MENSAH Efua" ×4); the fonts and header are smaller than in the template | Open (owner question) |
 
 ### UX5-01 – High – Long unbroken text breaks the phone layout
@@ -69,3 +69,7 @@ Tester: `frontend-ux-tester` – 2026-11-13 (00:50–01:15 server time, a Friday
 ## Journeys passed
 Locked → check-in → tasks/clients (iPhone); weekly upload refusals → upload → replace → download (iPhone); reminder → notification → weekly page; close email with attachments (two recipients); late upload → forward email; admin weekly N of M / submission (super admin iPhone, recipient desktop, viewer Android 360); client-name tiers (desktop); daily report generation; monthly report email + PDF; mission history badge; deep link after sign-in.
 Not covered: real push delivery (needs an installed PWA on a real phone), and real Safari file picker behaviour (iCloud Drive / Files) – to check on a device.
+
+
+## Fixes (attendance-frontend, 2026-11-13)
+UX5-01, 03, 04, 05, 06, 07: **Fixed** in the frontend (e2e `e2e/reports.spec.ts`: 360 px overflow, Options sheet, quantity 0, offline upload, missing list, back link). UX5-02 server side, UX5-08 owner question.

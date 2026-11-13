@@ -30,7 +30,13 @@ k.out('onbehalf empty', (await ap.locator('[role=dialog]').innerText()).replace(
 await ap.getByLabel('Reason').fill('Phone broken, came to my desk at 08:00');
 await ap.locator('[role=dialog]').getByRole('button', { name: 'Check in now' }).click();
 await ap.waitForTimeout(1500);
-k.out('after onbehalf row', (await ap.locator('li, tr').filter({ hasText: 'Abena' }).first().innerText()).replace(/\s+/g, ' '));
+k.out(
+  'after onbehalf row',
+  (await ap.locator('li, tr').filter({ hasText: 'Abena' }).first().innerText()).replace(
+    /\s+/g,
+    ' ',
+  ),
+);
 await k.shot(ap, 'j6-02-onbehalf-done');
 await e1.p.reload();
 await e1.p.waitForTimeout(1500);
@@ -40,9 +46,14 @@ await k.shot(e1.p, 'j6-03-employee-after-onbehalf');
 await ap.goto(k.BASE + `/app/admin/attendance/users/${e2.u.id}`);
 await ap.waitForTimeout(1500);
 k.out('kwesi admin page', (await k.mainText(ap)).slice(0, 500));
-await ap.getByRole('button', { name: /Edit|Change|Set/ }).first().click();
+await ap
+  .getByRole('button', { name: /Edit|Change|Set/ })
+  .first()
+  .click();
 await ap.waitForTimeout(500);
-const dow = ['Sunday', 'Monday', 'Tuesday', 'Wednesday', 'Thursday', 'Friday', 'Saturday'][new Date().getDay()];
+const dow = ['Sunday', 'Monday', 'Tuesday', 'Wednesday', 'Thursday', 'Friday', 'Saturday'][
+  new Date().getDay()
+];
 await ap.getByRole('radio', { name: `${dow}: Remote` }).check({ force: true });
 k.out('applies from default', await ap.getByLabel('Applies from').inputValue());
 await ap.getByLabel('Applies from').fill(today);
@@ -55,25 +66,45 @@ await e2.p.waitForTimeout(1500);
 await k.shot(e2.p, 'j6-05-remote-day');
 k.out('kwesi today', (await k.mainText(e2.p)).slice(0, 450));
 const rb = e2.p.getByRole('button', { name: /remote/i }).first();
-if (await rb.count()) { await rb.click(); await e2.p.waitForTimeout(4000); k.out('kwesi after remote', (await k.mainText(e2.p)).slice(0, 350)); }
+if (await rb.count()) {
+  await rb.click();
+  await e2.p.waitForTimeout(4000);
+  k.out('kwesi after remote', (await k.mainText(e2.p)).slice(0, 350));
+}
 // leave for efua today
 await ap.goto(k.BASE + '/app/admin/leave');
 await ap.waitForTimeout(1500);
 k.out('leave page', (await k.mainText(ap)).slice(0, 300));
-await ap.getByLabel('Employee').selectOption({ label: (await ap.getByLabel('Employee').locator('option').filter({ hasText: 'Efua' }).first().innerText()) });
+await ap.getByLabel('Employee').selectOption({
+  label: await ap
+    .getByLabel('Employee')
+    .locator('option')
+    .filter({ hasText: 'Efua' })
+    .first()
+    .innerText(),
+});
 await ap.getByLabel('First day').fill(today);
 await ap.getByLabel('Last day').fill(today);
 await ap.getByLabel('Note').fill('Annual leave');
-await ap.getByRole('button', { name: /Add leave|Save|Record/ }).first().click();
+await ap
+  .getByRole('button', { name: /Add leave|Save|Record/ })
+  .first()
+  .click();
 await ap.waitForTimeout(1500);
 k.out('leave saved', (await k.mainText(ap)).slice(0, 500));
 // invalid leave: last day before first day
 await ap.getByLabel('Employee').selectOption({ index: 1 });
 await ap.getByLabel('First day').fill('2026-12-10');
 await ap.getByLabel('Last day').fill('2026-12-01');
-await ap.getByRole('button', { name: /Add leave|Save|Record/ }).first().click();
+await ap
+  .getByRole('button', { name: /Add leave|Save|Record/ })
+  .first()
+  .click();
 await ap.waitForTimeout(1000);
-k.out('leave invalid', (await ap.locator('[role=alert], [id$=error], .text-danger-700').allInnerTexts()).join(' | '));
+k.out(
+  'leave invalid',
+  (await ap.locator('[role=alert], [id$=error], .text-danger-700').allInnerTexts()).join(' | '),
+);
 await k.shot(ap, 'j6-06-leave');
 const c3 = await k.ctx(b, 'iphone');
 const p3 = await c3.newPage();
@@ -85,7 +116,10 @@ k.out('efua today', (await k.mainText(p3)).slice(0, 400));
 // holiday (future)
 await ap.getByLabel('Date').fill('2026-12-25');
 await ap.getByLabel('Name').fill('Christmas Day');
-await ap.getByRole('button', { name: /Add holiday|Add/ }).last().click();
+await ap
+  .getByRole('button', { name: /Add holiday|Add/ })
+  .last()
+  .click();
 await ap.waitForTimeout(1200);
 k.out('holiday', (await k.mainText(ap)).slice(-400));
 // admin day on phone
@@ -98,7 +132,13 @@ await k.shot(ip, 'j6-08-admin-day-iphone');
 k.out('admin day iphone', (await k.mainText(ip)).slice(0, 300));
 // gate: mock 403 checkin_required on a request
 const e4 = await k.ready(b, { prefix: 'gate' });
-await e4.p.route('**/api/notifications**', (r) => r.fulfill({ status: 403, contentType: 'application/json', body: JSON.stringify({ message: 'Check in first.', code: 'checkin_required' }) }));
+await e4.p.route('**/api/notifications**', (r) =>
+  r.fulfill({
+    status: 403,
+    contentType: 'application/json',
+    body: JSON.stringify({ message: 'Check in first.', code: 'checkin_required' }),
+  }),
+);
 await e4.p.goto(k.BASE + '/app/notifications');
 await e4.p.waitForTimeout(2500);
 k.out('gate url', e4.p.url(), (await k.mainText(e4.p)).slice(0, 300));

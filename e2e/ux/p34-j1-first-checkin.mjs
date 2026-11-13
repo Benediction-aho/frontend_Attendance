@@ -18,7 +18,7 @@ await p.getByRole('button', { name: 'Save and continue' }).click();
 await p.waitForURL(/faceid|app/);
 k.out('after profile', p.url());
 await k.shot(p, (process.argv[2] ?? 'iphone') + '-j1-01-welcome-faceid');
-k.out(await k.mainText(p) || (await p.locator('body').innerText()).slice(0, 600));
+k.out((await k.mainText(p)) || (await p.locator('body').innerText()).slice(0, 600));
 await p.getByRole('button', { name: 'Set up Face ID' }).click();
 await p.waitForTimeout(2500);
 k.out('creds', (await auth.credentials()).length);
