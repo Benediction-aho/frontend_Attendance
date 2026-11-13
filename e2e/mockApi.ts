@@ -37,6 +37,60 @@ export interface MockState {
   settings?: unknown[];
   notifications?: Record<string, unknown>[];
   logs?: Record<string, unknown>[];
+  /** GET /admin/dashboard `data` (phase 6). */
+  adminDashboard?: Record<string, unknown>;
+  /** GET /me/dashboard `data`. */
+  myDashboard?: Record<string, unknown>;
+  /** Status returned by the CSV export (default 200). */
+  exportStatus?: number;
+}
+
+export function defaultMyDashboard(o: Record<string, unknown> = {}) {
+  return {
+    server_time: new Date().toISOString(),
+    work_date: '2026-11-13',
+    today: {
+      day_status: 'working',
+      expected: true,
+      checked_in: false,
+      checked_out: false,
+      check_in_at: null,
+      check_in_type: null,
+      is_late: null,
+      mission_status: null,
+      tasks_planned: 0,
+      tasks_done: 0,
+      clients_count: 0,
+    },
+    week: {
+      week_start: '2026-11-09',
+      week_end: '2026-11-15',
+      presence_days: 4,
+      expected_days_so_far: 5,
+      late_count: 1,
+      tasks_planned: 20,
+      tasks_done: 15,
+      clients_count: 9,
+      weekly_report: {
+        status: 'open',
+        expected: true,
+        window_date: '2026-11-13',
+        opens_at: null,
+        deadline: '2026-11-13T17:00:00Z',
+        submitted_at: null,
+        is_late: null,
+        version: null,
+      },
+    },
+    month: {
+      period_start: '2026-10-26',
+      period_end: '2026-11-25',
+      presence_days: 14,
+      late_count: 2,
+      clients_count: 31,
+    },
+    ...o,
+  };
 }
 
 const page1 = (data: unknown[], extra: object = {}) => ({
@@ -192,6 +246,39 @@ export async function mockApi(page: Page, state: MockState) {
       const t = url.searchParams.get('type');
       if (t) l = l.filter((x) => x.type === t);
       return send(200, page1(l));
+    }
+    if (path === '/me/dashboard')
+      return send(200, { data: state.myDashboard ?? defaultMyDashboard() });
+    if (path === '/admin/dashboard')
+      return send(200, {
+        data: state.adminDashboard ?? {
+          server_time: new Date().toISOString(),
+          work_date: '2026-11-13',
+        },
+      });
+    if (path === '/admin/activity-logs/export') {
+      const st = state.exportStatus ?? 200;
+      if (st !== 200)
+        return route.fulfill({
+          status: st,
+          contentType: 'application/json',
+          body: JSON.stringify({ message: 'Too Many Attempts.' }),
+          headers: {
+            'Access-Control-Allow-Origin': '*',
+            'Retry-After': '1800',
+            'Access-Control-Expose-Headers': 'Retry-After',
+          },
+        });
+      return route.fulfill({
+        status: 200,
+        contentType: 'text/csv; charset=UTF-8',
+        body: '\ufeffDate,Type\n',
+        headers: {
+          'Access-Control-Allow-Origin': '*',
+          'Access-Control-Expose-Headers': 'Content-Disposition',
+          'Content-Disposition': 'attachment; filename="activity_log_2026-11-13_090000.csv"',
+        },
+      });
     }
     if (path === '/client-errors') return send(202, {});
     // Defaults so employee pages load in tests that do not exercise attendance.
