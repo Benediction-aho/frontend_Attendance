@@ -16,6 +16,8 @@ export function FilterPanel({
   gridClassName = 'sm:grid-cols-2 lg:grid-cols-4',
   footer,
   onClear,
+  sheetOpen,
+  onSheetOpenChange,
 }: {
   main: ReactNode;
   more: ReactNode;
@@ -24,8 +26,16 @@ export function FilterPanel({
   gridClassName?: string;
   footer?: ReactNode;
   onClear?: () => void;
+  /** Optional control of the phone sheet (e.g. a "Change dates" link elsewhere). */
+  sheetOpen?: boolean;
+  onSheetOpenChange?: (open: boolean) => void;
 }) {
-  const [open, setOpen] = useState(false);
+  const [inner, setInner] = useState(false);
+  const open = sheetOpen ?? inner;
+  const setOpen = (v: boolean) => {
+    setInner(v);
+    onSheetOpenChange?.(v);
+  };
   const label = activeMore ? `Filters · ${activeMore}` : 'Filters';
   return (
     <Card className="mb-4 p-4">

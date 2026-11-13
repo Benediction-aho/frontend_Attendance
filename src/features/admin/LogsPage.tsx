@@ -1,4 +1,4 @@
-import { Fragment, useState } from 'react';
+import { Fragment, useEffect, useState } from 'react';
 import { useMutation, useQuery } from '@tanstack/react-query';
 import { AnimatePresence, motion } from 'motion/react';
 import { useSearchParams } from 'react-router';
@@ -12,9 +12,11 @@ import { EmptyState } from '../../ui/EmptyState';
 import { PageHeader } from '../../ui/PageHeader';
 import { Pagination } from '../../ui/Pagination';
 import { SkeletonRows } from '../../ui/Skeleton';
-import { api, errorMessage, qs } from '../../lib/api';
-import { exportErrorMessage } from '../../lib/logs';
+import { api, ApiError, errorMessage, qs } from '../../lib/api';
+import { serverNow } from '../../lib/serverTime';
+import { exportErrorMessage, fallbackExportName } from '../../lib/logs';
 import { formatDateTime } from '../../lib/format';
+import { formatTime } from '../../lib/attendance';
 import { canManageAccounts, isSuperAdmin } from '../../lib/permissions';
 import type { ActivityLog, Paginated, Setting, User } from '../../lib/types';
 import { useMe } from '../auth/useSession';
@@ -50,7 +52,8 @@ function saveFile(blob: Blob, name: string) {
   setTimeout(() => URL.revokeObjectURL(url), 10_000);
 }
 
-function ExportCsv({ filters, total }: { filters: Record<string, string>; total?: number }) {
+/** CSV export state: the button sits in the page header, messages above the list (UI6-09). */
+function useExportCsv(filters: Record<string, string>) {
   const settings = useQuery({
     queryKey: ['admin', 'settings'],
     queryFn: async () => (await api.get<{ data: Setting[] }>('/admin/settings')).data,
@@ -58,38 +61,94 @@ function ExportCsv({ filters, total }: { filters: Record<string, string>; total?
   });
   const raw = settings.data?.find((x) => x.key === 'log_export_max_rows')?.value;
   const max = typeof raw === 'number' ? raw : undefined;
+  // UI6-11: after a 429 the button stays disabled until the server's retry time.
+  const [blockedUntil, setBlockedUntil] = useState<number | null>(null);
+  useEffect(() => {
+    if (blockedUntil === null) return;
+    const ms = blockedUntil - serverNow().getTime();
+    const id = setTimeout(() => setBlockedUntil(null), Math.max(0, ms));
+    return () => clearTimeout(id);
+  }, [blockedUntil]);
   const exp = useMutation({
     mutationFn: () =>
       api.get<{ blob: Blob; filename: string | null }>(
         `/admin/activity-logs/export${qs(filters)}`,
         { raw: true, retries: 0 },
       ),
-    onSuccess: (r) => saveFile(r.blob, r.filename ?? 'activity_log.csv'),
+    onSuccess: (r) => saveFile(r.blob, r.filename ?? fallbackExportName(serverNow())),
+    onError: (e) => {
+      const w = e instanceof ApiError && e.status === 429 ? e.retryAfterSeconds : undefined;
+      if (w && w > 0) setBlockedUntil(serverNow().getTime() + w * 1000);
+    },
   });
-  const capped = max !== undefined && total !== undefined && total > max;
+  const limited = exp.error instanceof ApiError && exp.error.status === 429;
+  const availableAt =
+    blockedUntil !== null ? formatTime(new Date(blockedUntil).toISOString()) : undefined;
+  return { exp, max, blocked: blockedUntil !== null, limited, availableAt };
+}
+
+type ExportState = ReturnType<typeof useExportCsv>;
+
+function ExportButton({ s }: { s: ExportState }) {
   return (
-    <div className="mb-4 flex flex-col gap-2" data-testid="log-export">
-      <div className="flex flex-wrap items-center gap-3">
-        <Button variant="outline" size="sm" loading={exp.isPending} onClick={() => exp.mutate()}>
-          Export CSV
-        </Button>
-        <p className="text-xs text-ink-500">
-          Uses the current filters, newest first
-          {max !== undefined ? `, at most ${max.toLocaleString('en-GB')} rows` : ''}.
-        </p>
-      </div>
+    <div className="flex w-full flex-col gap-1 sm:w-auto sm:items-end" data-testid="log-export">
+      <Button
+        variant="outline"
+        size="sm"
+        className="w-full sm:w-auto"
+        loading={s.exp.isPending}
+        disabled={s.blocked}
+        onClick={() => s.exp.mutate()}
+      >
+        Export CSV
+      </Button>
+      <p className="text-xs text-ink-500">
+        {s.blocked && s.availableAt
+          ? `Available again at ${s.availableAt}`
+          : `Uses the current filters, newest first${
+              s.max !== undefined ? `, at most ${s.max.toLocaleString('en-GB')} rows` : ''
+            }.`}
+      </p>
+    </div>
+  );
+}
+
+function ExportMessages({
+  s,
+  total,
+  onChangeDates,
+}: {
+  s: ExportState;
+  total?: number;
+  onChangeDates: () => void;
+}) {
+  const capped = s.max !== undefined && total !== undefined && total > s.max;
+  if (!capped && !s.exp.isSuccess && !s.exp.isError) return null;
+  return (
+    <div className="mb-4 flex flex-col gap-2" data-testid="log-export-messages">
       {capped && (
         <Alert tone="warning">
           {total?.toLocaleString('en-GB')} entries match. Only the newest{' '}
-          {max?.toLocaleString('en-GB')} will be exported. Narrow the dates to get the rest.
+          {s.max?.toLocaleString('en-GB')} will be exported. Narrow the dates to get the rest.
+          <button
+            type="button"
+            onClick={onChangeDates}
+            className="mt-1 inline-flex min-h-11 items-center font-semibold text-primary-700 hover:underline"
+          >
+            Change dates
+          </button>
         </Alert>
       )}
-      {exp.isSuccess && (
+      {s.exp.isSuccess && (
         <p role="status" className="text-sm text-success-700">
           Export downloaded.
         </p>
       )}
-      {exp.isError && <Alert tone="danger">{exportErrorMessage(exp.error)}</Alert>}
+      {s.exp.isError && (
+        <Alert tone={s.limited ? 'warning' : 'danger'}>
+          {exportErrorMessage(s.exp.error, s.blocked ? s.availableAt : undefined)}
+        </Alert>
+      )}
     </div>
   );
 }
@@ -160,6 +219,16 @@ export function LogsPage() {
     staleTime: 5 * 60_000,
   });
   const filtered = FILTERS.some((k) => get(k));
+  const exportCsv = useExportCsv(filters);
+  const canExport = isSuperAdmin(me);
+  const [sheet, setSheet] = useState(false);
+  const changeDates = () => {
+    const from = Array.from(
+      document.querySelectorAll<HTMLInputElement>('[data-log-from] input'),
+    ).find((el) => el.offsetParent !== null);
+    if (from) from.focus();
+    else setSheet(true);
+  };
 
   return (
     <>
@@ -167,9 +236,12 @@ export function LogsPage() {
         title="Activity log"
         description="Read-only record of actions, security events, automatic tasks and errors."
         back={{ to: '/app/admin', label: 'Administration' }}
+        actions={canExport ? <ExportButton s={exportCsv} /> : undefined}
       />
       <FilterPanel
         gridClassName="sm:grid-cols-2 lg:grid-cols-3"
+        sheetOpen={sheet}
+        onSheetOpenChange={setSheet}
         activeMore={FILTERS.filter((k) => k !== 'type' && get(k)).length}
         onClear={() => {
           const n = new URLSearchParams();
@@ -220,12 +292,14 @@ export function LogsPage() {
               <option value="error">Error</option>
               <option value="critical">Critical</option>
             </Select>
-            <Input
-              label="From"
-              type="date"
-              value={get('from')}
-              onChange={(e) => set('from', e.target.value)}
-            />
+            <div data-log-from className="contents">
+              <Input
+                label="From"
+                type="date"
+                value={get('from')}
+                onChange={(e) => set('from', e.target.value)}
+              />
+            </div>
             <Input
               label="To"
               type="date"
@@ -255,10 +329,11 @@ export function LogsPage() {
           </>
         }
       />
-      {isSuperAdmin(me) && (
-        <ExportCsv
-          filters={filters}
+      {canExport && (
+        <ExportMessages
+          s={exportCsv}
           total={logs.data && !logs.isPlaceholderData ? logs.data.meta.total : undefined}
+          onChangeDates={changeDates}
         />
       )}
       <Card>
