@@ -179,7 +179,7 @@ describe('Today screen fixes', () => {
     fireEvent.click(await screen.findByRole('button', { name: 'Try again' }));
     await waitFor(() => expect(screen.getByTestId('faceid-help')).toBeInTheDocument());
     expect(screen.getByTestId('faceid-help').textContent).toContain(
-      'administrator can also check you in',
+      'Register it again; an administrator will approve it.',
     );
     fireEvent.click(screen.getByRole('button', { name: 'Register Face ID again' }));
     expect(

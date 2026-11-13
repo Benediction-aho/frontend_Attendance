@@ -107,9 +107,13 @@ function ReregisterAction({ onStart }: { onStart: () => void }) {
     );
   if (q.data && q.data.can_reregister === false) return null;
   return (
-    <Button variant="outline" className="mt-3" onClick={onStart}>
+    <button
+      type="button"
+      onClick={onStart}
+      className="mt-1 inline-flex min-h-11 items-center font-medium text-primary-700 underline underline-offset-2 hover:text-primary-800"
+    >
       Register Face ID again
-    </Button>
+    </button>
   );
 }
 
@@ -242,23 +246,18 @@ function CheckInPanel({ today }: { today: Today }) {
                         ))}
                       </ol>
                     )}
-                    {problem.hint && (
-                      <p className="mt-2" data-testid="problem-hint">
-                        {problem.hint}
-                      </p>
-                    )}
                   </Alert>
+                  {problem.hint && (
+                    <p className="mt-2 text-sm text-ink-700" data-testid="problem-hint">
+                      {problem.hint}
+                    </p>
+                  )}
                   {state.faceIdFailures >= FACEID_FAILURES_BEFORE_HELP &&
                     (problem.kind === 'faceid_failed' || problem.kind === 'faceid_cancelled') && (
-                      <div
-                        className="mt-3 rounded-control border border-ink-200 bg-surface px-4 py-3 text-sm text-ink-700"
-                        data-testid="faceid-help"
-                      >
-                        <p className="font-semibold text-ink-900">Face ID keeps failing?</p>
-                        <p className="mt-1">
-                          If Face ID was reset or the passkey was deleted on this phone, register
-                          Face ID again (an administrator will approve it). If it is urgent, an
-                          administrator can also check you in.
+                      <div className="mt-2 text-sm text-ink-700" data-testid="faceid-help">
+                        <p>
+                          Face ID reset on this phone? Register it again; an administrator will
+                          approve it.
                         </p>
                         <ReregisterAction onStart={() => setReregister(true)} />
                       </div>
@@ -273,7 +272,17 @@ function CheckInPanel({ today }: { today: Today }) {
               animate="show"
               className="mt-5 flex flex-col gap-2"
             >
-              {outside && mission ? (
+              {outside && mission && problem?.nearEdge && gps ? (
+                <>
+                  {/* Imprecise position near the edge: probably at the office, retry first. */}
+                  <Button size="lg" block onClick={() => void run('gps')}>
+                    Try again at the office
+                  </Button>
+                  <Button variant="outline" block onClick={() => setMissionOpen(true)}>
+                    Mission check-in
+                  </Button>
+                </>
+              ) : outside && mission ? (
                 <>
                   {/* Out of the perimeter: the mission check-in becomes the one main action. */}
                   <Button size="lg" block onClick={() => setMissionOpen(true)}>
@@ -383,11 +392,11 @@ function NotExpected({ today }: { today: Today }) {
           ? 'Today is your day off.'
           : 'Today is not a working day.';
   if (today.checked_in) return null;
-  const canCheckIn = today.available_check_ins.length > 0;
+  // Nothing to do: the calm rest-day card says it once (UI34-21).
+  if (today.available_check_ins.length === 0) return null;
   return (
     <Alert tone="info" title="You are not expected today">
-      {why}
-      {canCheckIn ? ' You can still check in if you are working.' : ''}
+      {why} You can still check in if you are working.
     </Alert>
   );
 }

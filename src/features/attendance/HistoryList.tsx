@@ -58,7 +58,7 @@ export function HistoryList({ path }: { path: string }) {
                   <div className="mb-3 flex flex-wrap items-center justify-between gap-2">
                     <span className="flex flex-wrap items-center gap-2">
                       <AttendanceDate a={a} />
-                      <DayStatusBadge status={a.day_status} />
+                      <DayStatusBadge status={a.day_status} checkInType={a.check_in_type} />
                     </span>
                     <AttendanceBadges a={a} />
                   </div>

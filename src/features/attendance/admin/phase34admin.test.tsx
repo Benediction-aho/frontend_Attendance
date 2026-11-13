@@ -111,4 +111,30 @@ describe('phase 3-4 admin fixes', () => {
       'This PDF is password-protected. Remove the password and upload it again.',
     );
   });
+
+  it('omits a missing distance in refused check-ins (UI34-20)', async () => {
+    stub({
+      '/admin/attendance/attempts': {
+        body: {
+          data: [
+            {
+              id: 2,
+              user_id: 3,
+              user: { id: 3, first_name: 'Ama', last_name: 'Mensah', job_title: 'Officer' },
+              work_date: '2026-11-12',
+              outcome: 'low_accuracy',
+              distance_m: null,
+              accuracy_m: 120,
+              created_at: '2026-11-12T08:01:00Z',
+            },
+          ],
+          meta: { total: 1, current_page: 1, last_page: 1 },
+        },
+      },
+    });
+    renderAt(<AttemptsPage />, '/');
+    const list = await screen.findByTestId('attempts-stacked');
+    expect(list).toHaveTextContent('08:01 · ± 120 m');
+    expect(list.textContent).not.toContain('· –');
+  });
 });

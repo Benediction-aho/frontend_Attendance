@@ -5,7 +5,7 @@ import { api, qs } from '../../lib/api';
 import { can, canViewAttendance } from '../../lib/permissions';
 import { serverNow } from '../../lib/serverTime';
 import type { Paginated, User } from '../../lib/types';
-import { Card, StatTile } from '../../ui/Card';
+import { StatTile } from '../../ui/Card';
 import { PageHeader } from '../../ui/PageHeader';
 import { Skeleton } from '../../ui/Skeleton';
 import { fadeUp, stagger } from '../../ui/motion';
@@ -81,6 +81,24 @@ export function DashboardPage() {
         animate="show"
         className="grid items-stretch gap-4 sm:grid-cols-2"
       >
+        {canViewAttendance(me) && (
+          <motion.div variants={fadeUp} className="h-full">
+            <Link
+              to="/app/admin/attendance"
+              className="block h-full rounded-card focus-visible:outline-offset-4"
+              data-testid="attendance-tile"
+            >
+              <StatTile
+                label="Checked in today"
+                value={
+                  day.isPending ? <Skeleton className="h-8 w-16" /> : `${present} / ${expected}`
+                }
+                hint={!day.isPending && showLate ? `Late ${late}` : undefined}
+                cta="Open today's attendance"
+              />
+            </Link>
+          </motion.div>
+        )}
         {approver && (
           <motion.div variants={fadeUp} className="h-full">
             <Link
@@ -130,42 +148,6 @@ export function DashboardPage() {
                 hint={devices.data ? 'New phones to approve.' : 'Nothing to review.'}
                 cta={devices.data ? 'Review devices' : undefined}
               />
-            </Link>
-          </motion.div>
-        )}
-        {canViewAttendance(me) && (
-          <motion.div variants={fadeUp} className="h-full sm:col-span-2">
-            <Link
-              to="/app/admin/attendance"
-              className="block h-full rounded-card focus-visible:outline-offset-4"
-              data-testid="attendance-tile"
-            >
-              <Card className="flex h-full flex-col px-5 py-4">
-                <p className="text-sm text-ink-500">Attendance today</p>
-                {day.isPending ? (
-                  <Skeleton className="mt-2 h-8 w-40" />
-                ) : (
-                  <dl className="mt-1 flex flex-wrap gap-x-8 gap-y-2">
-                    <div>
-                      <dt className="text-xs text-ink-500">Checked in</dt>
-                      <dd className="text-2xl font-semibold tabular-nums text-primary-700">
-                        {present} / {expected}
-                      </dd>
-                    </div>
-                    {showLate && (
-                      <div>
-                        <dt className="text-xs text-ink-500">Late</dt>
-                        <dd className="text-2xl font-semibold tabular-nums text-primary-700">
-                          {late}
-                        </dd>
-                      </div>
-                    )}
-                  </dl>
-                )}
-                <p className="mt-auto pt-2 text-sm font-medium text-primary-700">
-                  Open today&apos;s attendance
-                </p>
-              </Card>
             </Link>
           </motion.div>
         )}

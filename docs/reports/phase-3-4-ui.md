@@ -94,3 +94,13 @@ All 15 earlier findings are fixed. The new elements are well done: the GPS wait 
 3. UI34-16: attendance tile first in the super-admin grid.
 4. UI34-19: shorter Face ID help.
 5. UI34-20 / UI34-21: small copy cleanups.
+
+### Fix status (attendance-frontend, 2026-11-13)
+| ID | Status | Fix |
+|---|---|---|
+| UI34-16 | Fixed | Attendance tile is first in the grid, a regular `StatTile` ("Checked in today" N / M, "Late N" as hint), no `col-span-2`. |
+| UI34-17 | Fixed | Below `sm`: date field full width, then one `grid-cols-3` row Previous / Today / Next (`min-h-11`, disabled when not applicable); date removed from the subtitle. |
+| UI34-18 | Fixed | `nearEdge`: "Try again at the office" primary, "Mission check-in" outline; accuracy hint is a neutral `text-sm text-ink-700` line under the alert. |
+| UI34-19 | Fixed | Two-line help "Face ID reset on this phone? Register it again; an administrator will approve it." + text link "Register Face ID again". |
+| UI34-20 | Fixed | Missing distance omitted: "08:01 · ± 120 m". |
+| UI34-21 | Fixed | No info alert when no check-in is available; only the rest-day card. |

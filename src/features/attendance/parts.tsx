@@ -42,7 +42,15 @@ const DAY_TONE: Record<DayStatus, Tone> = {
   non_working: 'neutral',
 };
 
-export function DayStatusBadge({ status }: { status: DayStatus }) {
+export function DayStatusBadge({
+  status,
+  checkInType,
+}: {
+  status: DayStatus;
+  /** A mission check-in day reads "Mission", as on Today (UX34-09). */
+  checkInType?: Attendance['check_in_type'];
+}) {
+  if (checkInType === 'mission') return <Badge tone="primary">Mission</Badge>;
   return <Badge tone={DAY_TONE[status]}>{DAY_STATUS_LABEL[status]}</Badge>;
 }
 

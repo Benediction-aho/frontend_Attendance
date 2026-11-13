@@ -13,6 +13,7 @@ import { AuthLayout, AuthTitle } from './AuthLayout';
 import { InAppBrowserNotice } from '../pwa/InAppBrowserNotice';
 import { describeLoginError, normalizeSecret, stamped, type LoginErrorView } from './loginErrors';
 import { signIn } from './useSession';
+import { takeReturnTo } from './returnTo';
 import { rememberFirstCode } from './pendingCode';
 import { useCountdown } from './useCountdown';
 import { takeSignOutReason } from '../../lib/session';
@@ -77,7 +78,7 @@ export function SignInPage() {
       if (res.must_change_password) {
         rememberFirstCode(secret);
         navigate('/welcome/code', { replace: true });
-      } else navigate(from && from.startsWith('/app') ? from : '/app', { replace: true });
+      } else navigate(takeReturnTo(from), { replace: true });
     } catch (e) {
       const view = describeLoginError(e);
       setError(

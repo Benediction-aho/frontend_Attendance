@@ -92,7 +92,12 @@ Same set-up (real API :8000 on `attendance_e2e`, `migrate` only; private build o
 ### New findings
 | ID | Severity | Title | Status |
 |---|---|---|---|
-| UX34-09 | Low | Employee History still labels a mission day "Office day" ("13 Nov 2026 · Office day · On time · Mission: approved"); Today shows "Mission" | Open |
+| UX34-09 | Low | Employee History still labels a mission day "Office day" ("13 Nov 2026 · Office day · On time · Mission: approved"); Today shows "Mission" | **Fixed** (2026-11-13: History badge reads "Mission" on mission days, as on Today) |
 
 ### Regressions
 I found none. Re-run and passed: p34-j1 (first check-in), j4 (schedule, mission, early check-out with distance, history, admin day), j5 `noA` (new phone → pending → admin notification → approve → old phone flow), j6 (refused attempts, on-behalf, remote one-tap, leave, holiday, gate).
+
+### Fixes after re-test (attendance-frontend, 2026-11-13)
+- **UX34-09 – Fixed**: `DayStatusBadge` shows "Mission" when the check-in type is mission (History and Today agree). Test `phase34r2.test.tsx`.
+- **"Getting your position…" flicker during accuracy retries (UX34-03 minor) – Fixed**: a new position search keeps the last accuracy reading on screen (`mergeProgress`); only the very first search starts with "Getting your position…".
+- **Deep link after sign-in – Fixed**: the full path with query (e.g. `/app/admin/users/42` from an email) is kept in router state and sessionStorage and restored after sign-in, super-admin sign-in and the first-sign-in steps (staff). Only `/app…` paths are accepted (no open redirect). Unit + e2e tests.

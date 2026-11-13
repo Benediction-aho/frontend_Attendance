@@ -68,7 +68,10 @@ export function useCheckIn(rules: TodayRules | undefined) {
       try {
         if (globalThis.navigator?.onLine === false) throw new ApiError('network', null, 'offline');
         const target = rules?.max_accuracy_m ?? null;
-        const onProgress = (p: GeoProgress) => !ac.signal.aborted && patch({ progress: p });
+        const onProgress = (p: GeoProgress) => {
+          if (!ac.signal.aborted)
+            setState((s) => ({ ...s, progress: mergeProgress(s.progress, p) }));
+        };
 
         // The whole search for a precise position is capped: a clear message comes quickly.
         const deadline = startedAt + LOCATE_BUDGET_MS;
@@ -174,4 +177,15 @@ export function useCheckIn(rules: TodayRules | undefined) {
 /** Today's status after a confirmed check-in, as returned by the server. */
 export function confirmedToday(old: Today, a: Attendance): Today {
   return { ...old, checked_in: true, attendance: a, available_check_ins: [] };
+}
+
+/**
+ * A new position search starts with "no reading yet": during accuracy retries the
+ * last known accuracy stays on screen so the text does not flicker back to
+ * "Getting your position…".
+ */
+export function mergeProgress(prev: GeoProgress | null, next: GeoProgress): GeoProgress {
+  if (next.accuracy === null && prev && prev.accuracy !== null)
+    return { ...next, accuracy: prev.accuracy };
+  return next;
 }

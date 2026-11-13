@@ -7,6 +7,7 @@ import { Button } from '../../ui/Button';
 import { Logo } from '../../ui/Logo';
 import { Spinner } from '../../ui/Spinner';
 import { ME_KEY, useMe, useToken } from './useSession';
+import { rememberReturnTo } from './returnTo';
 
 function FullScreen({ children }: { children: React.ReactNode }) {
   return (
@@ -66,7 +67,11 @@ export function RequireAuth() {
     };
   }, [failed, token, refetch]);
 
-  if (!token) return <Navigate to="/sign-in" replace state={{ from: location.pathname }} />;
+  if (!token) {
+    const from = `${location.pathname}${location.search}${location.hash}`;
+    rememberReturnTo(from);
+    return <Navigate to="/sign-in" replace state={{ from }} />;
+  }
   if (me.isPending) return <Loading />;
   if (me.isError || !me.data)
     return (

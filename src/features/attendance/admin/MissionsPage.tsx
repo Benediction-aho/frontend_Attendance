@@ -223,7 +223,8 @@ export function AttemptsPage() {
                       </Badge>
                     </div>
                     <p className="text-sm text-ink-500 tabular-nums">
-                      {formatTime(a.created_at)} · {formatDistance(a.distance_m)}
+                      {formatTime(a.created_at)}
+                      {a.distance_m === null ? '' : ` · ${formatDistance(a.distance_m)}`}
                       {a.accuracy_m === null ? '' : ` · ± ${formatDistance(a.accuracy_m)}`}
                     </p>
                   </CardBody>

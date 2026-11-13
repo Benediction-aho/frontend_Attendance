@@ -10,6 +10,7 @@ import { PersonalForm } from '../profile/PersonalForm';
 import { AuthLayout, AuthTitle } from './AuthLayout';
 import { signOut, useMe } from './useSession';
 import { forgetFirstCode, peekFirstCode } from './pendingCode';
+import { takeReturnTo } from './returnTo';
 import { useStayOnPage } from './useStayOnPage';
 import type { FaceIdState } from '../../lib/attendance';
 import { FaceIdSetup } from '../faceid/FaceIdSetup';
@@ -75,7 +76,9 @@ export function WelcomeProfilePage() {
   const navigate = useNavigate();
   const { data: me } = useMe();
   const toast = useToast();
-  const next = me?.role === 'employee' ? '/welcome/faceid' : '/app';
+  // Employees continue to Face ID; staff go to the deep link they opened, if any.
+  const go = () =>
+    navigate(me?.role === 'employee' ? '/welcome/faceid' : takeReturnTo(), { replace: true });
   return (
     <AuthLayout step={3}>
       <div className="mb-6">
@@ -93,10 +96,10 @@ export function WelcomeProfilePage() {
           submitLabel="Save and continue"
           onDone={() => {
             toast.show('Profile saved.');
-            navigate(next, { replace: true });
+            go();
           }}
           secondary={
-            <Button variant="ghost" size="lg" onClick={() => navigate(next, { replace: true })}>
+            <Button variant="ghost" size="lg" onClick={go}>
               Skip for now
             </Button>
           }

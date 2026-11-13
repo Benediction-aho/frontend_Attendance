@@ -1,4 +1,5 @@
 import { useState } from 'react';
+import { takeReturnTo } from './returnTo';
 import { AnimatePresence, motion } from 'motion/react';
 import { Link, useNavigate } from 'react-router';
 import { Button } from '../../ui/Button';
@@ -71,7 +72,7 @@ export function SuperAdminSignInPage() {
     setBusy(true);
     try {
       await signIn(email, code.replace(/\s/g, ''));
-      navigate('/app', { replace: true });
+      navigate(takeReturnTo(), { replace: true });
     } catch (err) {
       setNotice(null);
       setError(stamped(describeLoginError(err)));

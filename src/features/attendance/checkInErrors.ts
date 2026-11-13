@@ -31,6 +31,8 @@ export interface CheckInProblem {
   steps?: string[];
   /** Short hint shown under the message (e.g. position may improve). */
   hint?: string;
+  /** Imprecise position close to the edge: the user is probably at the office. */
+  nearEdge?: boolean;
 }
 
 /** Steps to allow location access, for the detected platform only. */
@@ -132,6 +134,7 @@ export function checkInProblem(e: unknown, ctx: ProblemContext = {}): CheckInPro
         }. If you are working outside today, use a mission check-in instead.`,
         ...(nearEdge
           ? {
+              nearEdge: true,
               hint: `Your position is only accurate to ${formatDistance(acc)}. If you are at the office, move near a window or step outside for a few seconds, then try again.`,
             }
           : {}),

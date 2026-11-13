@@ -7,7 +7,7 @@ import { employeeDetail, formatTime, type Attendance, type DayRow } from '../../
 import { api as apiClient, qs } from '../../../lib/api';
 import { useQuery } from '@tanstack/react-query';
 import type { PageMeta } from '../../../lib/types';
-import { formatDate, isoDay } from '../../../lib/format';
+import { isoDay } from '../../../lib/format';
 import { can } from '../../../lib/permissions';
 import { serverNow } from '../../../lib/serverTime';
 import { Alert } from '../../../ui/Alert';
@@ -176,7 +176,6 @@ export function AdminAttendancePage() {
     <>
       <PageHeader
         title="Attendance"
-        description={formatDate(date)}
         actions={
           <>
             {can(me, 'approve_mission_checkins') && (
@@ -198,28 +197,45 @@ export function AdminAttendancePage() {
           </>
         }
       />
-      <div className="mb-5 flex flex-wrap items-end gap-2">
+      <div className="mb-5 flex flex-col gap-2 sm:flex-row sm:items-end">
         <Input
           label="Date"
           type="date"
           value={date}
           max={today}
-          wrapperClassName="w-44"
+          wrapperClassName="sm:w-44"
           onChange={(e) => setDate(e.target.value)}
         />
-        <Button variant="ghost" size="sm" onClick={() => setDate(shiftDay(date, -1))}>
-          Previous day
-        </Button>
-        {date !== today && (
-          <Button variant="ghost" size="sm" onClick={() => setDate(today)}>
+        <div className="grid grid-cols-3 gap-2 sm:flex" role="group" aria-label="Day navigation">
+          <Button
+            variant="ghost"
+            size="sm"
+            className="min-h-11"
+            aria-label="Previous day"
+            onClick={() => setDate(shiftDay(date, -1))}
+          >
+            Previous
+          </Button>
+          <Button
+            variant="ghost"
+            size="sm"
+            className="min-h-11"
+            disabled={date === today}
+            onClick={() => setDate(today)}
+          >
             Today
           </Button>
-        )}
-        {date < today && (
-          <Button variant="ghost" size="sm" onClick={() => setDate(shiftDay(date, 1))}>
-            Next day
+          <Button
+            variant="ghost"
+            size="sm"
+            className="min-h-11"
+            aria-label="Next day"
+            disabled={date >= today}
+            onClick={() => setDate(shiftDay(date, 1))}
+          >
+            Next
           </Button>
-        )}
+        </div>
       </div>
       {q.isPending && <SkeletonRows rows={6} />}
       {q.isError && <Alert tone="danger">{errorMessage(q.error)}</Alert>}
