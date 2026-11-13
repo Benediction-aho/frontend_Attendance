@@ -8,8 +8,9 @@ export interface DayResponse {
   data: DayRow[];
 }
 
-export function useDay(date: string) {
+export function useDay(date: string, enabled = true) {
   return useQuery({
+    enabled,
     queryKey: ['admin', 'attendance', 'day', date],
     queryFn: () => api.get<DayResponse>(`/admin/attendance/day${qs({ date })}`),
     refetchInterval: 60_000,

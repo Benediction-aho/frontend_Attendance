@@ -84,11 +84,11 @@ export function WeekPicker({
                   className={cx(
                     'flex min-h-11 cursor-pointer items-center justify-center rounded-control border text-sm transition-colors has-[:focus-visible]:shadow-focus',
                     c === o.v
-                      ? o.v === 'office'
-                        ? 'border-primary-500 bg-primary-50 font-semibold text-primary-800'
-                        : 'border-secondary-400 bg-secondary-50 font-semibold text-secondary-900'
+                      ? o.v === 'off'
+                        ? 'border-secondary-400 bg-secondary-50 font-semibold text-secondary-800'
+                        : 'border-primary-500 bg-primary-50 font-semibold text-primary-700'
                       : o.disabled
-                        ? 'cursor-not-allowed border-ink-100 text-ink-300'
+                        ? 'cursor-not-allowed border-ink-100 text-ink-400'
                         : 'border-ink-200 bg-surface text-ink-700 hover:border-ink-300',
                   )}
                 >
@@ -108,6 +108,15 @@ export function WeekPicker({
           </fieldset>
         );
       })}
+      {(offFull || remoteFull) && (
+        <p className="mt-1 text-sm text-ink-700" data-testid="limit-hint">
+          {offFull &&
+            `You have chosen your ${info.max_days_off_per_week} day${info.max_days_off_per_week === 1 ? '' : 's'} off.`}
+          {offFull && remoteFull ? ' ' : ''}
+          {remoteFull &&
+            `You have chosen your ${info.max_remote_days_per_week} remote day${info.max_remote_days_per_week === 1 ? '' : 's'}.`}
+        </p>
+      )}
       <p className="mt-1 text-xs text-ink-500">
         Up to {info.max_days_off_per_week} day{info.max_days_off_per_week === 1 ? '' : 's'} off and{' '}
         {info.max_remote_days_per_week} remote day{info.max_remote_days_per_week === 1 ? '' : 's'}{' '}

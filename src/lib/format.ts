@@ -63,3 +63,16 @@ export const STATUS_LABEL = {
 export function initials(first?: string, last?: string): string {
   return `${(first ?? '').charAt(0)}${(last ?? '').charAt(0)}`.toUpperCase() || '?';
 }
+
+const dayFmt = new Intl.DateTimeFormat('en-GB', {
+  day: 'numeric',
+  month: 'short',
+  year: 'numeric',
+  timeZone: 'UTC',
+});
+
+/** "2026-11-12" → "12 Nov 2026" (calendar day, no time zone shift). */
+export function formatDayEnGb(iso: string): string {
+  const d = new Date(`${iso.slice(0, 10)}T00:00:00Z`);
+  return Number.isNaN(d.getTime()) ? iso : dayFmt.format(d);
+}

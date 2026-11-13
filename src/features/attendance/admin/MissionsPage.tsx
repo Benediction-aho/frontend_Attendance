@@ -3,8 +3,14 @@ import { AnimatePresence, motion } from 'motion/react';
 import { useState } from 'react';
 import { useSearchParams } from 'react-router';
 import { api, ApiError, errorMessage, qs } from '../../../lib/api';
-import { formatTime, type Attendance, type RefusedAttempt } from '../../../lib/attendance';
-import { formatDate, formatDateTime, isoDay } from '../../../lib/format';
+import {
+  employeeDetail,
+  formatTime,
+  type Attendance,
+  type EmployeeSummary,
+  type RefusedAttempt,
+} from '../../../lib/attendance';
+import { formatDate, isoDay } from '../../../lib/format';
 import type { PageMeta } from '../../../lib/types';
 import { serverNow } from '../../../lib/serverTime';
 import { Alert } from '../../../ui/Alert';
@@ -30,7 +36,7 @@ const TABS: { v: MStatus; label: string }[] = [
   { v: 'rejected', label: 'Rejected' },
 ];
 
-type Mission = Attendance & { user: { id: number; first_name: string; last_name: string } | null };
+type Mission = Attendance & { user: EmployeeSummary | null };
 
 function MissionCard({ m, pending }: { m: Mission; pending: boolean }) {
   const qc = useQueryClient();
@@ -59,6 +65,9 @@ function MissionCard({ m, pending }: { m: Mission; pending: boolean }) {
         <div className="flex flex-wrap items-start justify-between gap-2">
           <div>
             <p className="font-semibold text-ink-900">{m.user ? fullName(m.user) : 'Employee'}</p>
+            {employeeDetail(m.user) && (
+              <p className="text-xs text-ink-500">{employeeDetail(m.user)}</p>
+            )}
             <p className="text-xs text-ink-500">
               {formatDate(m.work_date)} at {formatTime(m.check_in_at)}
             </p>
@@ -166,6 +175,8 @@ export function AttemptsPage() {
   const [date, setDate] = useState(today);
   const day = useDay(today);
   const names = new Map((day.data?.data ?? []).map((r) => [r.user.id, fullName(r.user)]));
+  const attemptName = (a: RefusedAttempt) =>
+    a.user ? fullName(a.user) : (names.get(a.user_id) ?? `Employee ${a.user_id}`);
   const q = useQuery({
     queryKey: ['admin', 'attempts', date],
     queryFn: () =>
@@ -193,36 +204,69 @@ export function AttemptsPage() {
       {q.isError && <Alert tone="danger">{errorMessage(q.error)}</Alert>}
       {q.data && q.data.data.length === 0 && <EmptyState title="No refused check-ins" />}
       {q.data && q.data.data.length > 0 && (
-        <Card className="overflow-x-auto">
-          <Table>
-            <THead>
-              <TR>
-                <TH>Employee</TH>
-                <TH>Time</TH>
-                <TH>Outcome</TH>
-                <TH>Distance</TH>
-                <TH>Accuracy</TH>
-              </TR>
-            </THead>
-            <TBody>
-              {q.data.data.map((a) => (
-                <TR key={a.id}>
-                  <TD>{names.get(a.user_id) ?? `Employee ${a.user_id}`}</TD>
-                  <TD className="tabular-nums">{formatDateTime(a.created_at)}</TD>
-                  <TD>
-                    <Badge tone={a.outcome === 'out_of_perimeter' ? 'danger' : 'warning'}>
-                      {OUTCOME[a.outcome]}
-                    </Badge>
-                  </TD>
-                  <TD className="tabular-nums">{formatDistance(a.distance_m)}</TD>
-                  <TD className="tabular-nums">
-                    {a.accuracy_m === null ? '–' : `± ${formatDistance(a.accuracy_m)}`}
-                  </TD>
+        <>
+          {/* Phones: one stacked row per attempt (the date is the filter). */}
+          <ul className="flex flex-col gap-2 md:hidden" data-testid="attempts-stacked">
+            {q.data.data.map((a) => (
+              <li key={a.id}>
+                <Card>
+                  <CardBody className="flex flex-col gap-1">
+                    <div className="flex items-start justify-between gap-2">
+                      <div className="min-w-0">
+                        <p className="font-semibold text-ink-900">{attemptName(a)}</p>
+                        {employeeDetail(a.user) && (
+                          <p className="truncate text-xs text-ink-500">{employeeDetail(a.user)}</p>
+                        )}
+                      </div>
+                      <Badge tone={a.outcome === 'out_of_perimeter' ? 'danger' : 'warning'}>
+                        {OUTCOME[a.outcome]}
+                      </Badge>
+                    </div>
+                    <p className="text-sm text-ink-500 tabular-nums">
+                      {formatTime(a.created_at)} · {formatDistance(a.distance_m)}
+                      {a.accuracy_m === null ? '' : ` · ± ${formatDistance(a.accuracy_m)}`}
+                    </p>
+                  </CardBody>
+                </Card>
+              </li>
+            ))}
+          </ul>
+          <Card className="hidden overflow-x-auto md:block">
+            <Table>
+              <THead>
+                <TR>
+                  <TH>Employee</TH>
+                  <TH>Time</TH>
+                  <TH>Outcome</TH>
+                  <TH>Distance</TH>
+                  <TH>Accuracy</TH>
                 </TR>
-              ))}
-            </TBody>
-          </Table>
-        </Card>
+              </THead>
+              <TBody>
+                {q.data.data.map((a) => (
+                  <TR key={a.id}>
+                    <TD>
+                      {attemptName(a)}
+                      {employeeDetail(a.user) && (
+                        <span className="block text-xs text-ink-500">{employeeDetail(a.user)}</span>
+                      )}
+                    </TD>
+                    <TD className="tabular-nums">{formatTime(a.created_at)}</TD>
+                    <TD>
+                      <Badge tone={a.outcome === 'out_of_perimeter' ? 'danger' : 'warning'}>
+                        {OUTCOME[a.outcome]}
+                      </Badge>
+                    </TD>
+                    <TD className="tabular-nums">{formatDistance(a.distance_m)}</TD>
+                    <TD className="tabular-nums">
+                      {a.accuracy_m === null ? '–' : `± ${formatDistance(a.accuracy_m)}`}
+                    </TD>
+                  </TR>
+                ))}
+              </TBody>
+            </Table>
+          </Card>
+        </>
       )}
     </>
   );

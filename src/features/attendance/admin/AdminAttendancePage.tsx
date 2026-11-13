@@ -3,7 +3,10 @@ import { motion } from 'motion/react';
 import { useState } from 'react';
 import { Link, useSearchParams } from 'react-router';
 import { api, ApiError, errorMessage } from '../../../lib/api';
-import { formatTime, type Attendance, type DayRow } from '../../../lib/attendance';
+import { employeeDetail, formatTime, type Attendance, type DayRow } from '../../../lib/attendance';
+import { api as apiClient, qs } from '../../../lib/api';
+import { useQuery } from '@tanstack/react-query';
+import type { PageMeta } from '../../../lib/types';
 import { formatDate, isoDay } from '../../../lib/format';
 import { can } from '../../../lib/permissions';
 import { serverNow } from '../../../lib/serverTime';
@@ -83,6 +86,27 @@ function CheckInOnBehalf({ row, onClose }: { row: DayRow | null; onClose: () => 
   );
 }
 
+const linkCls = (hot: boolean) =>
+  `inline-flex min-h-11 items-center gap-1.5 rounded-control border bg-surface px-4 text-sm font-semibold text-ink-800 hover:bg-primary-50 ${
+    hot ? 'border-secondary-300 ring-1 ring-secondary-300' : 'border-ink-200'
+  }`;
+
+/** Number of items behind a header link (total from the API list). */
+function useCount(path: string, params: Record<string, string>, enabled: boolean) {
+  return useQuery({
+    queryKey: ['admin', 'attendance', 'count', path, params],
+    queryFn: () => apiClient.get<{ meta?: PageMeta; data: unknown[] }>(`${path}${qs(params)}`),
+    enabled,
+    select: (r) => r.meta?.total ?? r.data.length,
+  });
+}
+
+function shiftDay(iso: string, days: number): string {
+  const d = new Date(`${iso}T12:00:00Z`);
+  d.setUTCDate(d.getUTCDate() + days);
+  return d.toISOString().slice(0, 10);
+}
+
 function Row({ row, onCheckIn }: { row: DayRow; onCheckIn?: () => void }) {
   const a = row.attendance;
   return (
@@ -96,7 +120,7 @@ function Row({ row, onCheckIn }: { row: DayRow; onCheckIn?: () => void }) {
           >
             {fullName(row.user)}
           </Link>
-          <p className="truncate text-xs text-ink-500">{row.user.job_title ?? '–'}</p>
+          <p className="truncate text-xs text-ink-500">{employeeDetail(row.user) || '–'}</p>
           <div className="mt-1.5 flex flex-wrap gap-1.5">
             <DayStatusBadge status={row.day_status} />
             {a && <AttendanceBadges a={a} />}
@@ -140,6 +164,13 @@ export function AdminAttendancePage() {
   const missing = expected.filter((r) => !r.attendance);
   const late = rows.filter((r) => r.attendance?.is_late === true);
   const showLate = rows.some((r) => typeof r.attendance?.is_late === 'boolean');
+  const missions = useCount(
+    '/admin/attendance/missions',
+    { status: 'pending' },
+    can(me, 'approve_mission_checkins'),
+  );
+  const attempts = useCount('/admin/attendance/attempts', { date }, can(me, 'view_lateness'));
+  const setDate = (d: string) => setParams(d && d !== today ? { date: d } : {}, { replace: true });
 
   return (
     <>
@@ -151,32 +182,44 @@ export function AdminAttendancePage() {
             {can(me, 'approve_mission_checkins') && (
               <Link
                 to="/app/admin/attendance/missions"
-                className="inline-flex min-h-11 items-center rounded-control border border-ink-200 bg-surface px-4 text-sm font-semibold text-ink-800 hover:bg-primary-50"
+                className={linkCls((missions.data ?? 0) > 0)}
               >
-                Missions
+                Missions{missions.data !== undefined ? ` · ${missions.data}` : ''}
               </Link>
             )}
             {can(me, 'view_lateness') && (
               <Link
                 to="/app/admin/attendance/attempts"
-                className="inline-flex min-h-11 items-center rounded-control border border-ink-200 bg-surface px-4 text-sm font-semibold text-ink-800 hover:bg-primary-50"
+                className={linkCls((attempts.data ?? 0) > 0)}
               >
-                Refused check-ins
+                Refused check-ins{attempts.data !== undefined ? ` · ${attempts.data}` : ''}
               </Link>
             )}
           </>
         }
       />
-      <div className="mb-5 max-w-xs">
+      <div className="mb-5 flex flex-wrap items-end gap-2">
         <Input
           label="Date"
           type="date"
           value={date}
           max={today}
-          onChange={(e) =>
-            setParams(e.target.value ? { date: e.target.value } : {}, { replace: true })
-          }
+          wrapperClassName="w-44"
+          onChange={(e) => setDate(e.target.value)}
         />
+        <Button variant="ghost" size="sm" onClick={() => setDate(shiftDay(date, -1))}>
+          Previous day
+        </Button>
+        {date !== today && (
+          <Button variant="ghost" size="sm" onClick={() => setDate(today)}>
+            Today
+          </Button>
+        )}
+        {date < today && (
+          <Button variant="ghost" size="sm" onClick={() => setDate(shiftDay(date, 1))}>
+            Next day
+          </Button>
+        )}
       </div>
       {q.isPending && <SkeletonRows rows={6} />}
       {q.isError && <Alert tone="danger">{errorMessage(q.error)}</Alert>}
@@ -187,15 +230,16 @@ export function AdminAttendancePage() {
           animate="show"
           className="flex flex-col gap-5"
         >
-          <motion.div variants={fadeUp} className="grid grid-cols-2 gap-3 sm:grid-cols-4">
-            <StatTile label="Expected" value={expected.length} />
-            <StatTile label="Checked in" value={present.length} />
+          <motion.div variants={fadeUp} className="grid grid-cols-2 gap-2 sm:grid-cols-4 sm:gap-3">
+            <StatTile compact label="Expected" value={expected.length} />
+            <StatTile compact label="Checked in" value={present.length} />
             <StatTile
+              compact
               label="Not checked in"
               value={missing.length}
               highlight={missing.length > 0}
             />
-            {showLate && <StatTile label="Late" value={late.length} />}
+            {showLate && <StatTile compact label="Late" value={late.length} />}
           </motion.div>
           {rows.length === 0 ? (
             <EmptyState title="No employees" description="Active employees appear here." />

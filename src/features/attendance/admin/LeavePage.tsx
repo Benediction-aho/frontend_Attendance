@@ -2,7 +2,7 @@ import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
 import { motion } from 'motion/react';
 import { useState } from 'react';
 import { api, errorMessage, qs } from '../../../lib/api';
-import type { Holiday, Leave } from '../../../lib/attendance';
+import { employeeDetail, type Holiday, type Leave } from '../../../lib/attendance';
 import { formatDate, isoDay } from '../../../lib/format';
 import { can } from '../../../lib/permissions';
 import { serverNow } from '../../../lib/serverTime';
@@ -37,7 +37,12 @@ export function LeaveRows({ leaves, names }: { leaves: Leave[]; names?: Map<numb
           <div className="min-w-0 text-sm">
             {names && l.user_id !== undefined && (
               <p className="font-semibold text-ink-900">
-                {names.get(l.user_id) ?? `Employee ${l.user_id}`}
+                {l.user ? fullName(l.user) : (names.get(l.user_id) ?? `Employee ${l.user_id}`)}
+                {employeeDetail(l.user) && (
+                  <span className="block text-xs font-normal text-ink-500">
+                    {employeeDetail(l.user)}
+                  </span>
+                )}
               </p>
             )}
             <p className="text-ink-800">
@@ -102,7 +107,7 @@ export function LeaveForm({ userId }: { userId?: number }) {
           <option value="">Choose an employee</option>
           {day.data?.data.map((r) => (
             <option key={r.user.id} value={r.user.id}>
-              {fullName(r.user)}
+              {[fullName(r.user), employeeDetail(r.user)].filter(Boolean).join(' · ')}
             </option>
           ))}
         </Select>

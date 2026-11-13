@@ -1,6 +1,6 @@
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
 import { api, ApiError } from '../../lib/api';
-import type { FaceIdState } from '../../lib/attendance';
+import type { EmployeeSummary, FaceIdState } from '../../lib/attendance';
 import { getDeviceName } from '../../lib/session';
 import { createPasskey, PasskeyError } from '../../lib/webauthn';
 import { TODAY_KEY } from '../attendance/useAttendance';
@@ -16,7 +16,7 @@ export interface FaceIdCredential {
   revoke_reason: 'superseded' | 'replaced' | 'rejected' | 'revoked' | null;
   last_used_at: string | null;
   this_device?: boolean;
-  user?: { id: number; first_name: string; last_name: string };
+  user?: EmployeeSummary;
   registration?: {
     device_id: number | string | null;
     registered_at: string | null;

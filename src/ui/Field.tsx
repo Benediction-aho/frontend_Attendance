@@ -8,6 +8,7 @@ import {
 } from 'react';
 import { AnimatePresence, motion } from 'motion/react';
 import { cx } from './cx';
+import { formatDayEnGb } from '../lib/format';
 import { duration, easing } from './motion';
 
 const control =
@@ -82,6 +83,54 @@ export function Input({
   ref,
   ...props
 }: InputProps) {
+  if (props.type === 'date')
+    return (
+      <Field
+        label={label}
+        error={error}
+        hint={hint}
+        optional={optional}
+        className={wrapperClassName}
+      >
+        {({ id, describedBy, invalid }) => (
+          // Native date inputs follow the browser locale (often mm/dd/yyyy): the date is shown
+          // as "12 Nov 2026" and the native picker stays underneath for touch and keyboard.
+          <div
+            className={cx(
+              control,
+              border(invalid),
+              'relative flex items-center focus-within:border-primary-500 focus-within:ring-2 focus-within:ring-primary-200',
+              className,
+            )}
+          >
+            <span
+              aria-hidden
+              data-testid="date-display"
+              className={cx('pointer-events-none', props.value ? 'text-ink-900' : 'text-ink-400')}
+            >
+              {props.value ? formatDayEnGb(String(props.value)) : 'dd/mm/yyyy'}
+            </span>
+            <input
+              ref={ref}
+              id={id}
+              aria-invalid={invalid || undefined}
+              aria-describedby={describedBy}
+              className="absolute inset-0 h-full w-full cursor-pointer opacity-0"
+              onClick={(e) => {
+                try {
+                  (
+                    e.currentTarget as HTMLInputElement & { showPicker?: () => void }
+                  ).showPicker?.();
+                } catch {
+                  // showPicker can throw outside a user gesture; the native input still works.
+                }
+              }}
+              {...props}
+            />
+          </div>
+        )}
+      </Field>
+    );
   return (
     <Field label={label} error={error} hint={hint} optional={optional} className={wrapperClassName}>
       {({ id, describedBy, invalid }) => (

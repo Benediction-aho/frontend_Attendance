@@ -3,7 +3,12 @@ import { motion } from 'motion/react';
 import { useState } from 'react';
 import { useLocation, useParams } from 'react-router';
 import { api, errorMessage } from '../../../lib/api';
-import { weekdayNames, type Leave, type WorkScheduleInfo } from '../../../lib/attendance';
+import {
+  employeeDetail,
+  weekdayNames,
+  type Leave,
+  type WorkScheduleInfo,
+} from '../../../lib/attendance';
 import { formatDate, isoDay } from '../../../lib/format';
 import { can } from '../../../lib/permissions';
 import { serverNow } from '../../../lib/serverTime';
@@ -19,6 +24,7 @@ import { useMe } from '../../auth/useSession';
 import { HistoryList } from '../HistoryList';
 import { WeekPicker } from '../MyAttendancePages';
 import { LeaveForm, LeaveRows } from './LeavePage';
+import { fullName, useDay } from './useDay';
 
 function ScheduleCard({ userId }: { userId: string }) {
   const { data: me } = useMe();
@@ -151,24 +157,31 @@ export function EmployeeAttendancePage() {
   const { id = '' } = useParams();
   const { data: me } = useMe();
   const loc = useLocation();
-  const name = (loc.state as { name?: string } | null)?.name ?? 'Employee';
+  // The name comes from the day list (readable by every attendance tier), so a direct link
+  // or a reload still shows who this is.
+  const day = useDay(isoDay(serverNow()));
+  const row = day.data?.data.find((r) => String(r.user.id) === id);
+  const stateName = (loc.state as { name?: string } | null)?.name;
+  const name = row ? fullName(row.user) : stateName;
+  const detail = employeeDetail(row?.user);
   return (
     <>
       <PageHeader
-        title={name}
-        description="Attendance history"
+        title={name ?? (day.isPending ? '' : 'Employee')}
+        description={detail ? `${detail} · Attendance history` : 'Attendance history'}
         back={{ to: '/app/admin/attendance', label: 'Attendance' }}
       />
+      {!name && day.isPending && <Skeleton className="-mt-4 mb-5 h-7 w-48" />}
       <motion.div
         variants={stagger}
         initial="hidden"
         animate="show"
         className="grid gap-5 lg:grid-cols-[minmax(0,2fr)_minmax(0,1fr)]"
       >
-        <motion.div variants={fadeUp} className="order-2 lg:order-1">
+        <motion.div variants={fadeUp} className="order-1">
           <HistoryList path={`/admin/users/${id}/attendance`} />
         </motion.div>
-        <motion.div variants={fadeUp} className="order-1 flex flex-col gap-5 lg:order-2">
+        <motion.div variants={fadeUp} className="order-2 flex flex-col gap-5">
           <ScheduleCard userId={id} />
           {can(me, 'manage_leaves') && <LeaveCard userId={Number(id)} />}
         </motion.div>

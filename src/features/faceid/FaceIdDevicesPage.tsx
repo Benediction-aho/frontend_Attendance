@@ -1,3 +1,4 @@
+import { employeeDetail } from '../../lib/attendance';
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
 import { motion } from 'motion/react';
 import { useState } from 'react';
@@ -30,6 +31,8 @@ const REVOKE_REASON: Record<string, string> = {
 };
 
 function Detail({ label, value }: { label: string; value: string | null | undefined }) {
+  // Rows without a value are hidden (old devices registered before details were recorded).
+  if (!value) return null;
   return (
     <div>
       <dt className="text-ink-500">{label}</dt>
@@ -67,6 +70,9 @@ function DeviceCard({ c, onRevoke }: { c: FaceIdCredential; onRevoke?: () => voi
         <div className="flex flex-wrap items-start justify-between gap-2">
           <div>
             <p className="font-semibold text-ink-900">{name}</p>
+            {employeeDetail(c.user) && (
+              <p className="text-xs text-ink-500">{employeeDetail(c.user)}</p>
+            )}
             <p className="text-sm text-ink-600">{c.name ?? c.device?.name ?? 'Unnamed device'}</p>
           </div>
           <Badge
@@ -77,6 +83,16 @@ function DeviceCard({ c, onRevoke }: { c: FaceIdCredential; onRevoke?: () => voi
             {c.status === 'approved' ? 'Approved' : c.status === 'pending' ? 'Waiting' : 'Revoked'}
           </Badge>
         </div>
+        {r?.replaces_same_device && (
+          <p className="mt-3 text-sm text-ink-700" data-testid="same-device">
+            Face ID registered again on the same phone (passkey lost or Face ID reset).
+          </p>
+        )}
+        {!r?.platform && !r?.browser && !r?.ip && !r?.device_first_seen_at && (
+          <p className="mt-3 text-sm text-ink-500" data-testid="no-device-details">
+            No device details recorded (registered before this version).
+          </p>
+        )}
         <dl className="mt-4 grid gap-x-4 gap-y-2 text-sm sm:grid-cols-2">
           <Detail label="Phone system" value={r?.platform} />
           <Detail label="Browser" value={r?.browser} />

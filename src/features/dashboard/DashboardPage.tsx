@@ -5,12 +5,14 @@ import { api, qs } from '../../lib/api';
 import { can, canViewAttendance } from '../../lib/permissions';
 import { serverNow } from '../../lib/serverTime';
 import type { Paginated, User } from '../../lib/types';
-import { Card, CardBody, StatTile } from '../../ui/Card';
+import { Card, StatTile } from '../../ui/Card';
 import { PageHeader } from '../../ui/PageHeader';
 import { Skeleton } from '../../ui/Skeleton';
 import { fadeUp, stagger } from '../../ui/motion';
 import { useMe } from '../auth/useSession';
 import { useUnreadCount } from '../notifications/useNotifications';
+import { useDay } from '../attendance/admin/useDay';
+import { isoDay } from '../../lib/format';
 
 function greeting(hour: number) {
   if (hour < 12) return 'Good morning';
@@ -59,6 +61,13 @@ export function DashboardPage() {
   });
   // Server-corrected time, never the raw device clock.
   const now = serverNow();
+  // Figures as returned by the day list (no business rule computed here).
+  const day = useDay(isoDay(now), canViewAttendance(me));
+  const rows = day.data?.data ?? [];
+  const expected = rows.filter((r) => r.expected).length;
+  const present = rows.filter((r) => r.attendance).length;
+  const late = rows.filter((r) => r.attendance?.is_late === true).length;
+  const showLate = rows.some((r) => typeof r.attendance?.is_late === 'boolean');
 
   return (
     <>
@@ -72,19 +81,6 @@ export function DashboardPage() {
         animate="show"
         className="grid items-stretch gap-4 sm:grid-cols-2"
       >
-        <motion.div variants={fadeUp} className="h-full">
-          <Link
-            to="/app/notifications"
-            className="block h-full rounded-card focus-visible:outline-offset-4"
-          >
-            <StatTile
-              label="Unread notifications"
-              value={unread.isPending ? <Skeleton className="h-8 w-10" /> : (unread.data ?? 0)}
-              hint={unread.data ? 'New messages for you.' : 'You are all caught up.'}
-              cta={unread.data ? 'Open notifications' : undefined}
-            />
-          </Link>
-        </motion.div>
         {approver && (
           <motion.div variants={fadeUp} className="h-full">
             <Link
@@ -138,24 +134,50 @@ export function DashboardPage() {
           </motion.div>
         )}
         {canViewAttendance(me) && (
-          <motion.div variants={fadeUp} className="sm:col-span-2">
-            <Card>
-              <CardBody>
-                <h2 className="text-base font-semibold text-ink-900">Attendance</h2>
-                <p className="mt-1 text-sm text-ink-600">
-                  See who has checked in today and each employee&apos;s history.
-                </p>
-                <Link
-                  to="/app/admin/attendance"
-                  className="mt-4 inline-flex min-h-11 items-center text-sm font-semibold text-primary-700 hover:underline"
-                >
+          <motion.div variants={fadeUp} className="h-full sm:col-span-2">
+            <Link
+              to="/app/admin/attendance"
+              className="block h-full rounded-card focus-visible:outline-offset-4"
+              data-testid="attendance-tile"
+            >
+              <Card className="flex h-full flex-col px-5 py-4">
+                <p className="text-sm text-ink-500">Attendance today</p>
+                {day.isPending ? (
+                  <Skeleton className="mt-2 h-8 w-40" />
+                ) : (
+                  <dl className="mt-1 flex flex-wrap gap-x-8 gap-y-2">
+                    <div>
+                      <dt className="text-xs text-ink-500">Checked in</dt>
+                      <dd className="text-2xl font-semibold tabular-nums text-primary-700">
+                        {present} / {expected}
+                      </dd>
+                    </div>
+                    {showLate && (
+                      <div>
+                        <dt className="text-xs text-ink-500">Late</dt>
+                        <dd className="text-2xl font-semibold tabular-nums text-primary-700">
+                          {late}
+                        </dd>
+                      </div>
+                    )}
+                  </dl>
+                )}
+                <p className="mt-auto pt-2 text-sm font-medium text-primary-700">
                   Open today&apos;s attendance
-                </Link>
-              </CardBody>
-            </Card>
+                </p>
+              </Card>
+            </Link>
           </motion.div>
         )}
       </motion.div>
+      {(unread.data ?? 0) > 0 && (
+        <Link
+          to="/app/notifications"
+          className="mt-4 inline-flex min-h-11 items-center text-sm font-semibold text-primary-700 hover:underline"
+        >
+          {unread.data} unread notification{unread.data === 1 ? '' : 's'}
+        </Link>
+      )}
     </>
   );
 }

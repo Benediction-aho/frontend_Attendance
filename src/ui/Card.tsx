@@ -36,7 +36,10 @@ export function StatTile({
   hint,
   cta,
   highlight = false,
+  compact = false,
 }: {
+  /** Small tile: no reserved height (dense day views). */
+  compact?: boolean;
   label: string;
   value: ReactNode;
   hint?: string;
@@ -47,7 +50,8 @@ export function StatTile({
   return (
     <Card
       className={cx(
-        'flex h-full min-h-32 flex-col px-5 py-4 transition-shadow duration-200',
+        'flex h-full flex-col transition-shadow duration-200',
+        compact ? 'min-h-0 px-3 py-3 sm:px-5' : 'min-h-32 px-5 py-4',
         highlight && 'ring-1 ring-secondary-300',
       )}
     >

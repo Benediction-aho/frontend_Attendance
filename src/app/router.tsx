@@ -1,4 +1,5 @@
 import { createBrowserRouter, Navigate } from 'react-router';
+import { AppPrefixRedirect } from './AppPrefixRedirect';
 import { AppLayout } from './AppLayout';
 import { RequireAuth, RedirectIfSignedIn, Gate } from '../features/auth/guards';
 import { SignInPage } from '../features/auth/SignInPage';
@@ -124,6 +125,8 @@ export const router = createBrowserRouter([
     ],
   },
   { path: '/login', element: <Navigate to="/sign-in" replace /> },
+  // Older email links without the /app prefix (UX34-05).
+  { path: '/admin/*', element: <AppPrefixRedirect /> },
   { path: '/confirm-email', element: <ConfirmEmailPage /> },
   {
     element: <RequireAuth />,

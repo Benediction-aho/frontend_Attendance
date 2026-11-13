@@ -28,7 +28,7 @@ export interface Attendance {
   early_leave?: boolean;
   early_leave_reason?: string | null;
   user_id?: number;
-  user?: { id: number; first_name: string; last_name: string };
+  user?: EmployeeSummary;
   checked_in_by?: { id: number; name: string } | number | null;
 }
 
@@ -85,6 +85,7 @@ export interface WorkScheduleInfo {
 export interface Leave {
   id: number;
   user_id?: number;
+  user?: EmployeeSummary;
   start_date: string;
   end_date: string;
   note: string | null;
@@ -97,14 +98,24 @@ export interface Holiday {
   name: string;
 }
 
+/** Employee identity in admin lists (email only for admins allowed to list users). */
+export interface EmployeeSummary {
+  id: number;
+  first_name: string;
+  last_name: string;
+  job_title?: string | null;
+  employee_type?: string | null;
+  email?: string | null;
+}
+
+/** "Officer · ama@x.org": tells homonyms apart in admin lists. */
+export function employeeDetail(u: Partial<EmployeeSummary> | null | undefined): string {
+  if (!u) return '';
+  return [u.job_title, u.email].filter(Boolean).join(' · ');
+}
+
 export interface DayRow {
-  user: {
-    id: number;
-    first_name: string;
-    last_name: string;
-    job_title: string | null;
-    employee_type: string | null;
-  };
+  user: EmployeeSummary;
   day_status: DayStatus;
   expected: boolean;
   attendance: Attendance | null;
@@ -114,6 +125,7 @@ export interface RefusedAttempt {
   id: number;
   user_id: number;
   work_date: string;
+  user?: EmployeeSummary;
   outcome: 'out_of_perimeter' | 'low_accuracy';
   distance_m: number | null;
   accuracy_m: number | null;
