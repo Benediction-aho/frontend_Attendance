@@ -122,14 +122,15 @@ function ExportMessages({
   total?: number;
   onChangeDates: () => void;
 }) {
-  const capped = s.max !== undefined && total !== undefined && total > s.max;
+  // UI6-15: while rate-limited only the 429 warning is shown.
+  const capped = !s.limited && s.max !== undefined && total !== undefined && total > s.max;
   if (!capped && !s.exp.isSuccess && !s.exp.isError) return null;
   return (
     <div className="mb-4 flex flex-col gap-2" data-testid="log-export-messages">
       {capped && (
         <Alert tone="warning">
           {total?.toLocaleString('en-GB')} entries match. Only the newest{' '}
-          {s.max?.toLocaleString('en-GB')} will be exported. Narrow the dates to get the rest.
+          {s.max?.toLocaleString('en-GB')} will be exported. Narrow the dates to get the rest.{' '}
           <button
             type="button"
             onClick={onChangeDates}

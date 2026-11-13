@@ -77,6 +77,7 @@ describe('dashboard logic', () => {
     expect(periodLabel('2026-10-26', '2026-11-25')).toBe('26 Oct – 25 Nov 2026');
     expect(ratio(3, 5)).toBe('3 of 5');
     expect(ratio(undefined, 5)).toBeUndefined();
+    expect(ratio(1250, 12000)).toBe('1,250 of 12,000');
   });
   it('words every weekly report status', () => {
     expect(weeklyReportText(wr()).label).toBe('To send');
@@ -194,7 +195,7 @@ describe('Phase 6 review fixes', () => {
             period_start: '2026-10-26',
             period_end: '2026-11-25',
             services_top: [
-              { service: 'A very long service name '.repeat(5), service_key: 'x', quantity: 15 },
+              { service: 'A very long service name '.repeat(5), service_key: 'x', quantity: 1250 },
             ],
           },
           pending: { sign_up_requests: 0, faceid_devices: 3, missions: 2 },
@@ -209,6 +210,13 @@ describe('Phase 6 review fixes', () => {
     expect(screen.getByTestId('admin-week')).toHaveTextContent('9 Nov – 13 Nov 2026');
     expect(screen.getByTestId('week-closes')).toHaveTextContent(/^Closes /);
     expect(screen.getByTestId('service-qty').className).toContain('whitespace-nowrap');
+    // UI6-14: en-GB thousands separators.
+    expect(screen.getByTestId('service-qty')).toHaveTextContent('1,250');
+    // UI6-13: 2 columns on phones, Checked in full width, caption from sm only.
+    const fig = screen.getByTestId('fig-checked-in');
+    expect(fig.className).toContain('col-span-2');
+    expect(fig.parentElement?.className).toContain('grid-cols-2 sm:grid-cols-3');
+    expect(within(fig).getByText('Of expected today').className).toContain('hidden sm:block');
     const links = within(screen.getByTestId('admin-pending')).getAllByRole('link');
     expect(links.map((l) => l.textContent)).toEqual([
       'Face ID devices3Review',

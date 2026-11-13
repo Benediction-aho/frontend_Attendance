@@ -3,7 +3,7 @@
 Updated by the agents at the end of every work session.
 
 ## Current phase
-**Phase 6 – Dashboards and logs: UI6-01..12 and UX6-01..07/09 fixed – ready for frontend-ui-designer and frontend-ux-tester re-check** (2026-11-13). UX6-08 (denominator) and the readable CSV Device column are backend items. Phase 5 re-checks remain as listed below.
+**Phase 6 – Dashboards and logs: complete on the frontend** (2026-11-13). UI signed off (r2), UX re-test passed; polish UI6-13..15 and UX6-10 fixed. UX6-08 (denominator) and the readable CSV Device column are backend items. Phase 5 re-checks remain as listed below.
 
 ### Phase 6 – what was delivered (frontend)
 - Employee home (`/app`): Today's status and main action unchanged on top; below, from `GET /me/dashboard`: Today (tasks done of planned, clients, once checked in, link to My work), This week (days present of expected so far, late arrivals, tasks, clients, weekly report status with "Send my weekly report" / "See my weekly report" link), This month (26 → 25 period: days present, late, clients). Figures only, no charts; every value from the server.
@@ -94,7 +94,7 @@ The API uses Bearer device tokens only (no cookies), so an HttpOnly cookie is no
 | 3 – Attendance (manual) | UI/UX findings fixed, ready for UI/UX re-check | – | See "Phases 3–4 – what was delivered" |
 | 4 – PWA, Face ID, notifications | Frontend ready for frontend-ui-designer | – | Real-device validation pending (test deployment) |
 | 5 – Tasks, clients, reports | Not started | – | |
-| 6 – Dashboards and logs | Review fixes done – ready for UI/UX re-check | – | See "Phase 6 – what was delivered" |
+| 6 – Dashboards and logs | Done (frontend) – no open UI/UX finding | – | See "Phase 6 – what was delivered" |
 | 7 – Quality and pilot | Not started | – | |
 | 8 – Production deployment | Not started | – | Requires the owner's written approval below |
 
@@ -132,6 +132,7 @@ _Not given yet._
 ## Log
 - 2026-11-13 – Phase 6 frontend: employee and admin dashboards from server figures, activity log CSV export (super admin, 429 and cap), UX5-11 back links. Ready for frontend-ui-designer.
 - 2026-11-13 – Phase 6 review fixes: dashboards refreshed after every write, Today hierarchy, nowrap figures, pending rows, day_off/holiday/checked_in_not_expected, week_end, CSV header button, 429 warning with retry time, server file name; e2e recovery URL relative.
+- 2026-11-13 – Phase 6 polish: Today figures in 2 columns on phones (UI6-13), en-GB thousands separators on all dashboard numbers (UI6-14), only the hourly-limit warning while export is blocked (UI6-15), space before "Change dates" (UX6-10). Phase 6 frontend complete.
 - 2026-11-13 – Phases 3–4 UI/UX fixes: mission check-in as single primary action out of perimeter, secondary install/push cards after the main action, platform location steps, 30 s GPS budget with elapsed time and early hint, edge-of-perimeter hint, Face ID re-registration after 2 failures (admin check-in mentioned), confirmed attendance rendered at once, rest-day card, onboarding success moment, stacked refused attempts, employee name/job/email disambiguation, history first on phones, en-GB date fields, super admin attendance figures, compact tiles with counts, `/admin/*` redirect, 422 messages (e.g. `pdf_encrypted`) shown as sent. 97 unit tests, 75 mocked e2e (1 skipped real), lint 0 errors, typecheck and build green.
 - Specifications, agents and workflow added to the repository.
 - Switched from native app (Capacitor) to PWA; automatic check-in now based on office Wi-Fi detection.

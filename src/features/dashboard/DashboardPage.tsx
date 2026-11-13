@@ -11,7 +11,7 @@ import { fadeUp, stagger } from '../../ui/motion';
 import { useMe } from '../auth/useSession';
 import { useUnreadCount } from '../notifications/useNotifications';
 import { Figures, Section, type FigureItem } from './parts';
-import { periodLabel, ratio, todaySecondary } from './logic';
+import { formatCount, periodLabel, ratio, todaySecondary } from './logic';
 import { cx } from '../../ui/cx';
 import { useAdminDashboard } from './useDashboard';
 import { formatDate, formatDateTime, formatLongDay } from '../../lib/format';
@@ -48,6 +48,8 @@ function TodaySection({ t }: { t: NonNullable<AdminDashboard['today']> }) {
       label: 'Checked in',
       value: ratio(t.checked_in, t.expected),
       hint: 'Of expected today',
+      hintFromSm: true,
+      wide: true,
       testId: 'fig-checked-in',
     },
     { label: 'Not checked in yet', value: t.missing, attention: (t.missing ?? 0) > 0 },
@@ -62,19 +64,19 @@ function TodaySection({ t }: { t: NonNullable<AdminDashboard['today']> }) {
       action={{ to: '/app/admin/attendance', label: "Open today's attendance", short: 'Open' }}
       testId="admin-today"
     >
-      <Figures cols={3} items={items} />
+      <Figures cols="2-3" items={items} />
       {(secondary || extra > 0 || refused > 0) && (
         <div className="flex flex-col gap-1 border-t border-ink-100 px-5 py-3 text-sm text-ink-600">
           {secondary && <p data-testid="today-secondary">{secondary}</p>}
           {extra > 0 && (
-            <p data-testid="today-unexpected">{extra} checked in on a day they were not expected</p>
+            <p data-testid="today-unexpected">{formatCount(extra)} checked in on a day they were not expected</p>
           )}
           {refused > 0 && (
             <Link
               to="/app/admin/attendance/attempts"
               className="inline-flex min-h-11 items-center self-start font-semibold text-primary-700 hover:underline"
             >
-              {refused} refused check-in{refused === 1 ? '' : 's'}
+              {formatCount(refused)} refused check-in{refused === 1 ? '' : 's'}
             </Link>
           )}
         </div>
@@ -153,7 +155,7 @@ function MonthSection({ m }: { m: NonNullable<AdminDashboard['month']> }) {
                       className="py-2 pl-3 text-right align-top font-semibold whitespace-nowrap [overflow-wrap:normal] tabular-nums text-ink-900"
                       data-testid="service-qty"
                     >
-                      {s.quantity}
+                      {formatCount(s.quantity)}
                     </td>
                   </tr>
                 ))}

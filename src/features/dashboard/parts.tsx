@@ -2,6 +2,7 @@ import type { ReactNode } from 'react';
 import { Link } from 'react-router';
 import { Card, CardHeader } from '../../ui/Card';
 import { cx } from '../../ui/cx';
+import { formatCount } from './logic';
 
 export interface FigureItem {
   label: string;
@@ -11,6 +12,10 @@ export interface FigureItem {
   to?: string;
   /** Draws attention (something waits for an action). */
   attention?: boolean;
+  /** UI6-13: spans the full width on phones (2-column grid), one column from `sm`. */
+  wide?: boolean;
+  /** UI6-13: the hint is shown from `sm` only (redundant on phones). */
+  hintFromSm?: boolean;
   testId?: string;
 }
 
@@ -19,6 +24,7 @@ const COLS = {
   1: 'grid-cols-1',
   2: 'grid-cols-2',
   3: 'grid-cols-3',
+  '2-3': 'grid-cols-2 sm:grid-cols-3',
   4: 'grid-cols-2 sm:grid-cols-4',
 } as const;
 
@@ -37,15 +43,22 @@ export function Figures({ items, cols = 4 }: { items: FigureItem[]; cols?: keyof
                 f.attention ? 'text-secondary-700' : 'text-primary-700',
               )}
             >
-              {f.value}
+              {typeof f.value === 'number' ? formatCount(f.value) : f.value}
             </dd>
-            {f.hint && <dd className="mt-0.5 text-xs text-ink-500">{f.hint}</dd>}
+            {f.hint && (
+              <dd className={cx('mt-0.5 text-xs text-ink-500', f.hintFromSm && 'hidden sm:block')}>
+                {f.hint}
+              </dd>
+            )}
           </>
         );
         return (
           <div
             key={f.label}
-            className="-mr-px border-r border-b border-ink-100"
+            className={cx(
+              '-mr-px border-r border-b border-ink-100',
+              f.wide && 'col-span-2 sm:col-span-1',
+            )}
             data-testid={f.testId}
           >
             {f.to ? (

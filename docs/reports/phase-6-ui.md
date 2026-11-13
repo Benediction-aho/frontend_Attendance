@@ -64,9 +64,8 @@ No horizontal overflow at any width (measured).
 ### New findings
 | ID | Screen / width | Screenshot | Severity | Problem | Recommendation |
 |---|---|---|---|---|---|
-| UI6-13 | Admin home, Today / 360 | r2-super-full-360.png | Low | The 3-column figure row is cramped at 360: "Not checked in yet" wraps on 3 lines and pushes "3" below "9 of 12"; caption "Of expected today" wraps on 3 lines. Figures no longer share a baseline. | Below `sm`: 2 columns (Checked in full width on row 1, Not checked in + Late on row 2), or shorter label "Not in yet"; drop the "Of expected today" caption on phones (the "of 12" already says it). |
-| UI6-14 | Top services / all | r2-super-full-1440.png | Low | Large quantities have no thousands separator ("1250") while other figures use en-GB formatting. | Format with `toLocaleString('en-GB')` and `tabular-nums` on the quantity column. |
-| UI6-15 | Activity log, cap + 429 / 360 | r2-logs-429-360.png | Low | When both apply, two stacked amber boxes repeat context; "Change dates" is offered while export is disabled anyway. | When rate-limited, show only the 429 warning (hide the cap box or merge it into one box). |
-
+| UI6-13 | Admin home, Today / 360 | r2-super-full-360.png | Low | The 3-column figure row is cramped at 360: "Not checked in yet" wraps on 3 lines and pushes "3" below "9 of 12"; caption "Of expected today" wraps on 3 lines. Figures no longer share a baseline. | Below `sm`: 2 columns (Checked in full width on row 1, Not checked in + Late on row 2), or shorter label "Not in yet"; drop the "Of expected today" caption on phones (the "of 12" already says it). | **Fixed** |
+| UI6-14 | Top services / all | r2-super-full-1440.png | Low | Large quantities have no thousands separator ("1250") while other figures use en-GB formatting. | Format with `toLocaleString('en-GB')` and `tabular-nums` on the quantity column. | **Fixed** |
+| UI6-15 | Activity log, cap + 429 / 360 | r2-logs-429-360.png | Low | When both apply, two stacked amber boxes repeat context; "Change dates" is offered while export is disabled anyway. | When rate-limited, show only the 429 warning (hide the cap box or merge it into one box). | **Fixed** |
 ### Verdict r2
-All UI6-01..12 fixed; no Critical/High/Medium open. Phase 6 UI signed off; UI6-13..15 are polish.
+All UI6-01..12 fixed; no Critical/High/Medium open. Phase 6 UI signed off; UI6-13..15 are polish – **Fixed** (2 columns + caption from `sm` on phones; `formatCount` en-GB everywhere; cap box hidden while rate-limited).

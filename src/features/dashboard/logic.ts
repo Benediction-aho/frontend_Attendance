@@ -56,9 +56,14 @@ export function weeklyReportText(r: WR): {
   }
 }
 
+/** UI6-14: every dashboard number uses en-GB thousands separators ("1,250"). */
+export function formatCount(n: number): string {
+  return n.toLocaleString('en-GB');
+}
+
 /** "4 of 5" style ratio; undefined if either side is absent from the API. */
 export function ratio(a: number | undefined, b: number | undefined): string | undefined {
-  return a === undefined || b === undefined ? undefined : `${a} of ${b}`;
+  return a === undefined || b === undefined ? undefined : `${formatCount(a)} of ${formatCount(b)}`;
 }
 
 type AdminToday = NonNullable<AdminDashboard['today']>;
@@ -72,7 +77,7 @@ type AdminToday = NonNullable<AdminDashboard['today']>;
 export function todaySecondary(t: AdminToday): string | undefined {
   const parts: string[] = [];
   const add = (n: number | undefined, label: string) => {
-    if (n !== undefined && n > 0) parts.push(`${n} ${label}`);
+    if (n !== undefined && n > 0) parts.push(`${formatCount(n)} ${label}`);
   };
   add(t.on_leave, 'on leave');
   add(t.remote, 'remote');

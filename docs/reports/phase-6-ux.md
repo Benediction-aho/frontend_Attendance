@@ -20,7 +20,7 @@
 | UX6-08 | Low | Admin daily reports for a past day show "0 of 108 employees" on 12 Nov, but most of those accounts were created on 13 Nov (the denominator ignores account creation) | **Fixed – re-tested** (12 Nov: "0 of 50", API rows 50 = accounts existing that day) |
 | UX6-09 | Low | Admin "Weekly reports – Closes" date wraps onto two lines on the iPhone ("13 Nov 2026, / 17:00") | **Fixed – re-tested** ("Closes 13 Nov 2026, 17:00" on one line, iPhone) |
 | UX5-11 | – | Back links keep the day and the week | **Fixed** (re-tested) |
-| UX6-10 | Low | Desktop: the cap warning reads "…to get the rest.Change dates" (no space before the inline button) | **Open (front)** |
+| UX6-10 | Low | Desktop: the cap warning reads "…to get the rest.Change dates" (no space before the inline button) | **Fixed** |
 
 ## Re-test (frontend `4c5d028`, backend after `1bf4548`, real API)
 - Own ports: backend :8026 (`attendance_e2e`, `migrate` only, mail log, sync queue, CORS/WebAuthn origin :4206), private build on :4206 (`UX_API` / `UX_BASE` env vars added to `h6.mjs`). Screenshots: `docs/reports/screens/phase-6/*-rt.png`.
