@@ -67,3 +67,7 @@ Tester: `frontend-ux-tester` – 2026-11-12/13. Branch `claude/upbeat-noether-f7
 - Admin: refused attempts list, on-behalf check-in (reason required, "By an administrator" shown to the employee), schedule edit effective today → "Remote day" + one-tap remote check-in, leave today ("On leave – you are not expected today"), holiday added, invalid leave range blocked – `p34-j6-admin.mjs`.
 - Clock shown = server time even with the phone clock +2 h 37; install guide; WhatsApp in-app notice with "Copy the link"; Profile push section – `p34-j7-misc.mjs`.
 - Forgotten check-out at 00:00 – `p34-j8-forgotten.mjs` (see section below).
+
+## Forgotten check-out (00:00)
+- Run after the real midnight (13 Nov 00:00 UTC): `php artisan attendance:auto-checkout` → "Closed 13 attendance(s)", `check_out_at` = 00:00.
+- Employee (iPhone) History: "12 Nov 2026 · Late · Check-out forgotten · Check-out Forgotten – Closed automatically at midnight" (`ux-j8-forgotten-history.png`); Today is a fresh day. Admin day list for 12 Nov: "Check-out forgotten · In 19:24 · Out forgotten" (`ux-j8-admin-yesterday.png`). **Passed.**
