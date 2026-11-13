@@ -74,3 +74,25 @@ Tester: `frontend-ux-tester` – 2026-11-12/13. Branch `claude/upbeat-noether-f7
 
 ## Fix status (attendance-frontend, 2026-11-13)
 All findings above are fixed on the frontend (commits cd9ed25, a3288eb); server parts from backend 9d619bb. Ready for re-check.
+
+## Re-test (frontend-ux-tester, 2026-11-13 00:18–00:30 server time)
+Same set-up (real API :8000 on `attendance_e2e`, `migrate` only; private build on :4180). In the e2e DB only, `otp_requests_per_hour` was raised to 1000 because script volume hit the limit. New script `e2e/ux/p34-r1-retest.mjs <lost|slow|lowacc|edge|tabs|mail>`; screenshots `ux-r1-*.png`.
+
+| ID | Re-test result | Status |
+|---|---|---|
+| UX34-01 | Passkey wiped → 2 failures → "Face ID keeps failing?" block with "Register Face ID again" → confirmation step → "Waiting for approval" → admin approves → reload → check-in succeeds (`ux-r1-lost-after2.png`, `ux-r1-lost-pending.png`, `ux-r1-lost-checked-in.png`) | **Fixed** |
+| UX34-02 | All API calls +6 s: "Recording your check-in…" changes straight to "You are checked in" (t≈13 s) and the "not checked in" state never comes back | **Fixed** |
+| UX34-03 | ±220 m held: counter "N s of up to 30 s", accuracy bar, hint "Move near a window…" from ~14 s, clear refusal at ~33 s (`ux-r1-lowacc-*.png`). Minor: one reading showed "Getting your position…" for a moment at 19 s | **Fixed** |
+| UX34-04 | Day list and Leave select show "Name · Job · email" | **Fixed** |
+| UX34-05 | The mail link is now `/app/admin/users/<id>` and opens the request once signed in. The old `/admin/...` link also redirects to `/app/admin/...` | **Fixed** |
+| UX34-06 | Two tabs: tab 2 shows "You are checked in" within ~12 s, and only one record is created | **Fixed** |
+| UX34-07 | Hint follows the configured end of day. The Today chip now says "Mission" | **Fixed** (see UX34-09) |
+| UX34-08 | 70 m ±30 m: refusal plus the hint "Your position is only accurate to 30 m…" (`ux-r1-edge-end.png`) | **Fixed** |
+
+### New findings
+| ID | Severity | Title | Status |
+|---|---|---|---|
+| UX34-09 | Low | Employee History still labels a mission day "Office day" ("13 Nov 2026 · Office day · On time · Mission: approved"); Today shows "Mission" | Open |
+
+### Regressions
+I found none. Re-run and passed: p34-j1 (first check-in), j4 (schedule, mission, early check-out with distance, history, admin day), j5 `noA` (new phone → pending → admin notification → approve → old phone flow), j6 (refused attempts, on-behalf, remote one-tap, leave, holiday, gate).
