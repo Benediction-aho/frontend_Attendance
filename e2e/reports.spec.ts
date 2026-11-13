@@ -508,4 +508,9 @@ test('admin: missing list with job title; week summary from daily goes back to d
     .getByRole('link', { name: /Week summary/ })
     .click();
   await expect(page).toHaveURL(/\/app\/admin\/reports\/users\/\d+\/weekly\?date=2026-11-09/);
+  // UX5-11: the back link keeps the week the admin came from.
+  await expect(page.getByRole('link', { name: 'Back to weekly reports' })).toHaveAttribute(
+    'href',
+    '/app/admin/reports/weekly?date=2026-11-09',
+  );
 });
