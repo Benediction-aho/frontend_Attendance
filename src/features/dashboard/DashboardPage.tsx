@@ -1,18 +1,20 @@
-import { useQuery } from '@tanstack/react-query';
 import { motion } from 'motion/react';
 import { Link } from 'react-router';
-import { api, qs } from '../../lib/api';
-import { can, canViewAttendance } from '../../lib/permissions';
 import { serverNow } from '../../lib/serverTime';
-import type { Paginated, User } from '../../lib/types';
-import { StatTile } from '../../ui/Card';
+import { Alert } from '../../ui/Alert';
+import { Button } from '../../ui/Button';
+import { Card } from '../../ui/Card';
+import { EmptyState } from '../../ui/EmptyState';
 import { PageHeader } from '../../ui/PageHeader';
 import { Skeleton } from '../../ui/Skeleton';
 import { fadeUp, stagger } from '../../ui/motion';
 import { useMe } from '../auth/useSession';
 import { useUnreadCount } from '../notifications/useNotifications';
-import { useDay } from '../attendance/admin/useDay';
-import { isoDay } from '../../lib/format';
+import { Figures, Section, type FigureItem } from './parts';
+import { periodLabel, ratio } from './logic';
+import { useAdminDashboard } from './useDashboard';
+import { formatDate, formatDateTime } from '../../lib/format';
+import type { AdminDashboard } from './types';
 
 function greeting(hour: number) {
   if (hour < 12) return 'Good morning';
@@ -36,38 +38,158 @@ const accraDate = (d: Date) =>
     timeZone: 'Africa/Accra',
   }).format(d);
 
+function TodaySection({ t }: { t: NonNullable<AdminDashboard['today']> }) {
+  const items: FigureItem[] = [
+    {
+      label: 'Checked in',
+      value: ratio(t.checked_in, t.expected),
+      hint: 'Of expected today',
+      testId: 'fig-checked-in',
+    },
+    { label: 'Not checked in yet', value: t.missing, attention: (t.missing ?? 0) > 0 },
+    { label: 'Late', value: t.late, attention: (t.late ?? 0) > 0 },
+    { label: 'On leave', value: t.on_leave },
+    { label: 'Remote', value: t.remote },
+    { label: 'Day off', value: t.not_working },
+    {
+      label: 'Missions to approve',
+      value: t.missions_pending,
+      to: t.missions_pending ? '/app/admin/attendance/missions' : undefined,
+      attention: (t.missions_pending ?? 0) > 0,
+    },
+    {
+      label: 'Refused check-ins',
+      value: t.refused_attempts,
+      to: t.refused_attempts ? '/app/admin/attendance/attempts' : undefined,
+    },
+  ];
+  return (
+    <Section
+      title="Today"
+      action={{ to: '/app/admin/attendance', label: "Open today's attendance" }}
+      testId="admin-today"
+    >
+      <Figures items={items} />
+    </Section>
+  );
+}
+
+function WeekSection({ w }: { w: NonNullable<AdminDashboard['week']> }) {
+  const value = ratio(w.weekly_reports_received, w.weekly_reports_expected);
+  return (
+    <Section
+      title="Weekly reports"
+      description={`Week of ${formatDate(w.week_start)}`}
+      action={{
+        to: `/app/admin/reports/weekly?date=${w.week_start}`,
+        label: 'Open weekly reports',
+      }}
+      testId="admin-week"
+    >
+      <Figures
+        cols={2}
+        items={[
+          { label: 'Received', value, testId: 'fig-weekly' },
+          {
+            label: w.closed ? 'Closed' : 'Closes',
+            value:
+              w.closes_at === undefined ? undefined : (
+                <span className="text-base">{formatDateTime(w.closes_at)}</span>
+              ),
+          },
+        ]}
+      />
+    </Section>
+  );
+}
+
+function MonthSection({ m }: { m: NonNullable<AdminDashboard['month']> }) {
+  const top = m.services_top ?? [];
+  return (
+    <Section
+      title="This month"
+      description={`Report period ${periodLabel(m.period_start, m.period_end)}`}
+      testId="admin-month"
+    >
+      <Figures
+        cols={2}
+        items={[
+          { label: 'Late arrivals', value: m.late_count },
+          { label: 'Clients served', value: m.clients_count },
+        ]}
+      />
+      {m.services_top && (
+        <div className="border-t border-ink-100 px-5 py-3">
+          <p className="text-xs text-ink-500">Top services</p>
+          {top.length === 0 ? (
+            <p className="mt-1 text-sm text-ink-600">No service recorded yet.</p>
+          ) : (
+            <table className="mt-1 w-full text-sm" data-testid="services-top">
+              <tbody className="divide-y divide-ink-100">
+                {top.map((s) => (
+                  <tr key={s.service_key}>
+                    <td className="py-2 pr-3 wrap-anywhere text-ink-800">{s.service}</td>
+                    <td className="py-2 text-right font-semibold tabular-nums text-ink-900">
+                      {s.quantity}
+                    </td>
+                  </tr>
+                ))}
+              </tbody>
+            </table>
+          )}
+        </div>
+      )}
+    </Section>
+  );
+}
+
+function PendingSection({ p }: { p: NonNullable<AdminDashboard['pending']> }) {
+  const rows = [
+    { n: p.sign_up_requests, label: 'Sign-up requests', to: '/app/admin/requests' },
+    { n: p.faceid_devices, label: 'Face ID devices', to: '/app/admin/faceid-devices' },
+    { n: p.missions, label: 'Mission check-ins', to: '/app/admin/attendance/missions' },
+  ].filter((r): r is { n: number; label: string; to: string } => r.n !== undefined);
+  if (rows.length === 0) return null;
+  const total = rows.reduce((a, r) => a + r.n, 0);
+  return (
+    <Section
+      title="Waiting for you"
+      description={total === 0 ? 'Nothing to review.' : undefined}
+      testId="admin-pending"
+    >
+      <ul className="divide-y divide-ink-100">
+        {rows.map((r) => (
+          <li key={r.label}>
+            <Link
+              to={r.to}
+              className="flex min-h-12 items-center justify-between gap-3 px-5 py-3 transition-colors hover:bg-surface-muted focus-visible:outline-offset-[-2px]"
+            >
+              <span className="text-sm text-ink-800">{r.label}</span>
+              <span
+                className={
+                  r.n > 0
+                    ? 'rounded-full bg-secondary-50 px-2.5 py-0.5 text-sm font-semibold tabular-nums text-secondary-700'
+                    : 'text-sm tabular-nums text-ink-500'
+                }
+              >
+                {r.n > 0 ? `${r.n} to review` : 'None'}
+              </span>
+            </Link>
+          </li>
+        ))}
+      </ul>
+    </Section>
+  );
+}
+
 export function DashboardPage() {
   const { data: me } = useMe();
   const unread = useUnreadCount();
-  const approver = can(me, 'approve_users');
-  const pending = useQuery({
-    queryKey: ['admin', 'users', 'pending-count'],
-    queryFn: () =>
-      api.get<Paginated<User>>(`/admin/users${qs({ status: 'pending', per_page: 1 })}`),
-    enabled: approver,
-    select: (r) => r.meta.total,
-  });
-  const missions = useQuery({
-    queryKey: ['admin', 'missions', 'pending-count'],
-    queryFn: () => api.get<Paginated<unknown>>('/admin/attendance/missions?status=pending'),
-    enabled: can(me, 'approve_mission_checkins'),
-    select: (r) => r.meta.total,
-  });
-  const devices = useQuery({
-    queryKey: ['admin', 'faceid', 'pending-count'],
-    queryFn: () => api.get<Paginated<unknown>>('/admin/faceid/credentials?status=pending'),
-    enabled: can(me, 'approve_faceid_devices'),
-    select: (r) => r.meta.total,
-  });
+  const q = useAdminDashboard();
   // Server-corrected time, never the raw device clock.
   const now = serverNow();
-  // Figures as returned by the day list (no business rule computed here).
-  const day = useDay(isoDay(now), canViewAttendance(me));
-  const rows = day.data?.data ?? [];
-  const expected = rows.filter((r) => r.expected).length;
-  const present = rows.filter((r) => r.attendance).length;
-  const late = rows.filter((r) => r.attendance?.is_late === true).length;
-  const showLate = rows.some((r) => typeof r.attendance?.is_late === 'boolean');
+  const d = q.data;
+  const empty = d && !d.today && !d.week && !d.month && !d.pending;
 
   return (
     <>
@@ -75,83 +197,51 @@ export function DashboardPage() {
         title={`${greeting(accraHour(now))}, ${me?.first_name ?? ''}`}
         description={accraDate(now)}
       />
-      <motion.div
-        variants={stagger}
-        initial="hidden"
-        animate="show"
-        className="grid items-stretch gap-4 sm:grid-cols-2"
-      >
-        {canViewAttendance(me) && (
-          <motion.div variants={fadeUp} className="h-full">
-            <Link
-              to="/app/admin/attendance"
-              className="block h-full rounded-card focus-visible:outline-offset-4"
-              data-testid="attendance-tile"
-            >
-              <StatTile
-                label="Checked in today"
-                value={
-                  day.isPending ? <Skeleton className="h-8 w-16" /> : `${present} / ${expected}`
-                }
-                hint={!day.isPending && showLate ? `Late ${late}` : undefined}
-                cta="Open today's attendance"
-              />
-            </Link>
-          </motion.div>
-        )}
-        {approver && (
-          <motion.div variants={fadeUp} className="h-full">
-            <Link
-              to="/app/admin/requests"
-              className="block h-full rounded-card focus-visible:outline-offset-4"
-            >
-              <StatTile
-                label="Sign-up requests waiting"
-                value={pending.isPending ? <Skeleton className="h-8 w-10" /> : (pending.data ?? 0)}
-                highlight={Boolean(pending.data)}
-                hint={pending.data ? 'Waiting for your approval.' : 'Nothing to review.'}
-                cta={pending.data ? 'Review requests' : undefined}
-              />
-            </Link>
-          </motion.div>
-        )}
-        {can(me, 'approve_mission_checkins') && (
-          <motion.div variants={fadeUp} className="h-full">
-            <Link
-              to="/app/admin/attendance/missions"
-              className="block h-full rounded-card focus-visible:outline-offset-4"
-            >
-              <StatTile
-                label="Mission check-ins waiting"
-                value={
-                  missions.isPending ? <Skeleton className="h-8 w-10" /> : (missions.data ?? 0)
-                }
-                highlight={Boolean(missions.data)}
-                hint={
-                  missions.data ? 'Employees working outside the office.' : 'Nothing to review.'
-                }
-                cta={missions.data ? 'Review missions' : undefined}
-              />
-            </Link>
-          </motion.div>
-        )}
-        {can(me, 'approve_faceid_devices') && (
-          <motion.div variants={fadeUp} className="h-full">
-            <Link
-              to="/app/admin/faceid-devices"
-              className="block h-full rounded-card focus-visible:outline-offset-4"
-            >
-              <StatTile
-                label="Face ID devices waiting"
-                value={devices.isPending ? <Skeleton className="h-8 w-10" /> : (devices.data ?? 0)}
-                highlight={Boolean(devices.data)}
-                hint={devices.data ? 'New phones to approve.' : 'Nothing to review.'}
-                cta={devices.data ? 'Review devices' : undefined}
-              />
-            </Link>
-          </motion.div>
-        )}
-      </motion.div>
+      {q.isPending ? (
+        <div className="grid gap-4">
+          <Skeleton className="h-36 w-full" />
+          <Skeleton className="h-28 w-full" />
+        </div>
+      ) : q.isError || !d ? (
+        <Alert tone="danger" title="The dashboard could not be loaded">
+          You appear to be offline or the service is busy.
+          <Button variant="outline" size="sm" className="mt-2" onClick={() => void q.refetch()}>
+            Try again
+          </Button>
+        </Alert>
+      ) : empty ? (
+        <Card>
+          <EmptyState
+            title="Nothing to show yet"
+            description="Your permissions do not include dashboard figures. Use the menu to reach your pages."
+          />
+        </Card>
+      ) : (
+        <motion.div variants={stagger} initial="hidden" animate="show" className="grid gap-4">
+          {d.pending && (
+            <motion.div variants={fadeUp}>
+              <PendingSection p={d.pending} />
+            </motion.div>
+          )}
+          {d.today && (
+            <motion.div variants={fadeUp}>
+              <TodaySection t={d.today} />
+            </motion.div>
+          )}
+          <div className="grid items-start gap-4 lg:grid-cols-2">
+            {d.week && (
+              <motion.div variants={fadeUp}>
+                <WeekSection w={d.week} />
+              </motion.div>
+            )}
+            {d.month && (
+              <motion.div variants={fadeUp}>
+                <MonthSection m={d.month} />
+              </motion.div>
+            )}
+          </div>
+        </motion.div>
+      )}
       {(unread.data ?? 0) > 0 && (
         <Link
           to="/app/notifications"

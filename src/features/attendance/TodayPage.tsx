@@ -1,3 +1,4 @@
+import { EmployeeOverview } from '../dashboard/EmployeeOverview';
 import { AnimatePresence, motion, useReducedMotion } from 'motion/react';
 import { useEffect, useState } from 'react';
 import { useQueryClient } from '@tanstack/react-query';
@@ -486,6 +487,8 @@ export function TodayPage() {
           </motion.div>
         </>
       )}
+
+      {t && <EmployeeOverview />}
 
       {schedule.data && !schedule.data.selected && (
         <motion.div variants={fadeUp}>
