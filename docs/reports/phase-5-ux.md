@@ -14,14 +14,17 @@ Tester: `frontend-ux-tester` – 2026-11-13 (00:50–01:15 server time, a Friday
 
 | ID | Severity | Title | Status |
 |---|---|---|---|
-| UX5-01 | High | A long word with no spaces (task title, client name, URL) makes the whole page wider than the phone; the Plan/Edit/Delete buttons go off-screen | Fixed (frontend) |
-| UX5-02 | Medium | Weekly close "catch-up" for the previous week counts employees who did not exist that week ("0 of 76 received" for the week of 2 Nov, with accounts created on 12–13 Nov) | Open (backend) |
-| UX5-03 | Medium | "Not received" list (admin weekly page and close email) shows names only: homonyms cannot be told apart, and the list is one long comma-separated paragraph | Fixed (frontend) |
-| UX5-04 | Medium | Upload while offline: the Send button keeps the spinner with no message; the user does not know if the report was sent | Fixed (frontend) |
-| UX5-05 | Low | Quantity 0 is saved silently as 1 (no message) | Fixed (frontend) |
-| UX5-06 | Low | Quantity above 999 shows the raw server text "The quantity field must not be greater than 999." | Fixed (frontend) |
-| UX5-07 | Low | Per-employee weekly page reached from the daily reports says "Back to weekly reports" | Fixed (frontend) |
-| UX5-08 | Low | Monthly PDF: homonyms appear as identical rows ("MENSAH Efua" ×4); the fonts and header are smaller than in the template | Open (owner question) |
+| UX5-01 | High | A long word with no spaces (task title, client name, URL) makes the whole page wider than the phone; the Plan/Edit/Delete buttons go off-screen | **Fixed** (re-tested) |
+| UX5-02 | Medium | Weekly close "catch-up" for the previous week counts employees who did not exist that week ("0 of 76 received" for the week of 2 Nov, with accounts created on 12–13 Nov) | **Fixed** (re-tested) |
+| UX5-03 | Medium | "Not received" list (admin weekly page and close email) shows names only: homonyms cannot be told apart, and the list is one long comma-separated paragraph | **Fixed** (re-tested) |
+| UX5-04 | Medium | Upload while offline: the Send button keeps the spinner with no message; the user does not know if the report was sent | **Fixed** (re-tested) |
+| UX5-05 | Low | Quantity 0 is saved silently as 1 (no message) | **Fixed** (re-tested) |
+| UX5-06 | Low | Quantity above 999 shows the raw server text "The quantity field must not be greater than 999." | **Fixed** (re-tested) |
+| UX5-07 | Low | Per-employee weekly page reached from the daily reports says "Back to weekly reports" | **Fixed** (re-tested) |
+| UX5-08 | Low | Monthly PDF: homonyms appear as identical rows ("MENSAH Efua" ×4); the fonts and header are smaller than in the template | **Fixed** (re-tested; owner question on strict template remains) |
+| UX5-09 | Low | Catch-up close sends an empty "Weekly reports: 0 of 0 received" email for a week where nobody was expected | Open (backend) |
+| UX5-10 | Low | Missing list: the email writes "HOMONYM Ama – Accountant", the app writes "Ama Homonym / Accountant": same people, two name orders | Open |
+| UX5-11 | Low | "Back to daily reports" goes to `/app/admin/reports` without the day: an admin who was looking at a past day lands on today | Open (frontend) |
 
 ### UX5-01 – High – Long unbroken text breaks the phone layout
 - Employee, iPhone 13 and Android 360. Scripts `p5-j1-work.mjs`, `p5-j6-retest.mjs`. Screens `ux-j1-02-tasks-iphone.png` (the page becomes about 12,500 px wide), `ux-j6-03-long-android.png`.
@@ -73,3 +76,23 @@ Not covered: real push delivery (needs an installed PWA on a real phone), and re
 
 ## Fixes (attendance-frontend, 2026-11-13)
 UX5-01, 03, 04, 05, 06, 07: **Fixed** in the frontend (e2e `e2e/reports.spec.ts`: 360 px overflow, Options sheet, quantity 0, offline upload, missing list, back link). UX5-02 server side, UX5-08 owner question.
+
+
+## Re-test (frontend-ux-tester, 2026-11-13 05:30–05:45 server time)
+Environment: backend `f601ef3` on :8000 (`attendance_e2e`, `migrate` only, `MAIL_MAILER=log`, `QUEUE_CONNECTION=sync`, FRONTEND_URL / CORS / `WEBAUTHN_ORIGINS` = `http://localhost:4180` as env vars, no backend file changed); private build of front `aa016ff` on :4180. Scripts: `e2e/ux/p5-j7-retest.mjs`, `e2e/ux/p5-j8-backlink.mjs`, plus re-runs of `p5-j1-work` (iPhone, Android), `p5-j2-weekly`, `p5-j6-retest`. E2e DB only: `scheduled_runs` / `report_deliveries` rows of `weekly_close` and `monthly_report` deleted to replay the runs; the temporary window / monthly settings rows were deleted afterwards (settings table back to its 5 original rows, cache flushed).
+
+- **UX5-01 Fixed**: 160-character word in a task, client name and service: `scrollWidth` = viewport on iPhone 13 (390) and Android (360) for My work, Daily report and Weekly report; also 360/1280 in `p5-j6-retest`. Row actions are in an "Options" sheet (Edit task / Delete task / Cancel). Screens `ux-j7-long-work-iphone.png`, `ux-j7-long-work-android.png`, `ux-j7-options-*.png`.
+- **UX5-02 Fixed**: catch-up close replayed on Fri 13 Nov: week of 2 Nov → "0 of 0 received" (every account joined on 12–13 Nov); current week → "3 of 100 received". The old "0 of 76" is gone. See new UX5-09 (empty email still sent).
+- **UX5-03 Fixed**: admin weekly page (desktop + iPhone) lists one name per line with job title and email ("Ama Homonym / Accountant · homo…@e2e.test", "… Driver …"), collapsed with "Show all". Close email: "Not received (97):" then one bullet per line `HOMONYM Ama – Accountant (email)` for the super admin, `HOMONYM Ama – Accountant` (no email) for the `receive_weekly_reports` admin. In-app body "Not received: 97." Screen `ux-j7-admin-weekly-desktop.png`, `-iphone.png`.
+- **UX5-04 Fixed**: offline → "You are offline. Your report was not sent yet. It will be sent automatically when you are back online." with "Waiting for connection"; back online → "Report sent – Version 1 received" within 6 s, without any tap. Screens `ux-j7-offline-iphone.png`, `ux-j7-online-iphone.png`.
+- **UX5-05 / 06 Fixed**: 0 and −2 → "Quantity must be at least 1.", 1.5 → "Enter a whole number, 1 or more.", 1000 → "Quantity must be between 1 and 999."; no client saved during these tries (count unchanged). Screen `ux-j7-qty0-iphone.png`. (The old j1 script skipped quantity 0 by mistake; j7 types it.)
+- **UX5-07 Fixed**: from the daily reports → "Back to daily reports" (`&from=daily`); from the weekly page → "Back to weekly reports"; kept after reload. See UX5-11 for the lost day.
+- **UX5-08 Fixed**: new `Rapport_de_performance_Novembre_2026.pdf` (5 pages): header, title and table now have the template proportions (`ux-j7-monthly-page1-1.png` vs the template). Same-name rows get a small second line "Officer, ama.1794510262744" (same job title, so email local part). Remaining differences, for the owner only: font DejaVu Sans instead of Calibri (Calibri is not free to embed), and the second line starts with "Officer," then wraps, which looks slightly odd; "Officer · ama.…" on one line would read better.
+
+### New findings
+- **UX5-09 – Low – Empty catch-up email (server).** Super admin + recipient admin. Replay `reports:weekly-close` for a past week where no employee was expected. Actual: two emails "Weekly reports: 0 of 0 received … week of 2 Nov 2026". Expected: no email (or a single line in the next close) when nobody was expected; it reads as an error to an admin.
+- **UX5-10 – Low – Name order differs between email and app.** Email `HOMONYM Ama – Accountant`, app "Ama Homonym". Pick one (the monthly PDF uses "LAST First", so the email is consistent with the PDF; the app is not). Low.
+- **UX5-11 – Low – Back link loses the day.** Desktop/iPhone super admin: Reports → pick a past day → expand a row → Week summary → "Back to daily reports" goes to `/app/admin/reports` (today). Expected: back to the same day (`?date=`). Same for the weekly page link (`Back to weekly reports` drops the week).
+
+### Regressions
+None. Re-run journeys passed: check-in → tasks (plan, tick, add as done, double tap, edit, delete) → clients with suggestions and grouping → daily report → weekly summary (iPhone and Android 360); weekly upload refusals (JPG, empty, 11 MB, fake, encrypted, JavaScript) → upload → replace → download 200 PDF → offline resend; mission check-in history badge; deep link after sign-in; admin weekly missing list + back links (desktop, iPhone); catch-up close email (two recipients, tiers respected); monthly email + PDF.
