@@ -25,7 +25,7 @@ export function Figures({ items, cols = 4 }: { items: FigureItem[]; cols?: keyof
   const shown = items.filter((f) => f.value !== undefined && f.value !== null);
   if (shown.length === 0) return null;
   return (
-    <dl className={cx('grid gap-px bg-ink-100', COLS[cols])}>
+    <dl className={cx('-mb-px grid overflow-hidden', COLS[cols])}>
       {shown.map((f) => {
         const inner = (
           <>
@@ -42,7 +42,11 @@ export function Figures({ items, cols = 4 }: { items: FigureItem[]; cols?: keyof
           </>
         );
         return (
-          <div key={f.label} className="bg-surface" data-testid={f.testId}>
+          <div
+            key={f.label}
+            className="-mr-px border-r border-b border-ink-100"
+            data-testid={f.testId}
+          >
             {f.to ? (
               <Link
                 to={f.to}
