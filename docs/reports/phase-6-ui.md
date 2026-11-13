@@ -26,6 +26,9 @@ Screens: `docs/reports/screens/phase-6/<state>-<width>.png` (states: employee, e
 
 Positive: sober, figures only, no charts, no emojis, icons only in navigation, primary blue dominates with amber reserved for late/pending, absent sections are hidden (limited admins), skeleton loading matches card shapes, no overflow at 360, clear 429 and cap copy in plain English.
 
+## Fix status (attendance-frontend, 2026-11-13)
+All findings UI6-01..UI6-12 **Fixed**: nowrap fixed quantity column; Today = 3 key figures + secondary line (refused check-ins as a link only if > 0, missions removed); baseline-aligned header links with short labels on phones; Closes as small secondary text (amber when < 24 h); pending rows sorted, "Review" label, hover/active and focus ring; single "Nothing to review" message with a quiet link; employee month labels shortened; server work date as "Friday 13 November" on both homes; Export CSV in the page header with the hint below; "Change dates" opens the Filters sheet (focuses From on desktop); 429 as an amber warning with the button disabled until "Available again at HH:MM"; dashboard GET retries limited to 1.
+
 ## Verdict
 Professional and sober; one High layout bug (UI6-01) blocks sign-off. The rest is hierarchy polish.
 

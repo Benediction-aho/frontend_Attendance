@@ -10,15 +10,15 @@
 
 | ID | Severity | Finding | Status |
 |---|---|---|---|
-| UX6-01 | High | The employee dashboard is not refreshed after check-in: the card says "Late" but "This week" shows "Days present 0 of 1, Late arrivals 0" for up to 5 min | Open (frontend) |
-| UX6-02 | Medium | Admin "Waiting for you" counts are stale right after an approval (sign-up, mission): returning Home still shows the old count | Open (frontend) |
-| UX6-03 | Medium | Admin "Day off" counts people on leave too: it shows 2 when the day list has 1 day off and 1 on leave | Open (front label or backend figure) |
-| UX6-04 | Medium | Top services: a long service name squeezes the quantity column, so "15" wraps to "1 / 5" (reads as 1 and 5) | Open (frontend) |
-| UX6-05 | Low | Every CSV is saved as `activity_log.csv`: the server name `activity_log_2026-11-13_061020.csv` is not readable cross-origin because `Content-Disposition` is not in `Access-Control-Expose-Headers` | Open (backend CORS) |
-| UX6-06 | Low | The 429 message "Try again later." does not say when; the CSV "Device" column holds an internal id ("1", "215") that means nothing to the reader | Open |
-| UX6-07 | Low | Employee "This week 9 Nov – 15 Nov" while the weekly report page says "9 Nov – 13 Nov" (Monday to Friday) | Open (frontend) |
-| UX6-08 | Low | Admin daily reports for a past day show "0 of 108 employees" on 12 Nov, but most of those accounts were created on 13 Nov (the denominator ignores account creation) | Open (backend, phase 5 area) |
-| UX6-09 | Low | Admin "Weekly reports – Closes" date wraps onto two lines on the iPhone ("13 Nov 2026, / 17:00") | Open |
+| UX6-01 | High | The employee dashboard is not refreshed after check-in: the card says "Late" but "This week" shows "Days present 0 of 1, Late arrivals 0" for up to 5 min | **Fixed (every successful write refreshes both dashboards)** |
+| UX6-02 | Medium | Admin "Waiting for you" counts are stale right after an approval (sign-up, mission): returning Home still shows the old count | **Fixed (approvals refresh the admin dashboard)** |
+| UX6-03 | Medium | Admin "Day off" counts people on leave too: it shows 2 when the day list has 1 day off and 1 on leave | **Fixed (distinct day_off / holiday from the API; unexpected check-ins shown)** |
+| UX6-04 | Medium | Top services: a long service name squeezes the quantity column, so "15" wraps to "1 / 5" (reads as 1 and 5) | **Fixed (fixed nowrap quantity column)** |
+| UX6-05 | Low | Every CSV is saved as `activity_log.csv`: the server name `activity_log_2026-11-13_061020.csv` is not readable cross-origin because `Content-Disposition` is not in `Access-Control-Expose-Headers` | **Fixed (server file name; dated fallback)** |
+| UX6-06 | Low | The 429 message "Try again later." does not say when; the CSV "Device" column holds an internal id ("1", "215") that means nothing to the reader | **Fixed front (time of availability, disabled button); Device column: backend** |
+| UX6-07 | Low | Employee "This week 9 Nov – 15 Nov" while the weekly report page says "9 Nov – 13 Nov" (Monday to Friday) | **Fixed (week_end from the API, Mon–Fri)** |
+| UX6-08 | Low | Admin daily reports for a past day show "0 of 108 employees" on 12 Nov, but most of those accounts were created on 13 Nov (the denominator ignores account creation) | **Open (backend)** |
+| UX6-09 | Low | Admin "Weekly reports – Closes" date wraps onto two lines on the iPhone ("13 Nov 2026, / 17:00") | **Fixed (Closes as secondary text)** |
 | UX5-11 | – | Back links keep the day and the week | **Fixed** (re-tested) |
 
 ## Details
