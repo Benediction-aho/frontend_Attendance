@@ -65,10 +65,34 @@ export function useTaskMutations() {
     mutationFn: (v: { title: string; done: boolean }) => api.post<{ data: Task }>('/me/tasks', v),
     onSuccess: done,
   });
+  const qc = useQueryClient();
+  type TaskList = { work_date: string; data: Task[] };
   const update = useMutation({
     mutationFn: ({ id, ...v }: { id: number; title?: string; done?: boolean }) =>
       api.patch<{ data: Task }>(`/me/tasks/${id}`, v),
-    onSuccess: done,
+    // The tick shows at once; the server's answer (completion time) replaces it.
+    onMutate: async ({ id, title, done: isDone }) => {
+      await qc.cancelQueries({ queryKey: TASKS_KEY });
+      const prev = qc.getQueryData<TaskList>(TASKS_KEY);
+      if (prev)
+        qc.setQueryData<TaskList>(TASKS_KEY, {
+          ...prev,
+          data: prev.data.map((t) =>
+            t.id !== id
+              ? t
+              : {
+                  ...t,
+                  ...(title !== undefined ? { title } : {}),
+                  ...(isDone !== undefined ? { status: isDone ? 'done' : 'planned' } : {}),
+                },
+          ),
+        });
+      return { prev };
+    },
+    onError: (_e, _v, ctx) => {
+      if (ctx?.prev) qc.setQueryData(TASKS_KEY, ctx.prev);
+    },
+    onSettled: done,
   });
   const remove = useMutation({
     mutationFn: (id: number) => api.del(`/me/tasks/${id}`),
