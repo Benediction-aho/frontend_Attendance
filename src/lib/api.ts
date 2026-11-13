@@ -91,6 +91,14 @@ export function onPasswordChangeRequired(l: Listener): () => void {
   return () => forbiddenListeners.delete(l);
 }
 
+const writeListeners = new Set<(path: string) => void>();
+
+/** Called after every successful write (POST/PUT/PATCH/DELETE) outside /auth, e.g. to refresh dashboards. */
+export function onWriteSuccess(l: (path: string) => void): () => void {
+  writeListeners.add(l);
+  return () => writeListeners.delete(l);
+}
+
 const checkinListeners = new Set<Listener>();
 
 /** Notified when the API answers 403 checkin_required (employee must check in first). */
@@ -162,7 +170,13 @@ export function createApiClient(config: ApiClientConfig) {
     }
     const data: unknown = await res.json().catch(() => null);
 
-    if (res.ok) return data as T;
+    if (res.ok) {
+      const method = opts.method ?? 'GET';
+      if (method !== 'GET' && !path.replace(/^\/+/, '').startsWith('auth/')) {
+        writeListeners.forEach((l) => l(path));
+      }
+      return data as T;
+    }
     const serverMessage =
       data && typeof data === 'object' && 'message' in data && typeof data.message === 'string'
         ? data.message

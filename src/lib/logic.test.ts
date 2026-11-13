@@ -88,3 +88,18 @@ describe('login errors', () => {
     expect(describeLoginError(new ApiError('network', null, 'x')).message).toMatch(/offline/);
   });
 });
+
+describe('dashboard refresh after writes (UX6-01 / UX6-02)', () => {
+  it('invalidates both dashboards', async () => {
+    const { QueryClient } = await import('@tanstack/react-query');
+    const { invalidateDashboards } = await import('./queryClient');
+    const qc = new QueryClient();
+    qc.setQueryData(['me', 'dashboard'], { a: 1 });
+    qc.setQueryData(['admin', 'dashboard'], { a: 1 });
+    qc.setQueryData(['other'], { a: 1 });
+    invalidateDashboards(qc);
+    expect(qc.getQueryState(['me', 'dashboard'])?.isInvalidated).toBe(true);
+    expect(qc.getQueryState(['admin', 'dashboard'])?.isInvalidated).toBe(true);
+    expect(qc.getQueryState(['other'])?.isInvalidated).toBe(false);
+  });
+});

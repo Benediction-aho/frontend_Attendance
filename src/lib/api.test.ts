@@ -1,5 +1,5 @@
 import { beforeEach, describe, expect, it, vi } from 'vitest';
-import { ApiError, backoffDelay, createApiClient } from './api';
+import { ApiError, backoffDelay, createApiClient, onWriteSuccess } from './api';
 import { getToken, setToken } from './session';
 
 const json = (status: number, body: unknown = {}) =>
@@ -121,5 +121,18 @@ describe('api client – sign-in specifics', () => {
     const init = (fetchImpl.mock.calls[0] as unknown as [string, RequestInit])[1];
     expect((init.headers as Record<string, string>)['Content-Type']).toBeUndefined();
     expect(init.body).toBeInstanceOf(FormData);
+  });
+
+  it('notifies successful writes outside /auth so dashboards refresh (UX6-01/02)', async () => {
+    const seen: string[] = [];
+    const off = onWriteSuccess((p) => seen.push(p));
+    const { client } = setup([json(200), json(200), json(200), json(422), json(200)]);
+    await client.post('/attendance/check-in');
+    await client.get('/me/dashboard');
+    await client.post('/auth/login');
+    await expect(client.patch('/me/tasks/1')).rejects.toBeInstanceOf(ApiError);
+    await client.del('/me/clients/2');
+    off();
+    expect(seen).toEqual(['/attendance/check-in', '/me/clients/2']);
   });
 });
