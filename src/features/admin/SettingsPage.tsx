@@ -1,4 +1,4 @@
-import { useEffect, useMemo, useState } from 'react';
+import { Fragment, useEffect, useMemo, useState } from 'react';
 import { Link, useBlocker, useParams } from 'react-router';
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
 import { AnimatePresence, motion } from 'motion/react';
@@ -28,6 +28,7 @@ import {
   isSettingsSection,
   normalizeTime,
   parseInput,
+  PERIMETER_HELP,
   SECTION_INFO,
   sectionOf,
   sameValue,
@@ -90,13 +91,7 @@ function SettingControl({
       label={s.label}
       // Never a native time input: it follows the browser locale and may show AM/PM.
       type="text"
-      inputMode={
-        s.type === 'int'
-          ? 'numeric'
-          : s.type === 'float'
-            ? 'decimal'
-            : undefined
-      }
+      inputMode={s.type === 'int' ? 'numeric' : s.type === 'float' ? 'decimal' : undefined}
       placeholder={s.type === 'time' ? 'e.g. 8:10 AM' : undefined}
       maxLength={s.type === 'time' ? 10 : undefined}
       autoComplete="off"
@@ -263,16 +258,25 @@ function SettingsForm({
               <CardHeader title={g.title} description={g.description} />
               <CardBody className="grid gap-x-6 gap-y-5 md:grid-cols-2">
                 {g.items.map((s) => (
-                  <SettingControl
-                    key={s.key}
-                    s={canEdit && (superA || !s.super_admin_only) ? s : { ...s, editable: false }}
-                    value={draft[s.key] ?? toInput(s.value, s.type)}
-                    error={parsed.errors[s.key] ?? serverErrors[s.key]}
-                    onChange={(v) => {
-                      setDraft((d) => ({ ...d, [s.key]: v }));
-                      setServerErrors((errs) => omit(errs, s.key));
-                    }}
-                  />
+                  <Fragment key={s.key}>
+                    {s.key === 'checkin_radius_m' && (
+                      <p
+                        className="text-sm text-ink-600 md:col-span-2"
+                        data-testid="perimeter-help"
+                      >
+                        {PERIMETER_HELP}
+                      </p>
+                    )}
+                    <SettingControl
+                      s={canEdit && (superA || !s.super_admin_only) ? s : { ...s, editable: false }}
+                      value={draft[s.key] ?? toInput(s.value, s.type)}
+                      error={parsed.errors[s.key] ?? serverErrors[s.key]}
+                      onChange={(v) => {
+                        setDraft((d) => ({ ...d, [s.key]: v }));
+                        setServerErrors((errs) => omit(errs, s.key));
+                      }}
+                    />
+                  </Fragment>
                 ))}
               </CardBody>
             </Card>

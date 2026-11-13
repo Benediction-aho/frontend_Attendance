@@ -40,6 +40,25 @@ describe('check-in problems: a clear message for every case', () => {
     expect(p.message).toContain('50 m or better');
   });
 
+  it('shows the server messages for low accuracy, already checked in and not open yet', () => {
+    const low =
+      'Your GPS position is not precise enough: about 120 m of uncertainty, and the maximum accepted is 100 m. Move near a window or step outside, wait a few seconds, then try again.';
+    expect(checkInProblem(apiErr(422, { code: 'low_accuracy', message: low })).message).toBe(low);
+    const done =
+      'You already checked in and out today. You can check in again tomorrow from 6:00 AM.';
+    const p = checkInProblem(apiErr(409, { code: 'already_checked_in', message: done }));
+    expect(p.message).toBe(done);
+    const early = checkInProblem(
+      apiErr(422, {
+        code: 'checkin_not_open',
+        opens_at: '06:00',
+        message: 'Check-in opens at 6:00 AM.',
+      }),
+    );
+    expect(early.kind).toBe('not_open');
+    expect(early.message).toBe('Check-in opens at 6:00 AM.');
+  });
+
   it('offline, GPS denied, Face ID cancelled, pending device, expired intent', () => {
     expect(checkInProblem(new ApiError('network', null, 'x')).kind).toBe('offline');
     expect(checkInProblem(new GeoError('denied', 'blocked')).steps?.length).toBeGreaterThan(2);
@@ -212,6 +231,55 @@ describe('Today screen', () => {
     expect(screen.getByRole('button', { name: 'Check in at the office' })).toBeInTheDocument();
     expect(screen.getByRole('button', { name: /Mission check-in/ })).toBeInTheDocument();
     expect(screen.getByText(/after 08:10 count as late/)).toBeInTheDocument();
+  });
+
+  it('shows when check-in opens instead of the button before opening time', async () => {
+    const t = today();
+    vi.stubGlobal(
+      'fetch',
+      route({
+        '/attendance/today': {
+          ...t,
+          rules: { ...t.rules, checkin_opens_at: '06:00', checkin_open: false },
+        },
+        '/me/work-schedule': { selected: true },
+      }),
+    );
+    renderAt(<TodayPage />, '/app');
+    expect(await screen.findByTestId('checkin-not-open')).toHaveTextContent(
+      'Check-in opens at 6:00 AM',
+    );
+    expect(screen.queryByRole('button', { name: 'Check in at the office' })).toBeNull();
+  });
+
+  it('says see you tomorrow after check-out', async () => {
+    const t = today();
+    const a: Attendance = {
+      id: 2,
+      work_date: '2026-11-12',
+      day_status: 'working',
+      check_in_type: 'gps',
+      check_in_at: '2026-11-12T07:50:00Z',
+      check_out_at: '2026-11-12T17:10:00Z',
+    };
+    vi.stubGlobal(
+      'fetch',
+      route({
+        '/attendance/today': {
+          ...t,
+          checked_in: true,
+          checked_out: true,
+          attendance: a,
+          available_check_ins: [],
+          rules: { ...t.rules, checkin_opens_at: '06:00', checkin_open: true },
+        },
+        '/me/work-schedule': { selected: true },
+      }),
+    );
+    renderAt(<TodayPage />, '/app');
+    expect(await screen.findByTestId('see-you-tomorrow')).toHaveTextContent(
+      'See you tomorrow – check-in opens at 6:00 AM',
+    );
   });
 
   it('asks to set up Face ID before any check-in', async () => {

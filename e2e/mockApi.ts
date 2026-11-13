@@ -339,7 +339,7 @@ export function defaultToday(o: Record<string, unknown> = {}) {
     available_check_ins: ['gps', 'mission'],
     rules: {
       radius_m: 50,
-      max_accuracy_m: 50,
+      max_accuracy_m: 100,
       late_after: '08:10',
       end_of_day: '17:00',
       early_checkout_reason_required: true,

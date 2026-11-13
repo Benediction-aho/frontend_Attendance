@@ -138,6 +138,7 @@ The API uses Bearer device tokens only (no cookies), so an HttpOnly cookie is no
 _Not given yet._
 
 ## Log
+- 2026-11-13 – Owner requests: check-in shows the server's `low_accuracy`, `already_checked_in` and new `checkin_not_open` messages; Today shows "Check-in opens at 6:00 AM" instead of the button before `rules.checkin_opens_at`, and "See you tomorrow – check-in opens at 6:00 AM" after check-out; Settings – Attendance keeps the GPS uncertainty setting next to the perimeter radius with a helper text.
 - 2026-11-13 – Phase 6 frontend: employee and admin dashboards from server figures, activity log CSV export (super admin, 429 and cap), UX5-11 back links. Ready for frontend-ui-designer.
 - 2026-11-13 – Phase 6 review fixes: dashboards refreshed after every write, Today hierarchy, nowrap figures, pending rows, day_off/holiday/checked_in_not_expected, week_end, CSV header button, 429 warning with retry time, server file name; e2e recovery URL relative.
 - 2026-11-13 – Phase 6 polish: Today figures in 2 columns on phones (UI6-13), en-GB thousands separators on all dashboard numbers (UI6-14), only the hourly-limit warning while export is blocked (UI6-15), space before "Change dates" (UX6-10). Phase 6 frontend complete.

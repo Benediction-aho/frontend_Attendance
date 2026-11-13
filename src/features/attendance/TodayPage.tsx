@@ -170,6 +170,16 @@ function CheckInPanel({ today }: { today: Today }) {
       </CardBody>
     );
 
+  if (today.rules.checkin_open === false && !busy)
+    return (
+      <CardBody>
+        <p className="text-base font-semibold text-ink-900" data-testid="checkin-not-open">
+          Check-in opens at {formatHhmm(today.rules.checkin_opens_at ?? '06:00')}
+        </p>
+        <p className="mt-1 text-sm text-ink-600">Come back then to check in.</p>
+      </CardBody>
+    );
+
   if (faceRequired && faceState !== 'ready')
     return (
       <CardBody>
@@ -363,6 +373,12 @@ function CheckedInPanel({ today, celebrate }: { today: Today; celebrate: boolean
         <div className="mt-4">
           <AttendanceDetails a={a} />
         </div>
+        {today.checked_out && (
+          <p className="mt-4 text-sm text-ink-600" data-testid="see-you-tomorrow">
+            See you tomorrow – check-in opens at{' '}
+            {formatHhmm(today.rules.checkin_opens_at ?? '06:00')}
+          </p>
+        )}
         {!today.checked_out && (
           <>
             <Button size="lg" block className="mt-5" onClick={() => setOpen(true)}>

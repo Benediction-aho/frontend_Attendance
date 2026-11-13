@@ -37,6 +37,10 @@ export interface TodayRules {
   radius_m?: number;
   max_accuracy_m?: number;
   late_after?: string;
+  /** Employee check-in refused before this time (HH:MM). */
+  checkin_opens_at?: string;
+  /** false before checkin_opens_at on the current work date. */
+  checkin_open?: boolean;
   end_of_day?: string;
   early_checkout_reason_required?: boolean;
   faceid_required?: boolean;

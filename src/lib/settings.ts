@@ -153,12 +153,28 @@ export function displayValue(value: unknown): string {
   if (typeof value === 'boolean') return value ? 'On' : 'Off';
   if (Array.isArray(value)) return value.length ? value.join(', ') : 'None';
   if (value === null || value === undefined || value === '') return '–';
-  if (typeof value === 'string' && /^([01]\d|2[0-3]):[0-5]\d$/.test(value)) return formatHhmm(value);
+  if (typeof value === 'string' && /^([01]\d|2[0-3]):[0-5]\d$/.test(value))
+    return formatHhmm(value);
   return String(value);
 }
 
+/** Shown above the perimeter radius and GPS uncertainty settings, which are kept side by side. */
+export const PERIMETER_HELP =
+  'Perimeter radius: how far from the office. Maximum GPS uncertainty: how imprecise a phone position may be.';
+
+/** Keeps checkin_max_accuracy_m right after checkin_radius_m. */
+function pairPerimeter(items: Setting[]): Setting[] {
+  const acc = items.find((s) => s.key === 'checkin_max_accuracy_m');
+  const radiusAt = items.findIndex((s) => s.key === 'checkin_radius_m');
+  if (!acc || radiusAt < 0) return items;
+  const rest = items.filter((s) => s !== acc);
+  const at = rest.findIndex((s) => s.key === 'checkin_radius_m');
+  return [...rest.slice(0, at + 1), acc, ...rest.slice(at + 1)];
+}
+
 export function groupSettings(settings: Setting[]) {
-  return GROUPS.map((g) => ({ ...g, items: settings.filter((s) => s.group === g.key) })).filter(
-    (g) => g.items.length,
-  );
+  return GROUPS.map((g) => ({
+    ...g,
+    items: pairPerimeter(settings.filter((s) => s.group === g.key)),
+  })).filter((g) => g.items.length);
 }

@@ -15,6 +15,7 @@ export type CheckInProblemKind =
   | 'faceid_setup'
   | 'expired'
   | 'already'
+  | 'not_open'
   | 'not_remote_day'
   | 'reason_required'
   | 'throttled'
@@ -68,6 +69,12 @@ function num(body: unknown, key: string): number | undefined {
   return typeof v === 'number' && Number.isFinite(v) ? v : undefined;
 }
 
+/** Message written by the API for this refusal, when present. */
+function serverMessage(body: unknown): string | undefined {
+  const v = (body as Record<string, unknown> | null)?.message;
+  return typeof v === 'string' && v.trim() ? v : undefined;
+}
+
 /** Clear English message for every way a check-in can fail. Values come from the API. */
 export function checkInProblem(e: unknown, ctx: ProblemContext = {}): CheckInProblem {
   if (e instanceof GeoError) {
@@ -115,9 +122,12 @@ export function checkInProblem(e: unknown, ctx: ProblemContext = {}): CheckInPro
       return {
         kind: 'low_accuracy',
         title: 'Position not precise enough',
-        message: `Your position is accurate to ${formatDistance(acc)}${
-          max !== undefined ? `, ${formatDistance(max)} or better is needed` : ''
-        }. Move near a window or step outside for a moment, then try again.`,
+        // The server message states the measured and accepted values and what to do.
+        message:
+          serverMessage(e.body) ??
+          `Your position is accurate to ${formatDistance(acc)}${
+            max !== undefined ? `, ${formatDistance(max)} or better is needed` : ''
+          }. Move near a window or step outside for a moment, then try again.`,
       };
     }
     case 'out_of_perimeter': {
@@ -179,7 +189,13 @@ export function checkInProblem(e: unknown, ctx: ProblemContext = {}): CheckInPro
       return {
         kind: 'already',
         title: 'Already checked in',
-        message: 'You are already checked in today.',
+        message: serverMessage(e.body) ?? 'You are already checked in today.',
+      };
+    case 'checkin_not_open':
+      return {
+        kind: 'not_open',
+        title: 'Check-in not open yet',
+        message: serverMessage(e.body) ?? 'Check-in is not open yet.',
       };
     case 'not_remote_day':
       return {
