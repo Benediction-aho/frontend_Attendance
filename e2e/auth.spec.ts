@@ -163,9 +163,12 @@ test('super admin: email, one-time code, sign in; recovery link page', async ({ 
   expect(login.password).toBe('12345678');
 
   const s2 = newState();
-  const p2 = await page.context().browser()!.newPage();
+  const p2 = await page
+    .context()
+    .browser()!
+    .newPage({ baseURL: new URL(page.url()).origin });
   await mockApi(p2, s2);
-  await p2.goto('http://localhost:4173/recover?token=abc123');
+  await p2.goto('/recover?token=abc123');
   await expect(p2.getByText('Access restored.', { exact: false })).toBeVisible();
   expect(p2.url()).not.toContain('token=');
   await p2.close();
