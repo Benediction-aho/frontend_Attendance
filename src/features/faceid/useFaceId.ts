@@ -25,6 +25,7 @@ export interface FaceIdCredential {
     browser: string | null;
     user_agent: string | null;
     device_first_seen_at: string | null;
+    replaces_same_device?: boolean;
   };
 }
 
@@ -33,7 +34,13 @@ export const FACEID_KEY = ['me', 'faceid'] as const;
 export function useMyFaceId(enabled = true) {
   return useQuery({
     queryKey: FACEID_KEY,
-    queryFn: () => api.get<{ state: FaceIdState; data: FaceIdCredential[] }>('/me/faceid'),
+    queryFn: () =>
+      api.get<{
+        state: FaceIdState;
+        data: FaceIdCredential[];
+        can_reregister?: boolean;
+        replacement_pending?: boolean;
+      }>('/me/faceid'),
     enabled,
   });
 }
@@ -60,12 +67,17 @@ export function registrationError(e: unknown): string {
 }
 
 /** Registration: options → navigator.credentials.create → register. */
-export function useRegisterFaceId() {
+/**
+ * `replace`: register again on a phone whose passkey was lost (Face ID reset, passkey
+ * deleted). The server keeps the new credential pending until an administrator approves it.
+ */
+export function useRegisterFaceId(replace = false) {
   const qc = useQueryClient();
   return useMutation({
     mutationFn: async () => {
       const opts = await api.post<{ challenge_id: string; public_key: Record<string, unknown> }>(
         '/me/faceid/register/options',
+        replace ? { reregister: true } : undefined,
       );
       const credential = await createPasskey(opts.public_key);
       return api.post<{ data: FaceIdCredential; state: FaceIdState }>('/me/faceid/register', {

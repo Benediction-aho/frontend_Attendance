@@ -1,5 +1,6 @@
 import { ApiError, throttleMessage } from '../../lib/api';
 import { formatDistance } from '../../lib/attendance';
+import { detectPlatform, type Platform } from '../../lib/browser';
 import { GeoError } from '../../lib/geo';
 import { PasskeyError } from '../../lib/webauthn';
 
@@ -26,6 +27,38 @@ export interface CheckInProblem {
   message: string;
   /** Code from the API when the problem is about Face ID readiness. */
   faceidState?: 'not_registered' | 'pending_approval' | 'other_device';
+  /** Numbered steps to follow (location permission help for the detected phone). */
+  steps?: string[];
+  /** Short hint shown under the message (e.g. position may improve). */
+  hint?: string;
+}
+
+/** Steps to allow location access, for the detected platform only. */
+export const LOCATION_STEPS: Record<Platform, string[]> = {
+  ios: [
+    'Open the Settings app on your iPhone.',
+    'Tap Privacy & Security, then Location Services.',
+    'Make sure Location Services is on.',
+    'Tap Safari Websites (or Attendance if you installed the app) and choose "While Using the App".',
+    'Come back here and tap "Try again".',
+  ],
+  android: [
+    'Tap the lock icon next to the address at the top of Chrome.',
+    'Tap Permissions, then Location.',
+    'Choose Allow.',
+    'Make sure Location is on in your quick settings.',
+    'Come back here and tap "Try again".',
+  ],
+  desktop: [
+    'Click the lock icon next to the address in your browser.',
+    'Set Location to Allow.',
+    'Reload the page and try again.',
+  ],
+};
+
+export interface ProblemContext {
+  /** Accuracy (metres) of the position that was sent, when known. */
+  accuracy?: number | null;
 }
 
 function num(body: unknown, key: string): number | undefined {
@@ -34,8 +67,17 @@ function num(body: unknown, key: string): number | undefined {
 }
 
 /** Clear English message for every way a check-in can fail. Values come from the API. */
-export function checkInProblem(e: unknown): CheckInProblem {
-  if (e instanceof GeoError) return { kind: 'gps', title: 'Location needed', message: e.message };
+export function checkInProblem(e: unknown, ctx: ProblemContext = {}): CheckInProblem {
+  if (e instanceof GeoError) {
+    if (e.kind === 'denied')
+      return {
+        kind: 'gps',
+        title: 'Location needed',
+        message: 'Location access is blocked for this app. To allow it:',
+        steps: LOCATION_STEPS[detectPlatform()],
+      };
+    return { kind: 'gps', title: 'Location needed', message: e.message };
+  }
   if (e instanceof PasskeyError) {
     if (e.kind === 'cancelled')
       return { kind: 'faceid_cancelled', title: 'Face ID not completed', message: e.message };
@@ -79,12 +121,20 @@ export function checkInProblem(e: unknown): CheckInProblem {
     case 'out_of_perimeter': {
       const d = num(e.body, 'distance_m');
       const r = num(e.body, 'radius_m');
+      const acc = ctx.accuracy ?? undefined;
+      // Display hint only: the server alone decides the perimeter.
+      const nearEdge = d !== undefined && r !== undefined && acc !== undefined && d - acc <= r;
       return {
         kind: 'out_of_perimeter',
         title: 'You are not at the office',
         message: `You are ${formatDistance(d)} from the office${
           r !== undefined ? `; check-in is allowed within ${formatDistance(r)}` : ''
         }. If you are working outside today, use a mission check-in instead.`,
+        ...(nearEdge
+          ? {
+              hint: `Your position is only accurate to ${formatDistance(acc)}. If you are at the office, move near a window or step outside for a few seconds, then try again.`,
+            }
+          : {}),
       };
     }
     case 'faceid_not_registered':
@@ -156,3 +206,12 @@ export function checkInProblem(e: unknown): CheckInProblem {
 
 /** API low_accuracy refusals are retried automatically while the reading improves. */
 export const MAX_ACCURACY_RETRIES = 3;
+
+/** Total time spent waiting for a precise enough position before giving a clear message. */
+export const LOCATE_BUDGET_MS = 30_000;
+
+/** After this wait, suggest moving near a window. */
+export const LOCATE_HINT_AFTER_MS = 10_000;
+
+/** After this many Face ID failures in a row, offer to register Face ID again. */
+export const FACEID_FAILURES_BEFORE_HELP = 2;

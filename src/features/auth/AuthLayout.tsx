@@ -81,7 +81,10 @@ export function AuthLayout({
   aside,
   step,
   footer,
+  notice,
 }: {
+  /** Shown above the card (e.g. the in-app browser notice) so the card keeps its layout. */
+  notice?: ReactNode;
   /** Small, low-emphasis links shown under the card. */
   footer?: ReactNode;
   children: ReactNode;
@@ -127,6 +130,7 @@ export function AuthLayout({
         <div className="mb-6 lg:hidden">
           <Logo variant="signin" />
         </div>
+        {notice && <div className="mb-4 w-full max-w-md">{notice}</div>}
         <motion.div
           variants={fadeUp}
           initial="hidden"

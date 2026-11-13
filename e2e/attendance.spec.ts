@@ -247,7 +247,7 @@ test('first sign-in registers Face ID, then GPS check-in with accuracy retry and
   expect(reg.name.length).toBeGreaterThan(0);
 
   await page.getByRole('button', { name: 'Check in at the office' }).click();
-  await expect(page.getByText(/Checked in at/)).toBeVisible();
+  await expect(page.getByText('You are checked in')).toBeVisible();
   await expect(page.getByText('12 m from the office', { exact: false })).toBeVisible();
 
   const intents = state.calls.filter((c) => c.path === '/attendance/check-in/intent');
@@ -334,7 +334,7 @@ test('remote day: one-tap remote check-in, then early check-out asks for a reaso
   await page.getByRole('button', { name: 'Set up Face ID' }).click();
 
   await page.getByRole('button', { name: 'Check in remotely' }).click();
-  await expect(page.getByText(/Checked in at/)).toBeVisible();
+  await expect(page.getByText('You are checked in')).toBeVisible();
   const remote = state.calls.find((c) => c.path === '/attendance/check-in/intent')?.body as Record<
     string,
     unknown

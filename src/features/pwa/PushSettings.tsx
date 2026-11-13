@@ -54,8 +54,11 @@ export function PushPrompt() {
   const avail = pushAvailability();
   if (!standalone || hidden || on !== false || avail !== 'ok') return null;
   return (
-    <Card data-testid="push-prompt">
-      <CardBody>
+    <div
+      data-testid="push-prompt"
+      className="rounded-card border border-primary-100 bg-primary-50/40 px-4 py-4 sm:px-5"
+    >
+      <div>
         <p className="font-semibold text-ink-900">Turn on reminders</p>
         <p className="mt-1 text-sm text-ink-600">
           Get a reminder if you have not checked in by the morning, and alerts about your requests.
@@ -68,6 +71,8 @@ export function PushPrompt() {
         )}
         <div className="mt-3 flex flex-wrap gap-2">
           <Button
+            variant="outline"
+            size="sm"
             loading={busy}
             onClick={async () => {
               setBusy(true);
@@ -93,8 +98,8 @@ export function PushPrompt() {
             Not now
           </Button>
         </div>
-      </CardBody>
-    </Card>
+      </div>
+    </div>
   );
 }
 

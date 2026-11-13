@@ -1,7 +1,9 @@
-import { AnimatePresence, motion } from 'motion/react';
-import { useState } from 'react';
+import { AnimatePresence, motion, useReducedMotion } from 'motion/react';
+import { useEffect, useState } from 'react';
+import { useQueryClient } from '@tanstack/react-query';
 import { Link } from 'react-router';
-import { formatDistance, formatTime, type Today } from '../../lib/attendance';
+import { formatDistance, type Today } from '../../lib/attendance';
+import { Badge } from '../../ui/Badge';
 import { formatDate } from '../../lib/format';
 import { Alert } from '../../ui/Alert';
 import { Button } from '../../ui/Button';
@@ -11,13 +13,19 @@ import { Stepper } from '../../ui/Stepper';
 import { duration, easing, fadeUp, stagger } from '../../ui/motion';
 import { useMe } from '../auth/useSession';
 import { FaceIdSetup } from '../faceid/FaceIdSetup';
+import { useMyFaceId } from '../faceid/useFaceId';
 import { InAppBrowserNotice } from '../pwa/InAppBrowserNotice';
 import { InstallCard } from '../pwa/InstallGuide';
 import { PushPrompt } from '../pwa/PushSettings';
-import { CheckOutDialog } from './CheckOutDialog';
+import { CheckOutDialog, looksBeforeEndOfDay } from './CheckOutDialog';
 import { MissionDialog } from './MissionDialog';
 import { AttendanceBadges, AttendanceDetails, DayStatusBadge, ServerClock } from './parts';
-import { useMySchedule, useToday } from './useAttendance';
+import {
+  FACEID_FAILURES_BEFORE_HELP,
+  LOCATE_BUDGET_MS,
+  LOCATE_HINT_AFTER_MS,
+} from './checkInErrors';
+import { TODAY_KEY, useMySchedule, useToday } from './useAttendance';
 import { useCheckIn, type CheckInState } from './useCheckIn';
 
 const FLOW_STEPS = ['Location', 'Face ID', 'Confirmed'];
@@ -28,6 +36,17 @@ function flowIndex(s: CheckInState): number {
   return 0;
 }
 
+/** Seconds since the position search started (UI only, never sent to the server). */
+function useElapsed(since: number | null): number {
+  const [now, setNow] = useState(() => Date.now());
+  useEffect(() => {
+    if (since === null) return;
+    const id = setInterval(() => setNow(Date.now()), 1000);
+    return () => clearInterval(id);
+  }, [since]);
+  return since === null ? 0 : Math.max(0, now - since);
+}
+
 function ProgressText({ s }: { s: CheckInState }) {
   if (s.step === 'locating') {
     const p = s.progress;
@@ -35,7 +54,7 @@ function ProgressText({ s }: { s: CheckInState }) {
     const target = p.target !== null ? ` (${formatDistance(p.target)} needed)` : '';
     return (
       <>
-        Improving the position, reading {p.attempt}: accurate to {formatDistance(p.accuracy)}
+        Improving your position: accurate to {formatDistance(p.accuracy)}
         {target}
       </>
     );
@@ -47,6 +66,51 @@ function ProgressText({ s }: { s: CheckInState }) {
   if (s.step === 'faceid') return <>Look at your phone to confirm with Face ID.</>;
   if (s.step === 'confirming') return <>Recording your check-in…</>;
   return null;
+}
+
+/** Time spent on the position search, with an early hint when it is slow. */
+function LocateTimer({ s }: { s: CheckInState }) {
+  const elapsed = useElapsed(s.step === 'locating' ? s.locateStartedAt : null);
+  if (s.step !== 'locating' || s.locateStartedAt === null) return null;
+  const secs = Math.min(Math.round(elapsed / 1000), LOCATE_BUDGET_MS / 1000);
+  return (
+    <div className="mt-2" data-testid="locate-timer">
+      <p className="text-xs text-ink-500 tabular-nums">
+        {secs} s of up to {LOCATE_BUDGET_MS / 1000} s
+      </p>
+      <AnimatePresence initial={false}>
+        {elapsed >= LOCATE_HINT_AFTER_MS && (
+          <motion.p
+            key="hint"
+            initial={{ opacity: 0, y: 4 }}
+            animate={{ opacity: 1, y: 0 }}
+            exit={{ opacity: 0 }}
+            className="mt-2 text-sm text-ink-700"
+            data-testid="locate-hint"
+          >
+            Taking a while? Move near a window or step outside for a moment.
+          </motion.p>
+        )}
+      </AnimatePresence>
+    </div>
+  );
+}
+
+/** "Set up again" button, or the pending state when a replacement already waits. */
+function ReregisterAction({ onStart }: { onStart: () => void }) {
+  const q = useMyFaceId();
+  if (q.data?.replacement_pending)
+    return (
+      <p className="mt-2 font-medium text-ink-900" data-testid="replacement-pending">
+        Your new Face ID registration is waiting for an administrator to approve it.
+      </p>
+    );
+  if (q.data && q.data.can_reregister === false) return null;
+  return (
+    <Button variant="outline" className="mt-3" onClick={onStart}>
+      Register Face ID again
+    </Button>
+  );
 }
 
 /** Accuracy progress bar: fills as the reading approaches the accuracy needed. */
@@ -83,6 +147,23 @@ function CheckInPanel({ today }: { today: Today }) {
   const faceState = today.faceid_state ?? 'ready';
   const faceRequired = today.rules.faceid_required !== false;
   const problem = state.problem;
+  const qc = useQueryClient();
+  const [reregister, setReregister] = useState(false);
+  const outside = problem?.kind === 'out_of_perimeter';
+
+  // While waiting for Face ID, notice a check-in completed elsewhere (another tab or phone).
+  useEffect(() => {
+    if (state.step !== 'faceid') return;
+    const id = setInterval(() => void qc.invalidateQueries({ queryKey: TODAY_KEY }), 8_000);
+    return () => clearInterval(id);
+  }, [state.step, qc]);
+
+  if (reregister)
+    return (
+      <CardBody>
+        <FaceIdSetup state="ready" reregister onCancel={() => setReregister(false)} />
+      </CardBody>
+    );
 
   if (faceRequired && faceState !== 'ready')
     return (
@@ -109,6 +190,7 @@ function CheckInPanel({ today }: { today: Today }) {
               <ProgressText s={state} />
             </p>
             <AccuracyBar s={state} />
+            <LocateTimer s={state} />
             <Button variant="ghost" className="mt-3" onClick={reset}>
               Cancel
             </Button>
@@ -121,7 +203,9 @@ function CheckInPanel({ today }: { today: Today }) {
             exit={{ opacity: 0 }}
             transition={{ duration: duration.base, ease: easing.standard }}
           >
-            <h2 className="text-base font-semibold text-ink-900">You have not checked in yet</h2>
+            <h2 className="text-base font-semibold text-ink-900">
+              {today.expected ? 'You have not checked in yet' : 'Working today?'}
+            </h2>
             <p className="mt-1 text-sm text-ink-600">
               {remote
                 ? 'Today is one of your remote days: check in remotely in one tap.'
@@ -140,42 +224,92 @@ function CheckInPanel({ today }: { today: Today }) {
                   className="mt-4"
                 >
                   <Alert
-                    tone={problem.kind === 'faceid_setup' ? 'warning' : 'danger'}
+                    tone={
+                      problem.kind === 'faceid_setup' || problem.kind === 'gps'
+                        ? 'warning'
+                        : 'danger'
+                    }
                     title={problem.title}
                   >
                     {problem.message}
+                    {problem.steps && (
+                      <ol className="mt-2 flex flex-col gap-1.5" data-testid="location-steps">
+                        {problem.steps.map((st, i) => (
+                          <li key={st} className="flex gap-2">
+                            <span className="font-semibold tabular-nums">{i + 1}.</span>
+                            <span>{st}</span>
+                          </li>
+                        ))}
+                      </ol>
+                    )}
+                    {problem.hint && (
+                      <p className="mt-2" data-testid="problem-hint">
+                        {problem.hint}
+                      </p>
+                    )}
                   </Alert>
+                  {state.faceIdFailures >= FACEID_FAILURES_BEFORE_HELP &&
+                    (problem.kind === 'faceid_failed' || problem.kind === 'faceid_cancelled') && (
+                      <div
+                        className="mt-3 rounded-control border border-ink-200 bg-surface px-4 py-3 text-sm text-ink-700"
+                        data-testid="faceid-help"
+                      >
+                        <p className="font-semibold text-ink-900">Face ID keeps failing?</p>
+                        <p className="mt-1">
+                          If Face ID was reset or the passkey was deleted on this phone, register
+                          Face ID again (an administrator will approve it). If it is urgent, an
+                          administrator can also check you in.
+                        </p>
+                        <ReregisterAction onStart={() => setReregister(true)} />
+                      </div>
+                    )}
                 </motion.div>
               )}
             </AnimatePresence>
-            <div className="mt-5 flex flex-col gap-2">
-              {remote && (
-                <Button size="lg" block onClick={() => void run('remote')}>
-                  Check in remotely
-                </Button>
+            <motion.div
+              key={outside && mission ? 'outside' : 'normal'}
+              variants={fadeUp}
+              initial="hidden"
+              animate="show"
+              className="mt-5 flex flex-col gap-2"
+            >
+              {outside && mission ? (
+                <>
+                  {/* Out of the perimeter: the mission check-in becomes the one main action. */}
+                  <Button size="lg" block onClick={() => setMissionOpen(true)}>
+                    Mission check-in
+                  </Button>
+                  {gps && (
+                    <Button variant="outline" block onClick={() => void run('gps')}>
+                      Try again at the office
+                    </Button>
+                  )}
+                </>
+              ) : (
+                <>
+                  {remote && (
+                    <Button size="lg" block onClick={() => void run('remote')}>
+                      Check in remotely
+                    </Button>
+                  )}
+                  {gps && (
+                    <Button
+                      size="lg"
+                      block
+                      variant={remote ? 'outline' : 'primary'}
+                      onClick={() => void run('gps')}
+                    >
+                      {problem && !outside ? 'Try again' : 'Check in at the office'}
+                    </Button>
+                  )}
+                  {mission && (
+                    <Button variant="ghost" block onClick={() => setMissionOpen(true)}>
+                      Working outside? Mission check-in
+                    </Button>
+                  )}
+                </>
               )}
-              {gps && (
-                <Button
-                  size="lg"
-                  block
-                  variant={remote ? 'outline' : 'primary'}
-                  onClick={() => void run('gps')}
-                >
-                  {problem && problem.kind !== 'out_of_perimeter'
-                    ? 'Try again'
-                    : 'Check in at the office'}
-                </Button>
-              )}
-              {mission && (
-                <Button
-                  variant={problem?.kind === 'out_of_perimeter' ? 'secondary' : 'ghost'}
-                  block
-                  onClick={() => setMissionOpen(true)}
-                >
-                  Working outside today? Mission check-in
-                </Button>
-              )}
-            </div>
+            </motion.div>
           </motion.div>
         )}
       </AnimatePresence>
@@ -191,42 +325,50 @@ function CheckInPanel({ today }: { today: Today }) {
   );
 }
 
-function CheckedInPanel({ today }: { today: Today }) {
+function CheckedInPanel({ today, celebrate }: { today: Today; celebrate: boolean }) {
   const a = today.attendance!;
   const [open, setOpen] = useState(false);
+  const reduce = useReducedMotion();
+  const animate = celebrate && !reduce;
   return (
-    <CardBody>
-      <div className="flex flex-wrap items-center justify-between gap-2">
-        <h2 className="text-base font-semibold text-ink-900">
-          {today.checked_out
-            ? 'Your day is complete'
-            : `Checked in at ${formatTime(a.check_in_at)}`}
-        </h2>
-        <AttendanceBadges a={a} />
-      </div>
-      {a.check_in_type === 'mission' && a.mission_status === 'pending' && (
-        <p className="mt-2 text-sm text-ink-600">
-          Your mission check-in is waiting for an administrator. You can already use the app.
-        </p>
-      )}
-      <div className="mt-4">
-        <AttendanceDetails a={a} />
-      </div>
-      {!today.checked_out && (
-        <>
-          <Button size="lg" block className="mt-5" onClick={() => setOpen(true)}>
-            Check out
-          </Button>
-          <p className="mt-2 text-xs text-ink-500">
-            You can check out from anywhere.
-            {today.rules.end_of_day
-              ? ` Before ${today.rules.end_of_day} you will be asked for a reason.`
-              : ''}
+    <motion.div
+      data-testid="checked-in-panel"
+      className="rounded-card"
+      initial={animate ? { scale: 0.98, boxShadow: '0 0 0 4px var(--color-success-200)' } : false}
+      animate={{ scale: 1, boxShadow: '0 0 0 0px var(--color-success-200)' }}
+      transition={{ duration: 0.6, ease: easing.standard }}
+    >
+      <CardBody>
+        <div className="flex flex-wrap items-center justify-between gap-2">
+          <h2 className="text-base font-semibold text-ink-900">
+            {today.checked_out ? 'Your day is complete' : 'You are checked in'}
+          </h2>
+          <AttendanceBadges a={a} />
+        </div>
+        {a.check_in_type === 'mission' && a.mission_status === 'pending' && (
+          <p className="mt-2 text-sm text-ink-600">
+            Your mission check-in is waiting for an administrator. You can already use the app.
           </p>
-          <CheckOutDialog open={open} onClose={() => setOpen(false)} rules={today.rules} />
-        </>
-      )}
-    </CardBody>
+        )}
+        <div className="mt-4">
+          <AttendanceDetails a={a} />
+        </div>
+        {!today.checked_out && (
+          <>
+            <Button size="lg" block className="mt-5" onClick={() => setOpen(true)}>
+              Check out
+            </Button>
+            <p className="mt-2 text-xs text-ink-500" data-testid="checkout-hint">
+              You can check out from anywhere.
+              {today.rules.end_of_day && looksBeforeEndOfDay(today.rules)
+                ? ` Before ${today.rules.end_of_day} you will be asked for a reason.`
+                : ''}
+            </p>
+            <CheckOutDialog open={open} onClose={() => setOpen(false)} rules={today.rules} />
+          </>
+        )}
+      </CardBody>
+    </motion.div>
   );
 }
 
@@ -240,10 +382,30 @@ function NotExpected({ today }: { today: Today }) {
         : today.day_status === 'day_off'
           ? 'Today is your day off.'
           : 'Today is not a working day.';
+  if (today.checked_in) return null;
+  const canCheckIn = today.available_check_ins.length > 0;
   return (
     <Alert tone="info" title="You are not expected today">
-      {why} You can still check in if you are working.
+      {why}
+      {canCheckIn ? ' You can still check in if you are working.' : ''}
     </Alert>
+  );
+}
+
+/** Calm card when there is nothing to do today (no check-in type available). */
+function RestDay({ today }: { today: Today }) {
+  const line =
+    today.day_status === 'holiday'
+      ? `Public holiday${today.holiday_name ? `: ${today.holiday_name}` : ''}. Enjoy your day.`
+      : today.day_status === 'leave'
+        ? 'You are on leave. Enjoy your time off.'
+        : 'Enjoy your day off.';
+  return (
+    <CardBody>
+      <p className="text-base font-semibold text-ink-900" data-testid="rest-day">
+        {line}
+      </p>
+    </CardBody>
   );
 }
 
@@ -253,6 +415,17 @@ export function TodayPage() {
   const today = useToday();
   const schedule = useMySchedule();
   const t = today.data;
+  // Animate the checked-in card only when it appears during this visit (after an action).
+  const [seen, setSeen] = useState({ notCheckedIn: false, openDay: false });
+  if (t && !t.checked_in && !seen.notCheckedIn) setSeen({ ...seen, notCheckedIn: true });
+  if (t?.checked_in && !t.checked_out && !seen.openDay) setSeen({ ...seen, openDay: true });
+  const celebrate = t ? (t.checked_out ? seen.openDay : seen.notCheckedIn) : false;
+  // Secondary invitations (install, reminders) only once the day's main action is done.
+  const mainActionDone =
+    !!t &&
+    (t.checked_in || (!t.expected && t.available_check_ins.length === 0)) &&
+    (t.rules.faceid_required === false || (t.faceid_state ?? 'ready') === 'ready');
+  const missionDay = t?.attendance?.check_in_type === 'mission';
 
   return (
     <motion.div
@@ -267,7 +440,12 @@ export function TodayPage() {
         <ServerClock />
         <p className="mt-1 flex flex-wrap items-center gap-2 text-sm text-ink-600">
           {t ? formatDate(t.work_date) : <Skeleton className="h-4 w-32" />}
-          {t && <DayStatusBadge status={t.day_status} />}
+          {t &&
+            (missionDay ? (
+              <Badge tone="primary">Mission</Badge>
+            ) : (
+              <DayStatusBadge status={t.day_status} />
+            ))}
         </p>
       </motion.div>
 
@@ -289,7 +467,9 @@ export function TodayPage() {
           <motion.div variants={fadeUp}>
             <Card data-testid="today-card">
               {t.checked_in && t.attendance ? (
-                <CheckedInPanel today={t} />
+                <CheckedInPanel today={t} celebrate={celebrate} />
+              ) : !t.expected && t.available_check_ins.length === 0 ? (
+                <RestDay today={t} />
               ) : (
                 <CheckInPanel today={t} />
               )}
@@ -317,12 +497,16 @@ export function TodayPage() {
           </Card>
         </motion.div>
       )}
-      <motion.div variants={fadeUp}>
-        <PushPrompt />
-      </motion.div>
-      <motion.div variants={fadeUp}>
-        <InstallCard />
-      </motion.div>
+      {mainActionDone && (
+        <>
+          <motion.div variants={fadeUp}>
+            <PushPrompt />
+          </motion.div>
+          <motion.div variants={fadeUp}>
+            <InstallCard />
+          </motion.div>
+        </>
+      )}
       <motion.div variants={fadeUp}>
         <Link
           to="/app/attendance/history"

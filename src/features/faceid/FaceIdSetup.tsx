@@ -24,22 +24,35 @@ const COPY: Record<FaceIdState, { title: string; body: string }> = {
 };
 
 /** Face ID state with the next action (register, wait for approval). */
+const REREGISTER = {
+  title: 'Register Face ID again',
+  body: 'Use this if Face ID was reset or the passkey was deleted on this phone. Your phone will ask for Face ID, then an administrator approves the new registration. Until then, an administrator can check you in.',
+};
+
 export function FaceIdSetup({
   state,
   onDone,
   compact = false,
+  reregister = false,
+  onCancel,
+  hideBody = false,
 }: {
+  hideBody?: boolean;
   state: FaceIdState;
   onDone?: (state: FaceIdState) => void;
   compact?: boolean;
+  /** Lost passkey on this phone: register again (pending admin approval). */
+  reregister?: boolean;
+  onCancel?: () => void;
 }) {
-  const reg = useRegisterFaceId();
-  const copy = COPY[state];
-  const canRegister = state === 'not_registered' || state === 'other_device';
+  const reg = useRegisterFaceId(reregister);
+  const copy = reregister ? REREGISTER : COPY[state];
+  const canRegister = reregister || state === 'not_registered' || state === 'other_device';
   return (
     <div data-testid="faceid-setup">
       {!compact && <h2 className="text-base font-semibold text-ink-900">{copy.title}</h2>}
-      <p className="mt-1 text-sm text-ink-600">{copy.body}</p>
+      {/* hideBody: the page title and subtitle already explain it. */}
+      {!hideBody && <p className="mt-1 text-sm text-ink-600">{copy.body}</p>}
       <AnimatePresence initial={false}>
         {reg.isError && (
           <motion.div initial={{ opacity: 0 }} animate={{ opacity: 1 }} className="mt-3">
@@ -47,7 +60,13 @@ export function FaceIdSetup({
           </motion.div>
         )}
       </AnimatePresence>
-      {canRegister && (
+      {reregister && reg.isSuccess && (
+        <Alert tone="info" className="mt-3" title="Waiting for approval">
+          Face ID is registered again on this phone. An administrator must approve it; you will get
+          a notification. Until then, an administrator can check you in.
+        </Alert>
+      )}
+      {canRegister && !(reregister && reg.isSuccess) && (
         <Button
           className="mt-4"
           size="lg"
@@ -55,7 +74,16 @@ export function FaceIdSetup({
           loading={reg.isPending}
           onClick={() => reg.mutate(undefined, { onSuccess: (r) => onDone?.(r.state) })}
         >
-          {state === 'other_device' ? 'Register this phone' : 'Set up Face ID'}
+          {reregister
+            ? 'Register Face ID again'
+            : state === 'other_device'
+              ? 'Register this phone'
+              : 'Set up Face ID'}
+        </Button>
+      )}
+      {onCancel && (
+        <Button variant="ghost" block className="mt-2" onClick={onCancel}>
+          Back
         </Button>
       )}
     </div>

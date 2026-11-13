@@ -1,7 +1,13 @@
 import { useMutation, useQueryClient } from '@tanstack/react-query';
 import { useState } from 'react';
 import { api, ApiError, errorMessage } from '../../lib/api';
-import { checkOutPlace, formatTime, type Attendance, type TodayRules } from '../../lib/attendance';
+import {
+  checkOutPlace,
+  formatTime,
+  type Attendance,
+  type Today,
+  type TodayRules,
+} from '../../lib/attendance';
 import { tryLocate } from '../../lib/geo';
 import { serverNow } from '../../lib/serverTime';
 import { Alert } from '../../ui/Alert';
@@ -47,7 +53,7 @@ export function CheckOutDialog({
     mutationFn: async () => {
       // Position is optional: the check-out works from anywhere, even without location.
       const pos = await tryLocate(8000);
-      return api.post<{ data: Attendance }>('/attendance/check-out', {
+      return api.post<{ data: Attendance; today?: Today }>('/attendance/check-out', {
         ...(pos
           ? { latitude: pos.latitude, longitude: pos.longitude, accuracy: pos.accuracy }
           : {}),
@@ -59,6 +65,7 @@ export function CheckOutDialog({
       toast.show(`Checked out at ${formatTime(r.data.check_out_at)}${place ? ` · ${place}` : ''}.`);
       setReason('');
       onClose();
+      if (r.today) qc.setQueryData(TODAY_KEY, r.today);
       void qc.invalidateQueries({ queryKey: TODAY_KEY });
     },
     onError: (e) => {

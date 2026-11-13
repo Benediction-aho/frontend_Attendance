@@ -122,8 +122,11 @@ export function InstallCard() {
   if (standalone || hidden || platform === 'desktop' || detectInAppBrowser()) return null;
   const iosNotSafari = platform === 'ios' && !isIosSafari();
   return (
-    <Card data-testid="install-card">
-      <CardBody>
+    <div
+      data-testid="install-card"
+      className="rounded-card border border-primary-100 bg-primary-50/40 px-4 py-4 sm:px-5"
+    >
+      <div>
         <p className="font-semibold text-ink-900">Add Attendance to your Home Screen</p>
         <p className="mt-1 text-sm text-ink-600">
           {iosNotSafari
@@ -133,7 +136,7 @@ export function InstallCard() {
         <div className="mt-3 flex flex-wrap gap-2">
           <Link
             to="/app/install"
-            className="inline-flex min-h-11 items-center rounded-control bg-primary-600 px-5 text-sm font-semibold text-white hover:bg-primary-700"
+            className="inline-flex min-h-11 items-center rounded-control border border-ink-200 bg-surface px-3 text-sm font-semibold text-ink-800 hover:border-primary-300 hover:bg-primary-50"
           >
             Show me how
           </Link>
@@ -147,7 +150,7 @@ export function InstallCard() {
             Not now
           </Button>
         </div>
-      </CardBody>
-    </Card>
+      </div>
+    </div>
   );
 }

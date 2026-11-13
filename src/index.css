@@ -52,6 +52,7 @@
 
   /* Status (text on light surfaces passes AA) */
   --color-success-50: #ecf8f1;
+  --color-success-200: #b7e4c9;
   --color-success-700: #1d7a48;
   --color-danger-50: #fdeeee;
   --color-danger-100: #fadcdc;

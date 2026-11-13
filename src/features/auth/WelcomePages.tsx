@@ -1,5 +1,5 @@
 import { motion } from 'motion/react';
-import { useState } from 'react';
+import { useEffect, useState } from 'react';
 import { Navigate, useNavigate } from 'react-router';
 import { Stepper } from '../../ui/Stepper';
 import { Button } from '../../ui/Button';
@@ -16,7 +16,7 @@ import { FaceIdSetup } from '../faceid/FaceIdSetup';
 import { useMyFaceId } from '../faceid/useFaceId';
 import { InAppBrowserNotice } from '../pwa/InAppBrowserNotice';
 
-const BASE_STEPS = ['Sign in', 'Your password', 'Your profile'];
+const BASE_STEPS = ['Sign in', 'Password', 'Profile'];
 /** Employees also set up Face ID (needed to check in). */
 const stepsFor = (role?: string) => (role === 'employee' ? [...BASE_STEPS, 'Face ID'] : BASE_STEPS);
 
@@ -113,8 +113,36 @@ export function WelcomeFaceIdPage() {
   const { data: me } = useMe();
   const faceid = useMyFaceId(me?.role === 'employee');
   const [state, setState] = useState<FaceIdState | null>(null);
+  const [justDone, setJustDone] = useState(false);
+  // Short success moment after registration, then on to the check-in.
+  useEffect(() => {
+    if (!justDone) return;
+    const id = setTimeout(() => navigate('/app', { replace: true }), 1200);
+    return () => clearTimeout(id);
+  }, [justDone, navigate]);
   if (me && me.role !== 'employee') return <Navigate to="/app" replace />;
   const current = state ?? faceid.data?.state ?? null;
+  if (justDone)
+    return (
+      <AuthLayout step={3}>
+        <div className="mb-6">
+          <Stepper steps={stepsFor('employee')} current={4} />
+        </div>
+        <motion.div
+          variants={fadeUp}
+          initial="hidden"
+          animate="show"
+          transition={{ duration: 0.25 }}
+          role="status"
+          data-testid="faceid-success"
+        >
+          <AuthTitle
+            title="Face ID is ready"
+            subtitle="You are all set. Taking you to your check-in…"
+          />
+        </motion.div>
+      </AuthLayout>
+    );
   return (
     <AuthLayout step={3}>
       <div className="mb-6">
@@ -134,13 +162,21 @@ export function WelcomeFaceIdPage() {
             ? 'You will confirm each check-in with Face ID (or your fingerprint).'
             : current === 'pending_approval'
               ? 'An administrator must approve this phone before you can check in.'
-              : 'You need it to check in. It takes a few seconds.'
+              : 'Face ID confirms that it is really you at each check-in. Your face never leaves your phone. It takes a few seconds.'
         }
       />
       {current && current !== 'ready' && current !== 'pending_approval' && (
-        <FaceIdSetup state={current} compact onDone={(s) => setState(s)} />
+        <FaceIdSetup
+          state={current}
+          compact
+          hideBody
+          onDone={(s) => {
+            setState(s);
+            if (s === 'ready') setJustDone(true);
+          }}
+        />
       )}
-      {current === 'pending_approval' && <FaceIdSetup state={current} compact />}
+      {current === 'pending_approval' && <FaceIdSetup state={current} compact hideBody />}
       {current === 'ready' && (
         <Button size="lg" block onClick={() => navigate('/app', { replace: true })}>
           Continue to check-in

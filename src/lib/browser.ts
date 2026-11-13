@@ -51,5 +51,9 @@ export function isStandalone(): boolean {
 export function inAppMessage(kind: Exclude<InAppBrowser, null>, platform: Platform): string {
   const where = IN_APP_NAME[kind];
   const target = platform === 'ios' ? 'Safari' : 'Chrome';
-  return `You opened this page inside ${where}. Location and Face ID do not work here. Tap the menu (three dots or the share button) and choose "Open in ${target}", or copy the link into ${target}.`;
+  const how =
+    platform === 'ios'
+      ? `Tap the share button (or the compass icon) and choose "Open in ${target}"`
+      : `Tap the menu (three dots) and choose "Open in ${target}"`;
+  return `You opened this page inside ${where}. Location and Face ID do not work here. ${how}, or copy the link into ${target}.`;
 }

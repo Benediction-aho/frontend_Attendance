@@ -42,7 +42,7 @@ describe('check-in problems: a clear message for every case', () => {
 
   it('offline, GPS denied, Face ID cancelled, pending device, expired intent', () => {
     expect(checkInProblem(new ApiError('network', null, 'x')).kind).toBe('offline');
-    expect(checkInProblem(new GeoError('denied', 'blocked')).message).toBe('blocked');
+    expect(checkInProblem(new GeoError('denied', 'blocked')).steps?.length).toBeGreaterThan(2);
     expect(checkInProblem(new PasskeyError('cancelled', 'c')).kind).toBe('faceid_cancelled');
     const pend = checkInProblem(apiErr(403, { code: 'faceid_pending_approval' }));
     expect(pend.faceidState).toBe('pending_approval');
@@ -251,7 +251,7 @@ describe('Today screen', () => {
       }),
     );
     renderAt(<TodayPage />, '/app');
-    expect(await screen.findByText('Checked in at 08:20')).toBeInTheDocument();
+    expect(await screen.findByText('You are checked in')).toBeInTheDocument();
     expect(screen.queryByText('Late')).toBeNull();
     expect(screen.getByText('Mission: waiting for approval')).toBeInTheDocument();
     // Free text stays plain text.

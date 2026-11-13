@@ -98,6 +98,7 @@ export function SignInPage() {
   return (
     <AuthLayout
       step={3}
+      notice={<InAppBrowserNotice />}
       footer={
         <Link
           to="/sign-in/super-admin"
@@ -108,7 +109,6 @@ export function SignInPage() {
       }
     >
       <motion.div variants={stagger} initial="hidden" animate="show">
-        <InAppBrowserNotice className="mb-5" />
         <motion.div variants={fadeUp}>
           <AuthTitle
             title="Sign in"
