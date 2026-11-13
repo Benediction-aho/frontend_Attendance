@@ -29,7 +29,7 @@ test('settings: bounds checked, leaving with unsaved changes asks first', async 
   await page.getByRole('link', { name: 'Home' }).first().click();
   await expect(page.getByText('Leave without saving?')).toBeVisible();
   await page.getByRole('button', { name: 'Stay on this page' }).click();
-  await expect(page).toHaveURL(/\/app\/admin\/settings$/);
+  await expect(page).toHaveURL(/\/app\/admin\/settings\/attendance$/);
   await expect(field).toHaveValue('60');
 });
 

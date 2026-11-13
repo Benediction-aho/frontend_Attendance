@@ -1,3 +1,4 @@
+import { HOUR_CYCLE } from '../../lib/format';
 import { useMutation, useQueryClient } from '@tanstack/react-query';
 import { useState } from 'react';
 import { api, ApiError, errorMessage } from '../../lib/api';
@@ -20,7 +21,7 @@ import { TODAY_KEY } from './useAttendance';
 const hhmm = new Intl.DateTimeFormat('en-GB', {
   hour: '2-digit',
   minute: '2-digit',
-  hour12: false,
+  hourCycle: HOUR_CYCLE,
   timeZone: 'Africa/Accra',
 });
 

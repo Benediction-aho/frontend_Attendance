@@ -53,7 +53,11 @@ export interface Setting {
   key: string;
   label: string;
   group: SettingGroup;
+  /** Configuration part the setting belongs to (decides who may manage it). */
+  section?: 'attendance' | 'reports' | 'security';
   type: SettingType;
+  /** Only super admins may change it (shown read-only to admins). */
+  super_admin_only?: boolean;
   editable: boolean;
   value: unknown;
   default: unknown;
@@ -101,4 +105,5 @@ export interface ActivityLog {
 export interface PermissionTier {
   key: string;
   label: string;
+  description?: string;
 }

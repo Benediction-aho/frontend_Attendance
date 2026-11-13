@@ -22,7 +22,15 @@ const dl = async (tag) => {
   await d.saveAs(path);
   const txt = readFileSync(path, 'utf8');
   const lines = txt.split(/\r?\n/).filter(Boolean);
-  k.out(tag, 'file', d.suggestedFilename(), 'lines', lines.length, 'BOM', txt.charCodeAt(0) === 0xfeff);
+  k.out(
+    tag,
+    'file',
+    d.suggestedFilename(),
+    'lines',
+    lines.length,
+    'BOM',
+    txt.charCodeAt(0) === 0xfeff,
+  );
   k.out(tag, 'header', lines[0]);
   k.out(tag, 'row1', lines[1]?.slice(0, 300));
   return lines;
@@ -30,9 +38,18 @@ const dl = async (tag) => {
 const lines = await dl('filtered');
 if (lines) {
   const hdr = lines[0].replace(/^﻿/, '').split(',');
-  const ti = hdr.findIndex((h) => /type/i.test(h)), li = hdr.findIndex((h) => /level/i.test(h));
+  const ti = hdr.findIndex((h) => /type/i.test(h)),
+    li = hdr.findIndex((h) => /level/i.test(h));
   const bad = lines.slice(1).filter((l) => !l.includes('security') || !l.includes('warning'));
-  k.out('rows not matching filter', bad.length, bad[0]?.slice(0, 200), 'type col', ti, 'level col', li);
+  k.out(
+    'rows not matching filter',
+    bad.length,
+    bad[0]?.slice(0, 200),
+    'type col',
+    ti,
+    'level col',
+    li,
+  );
 }
 // cap: 100 rows max, no filter
 const capId = k.setSetting('log_export_max_rows', 100);

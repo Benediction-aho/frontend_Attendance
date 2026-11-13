@@ -7,7 +7,10 @@ await k.bossSignIn(p);
 // daily: deep link to a day, then details -> employee week -> reload -> Back
 await p.goto(k.BASE + '/app/admin/reports?date=2026-11-13');
 await p.waitForTimeout(2500);
-await p.getByRole('button', { name: /Details for (Dash|Fresh) Mensah/ }).first().click();
+await p
+  .getByRole('button', { name: /Details for (Dash|Fresh) Mensah/ })
+  .first()
+  .click();
 await p.waitForTimeout(800);
 const l = p.locator('main a[href*="/users/"]').first();
 k.out('user link', await l.getAttribute('href').catch(() => 'none'));

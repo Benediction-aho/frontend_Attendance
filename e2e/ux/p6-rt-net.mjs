@@ -4,13 +4,18 @@ const dev = process.argv[2] ?? 'iphone';
 const b = await k.h.launch();
 const { u, p } = await k.ready(b, { dev, prefix: 'net' });
 const t0 = Date.now();
-p.on('request', (r) => { if (r.url().includes('dashboard')) k.out(Date.now() - t0, 'REQ', r.url().replace(k.API, '')); });
-p.on('requestfailed', (r) => k.out(Date.now() - t0, 'FAILED', r.url().replace(k.API, ''), r.failure()?.errorText));
+p.on('request', (r) => {
+  if (r.url().includes('dashboard')) k.out(Date.now() - t0, 'REQ', r.url().replace(k.API, ''));
+});
+p.on('requestfailed', (r) =>
+  k.out(Date.now() - t0, 'FAILED', r.url().replace(k.API, ''), r.failure()?.errorText),
+);
 p.on('response', async (r) => {
   const url = r.url();
   if (/\/(me\/dashboard|attendance\/check-in)/.test(url)) {
     let w = '';
-    if (url.includes('dashboard')) w = JSON.stringify((await r.json().catch(() => ({}))).data?.week ?? '').slice(0, 160);
+    if (url.includes('dashboard'))
+      w = JSON.stringify((await r.json().catch(() => ({}))).data?.week ?? '').slice(0, 160);
     k.out(Date.now() - t0, r.request().method(), url.replace(k.API, ''), r.status(), w);
   }
 });

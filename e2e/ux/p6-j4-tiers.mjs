@@ -24,12 +24,21 @@ for (const [name, perms] of Object.entries(tiers)) {
   await p.goto(k.BASE + '/app');
   await p.waitForTimeout(3000);
   k.out(name, JSON.stringify(perms), '=>', (await k.mainText(p)).slice(0, 500));
-  const links = await p.locator('main a').evaluateAll((as) => as.map((x) => x.getAttribute('href')));
+  const links = await p
+    .locator('main a')
+    .evaluateAll((as) => as.map((x) => x.getAttribute('href')));
   for (const href of links.filter((h) => h?.startsWith('/app/'))) {
     await p.goto(k.BASE + href);
     await p.waitForTimeout(2000);
     const t = await k.mainText(p);
-    k.out('   link', href, '->', p.url().replace(k.BASE, ''), /do not have access|not allowed|403/i.test(t) ? 'FORBIDDEN' : 'ok', t.slice(0, 90));
+    k.out(
+      '   link',
+      href,
+      '->',
+      p.url().replace(k.BASE, ''),
+      /do not have access|not allowed|403/i.test(t) ? 'FORBIDDEN' : 'ok',
+      t.slice(0, 90),
+    );
   }
   await k.shot6(p.context().pages()[0], `j4-${name}-${dev}`).catch(() => {});
   await p.goto(k.BASE + '/app');

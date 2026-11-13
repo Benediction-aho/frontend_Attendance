@@ -1,3 +1,4 @@
+import { HOUR_CYCLE } from './format';
 /**
  * Attendance data as returned by the API. The client never computes lateness,
  * work dates or perimeter validity: it only displays what the server sends.
@@ -188,11 +189,13 @@ export function checkOutPlace(a: Attendance): string | null {
 const timeFmt = new Intl.DateTimeFormat('en-GB', {
   hour: '2-digit',
   minute: '2-digit',
+  hourCycle: HOUR_CYCLE,
   timeZone: 'Africa/Accra',
 });
 const clockFmt = new Intl.DateTimeFormat('en-GB', {
   hour: '2-digit',
   minute: '2-digit',
+  hourCycle: HOUR_CYCLE,
   second: '2-digit',
   timeZone: 'Africa/Accra',
 });

@@ -20,7 +20,12 @@ await k.call('POST', '/me/tasks', { title: 'File visa folder' }, u.token);
 await k.call('POST', '/me/tasks', { title: 'Done directly', done: true }, u.token);
 await k.call('PATCH', `/me/tasks/${t1.body.data?.id ?? t1.body.id}`, { done: true }, u.token);
 await k.call('POST', '/me/clients', { name: 'Kofi A', service: 'Visa', quantity: 2 }, u.token);
-await k.call('POST', '/me/clients', { name: 'Esi B', service: 'Residence Permit', quantity: 1 }, u.token);
+await k.call(
+  'POST',
+  '/me/clients',
+  { name: 'Esi B', service: 'Residence Permit', quantity: 1 },
+  u.token,
+);
 await p.reload();
 await p.waitForTimeout(3000);
 k.out('HOME after work (no tab switch, reload)', await k.mainText(p));

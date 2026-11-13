@@ -37,6 +37,7 @@ import {
   canViewLogs,
   isEmployee,
   isSuperAdmin,
+  canManageSettings,
 } from '../lib/permissions';
 import type { User } from '../lib/types';
 
@@ -78,7 +79,7 @@ export function navFor(user: User | undefined, unread = 0) {
     admin.push({ to: '/app/admin/requests', label: 'Sign-up requests', icon: ClipboardList });
   if (canManageAccounts(user))
     admin.push({ to: '/app/admin/users', label: 'Users', icon: UsersRound });
-  if (isSuperAdmin(user))
+  if (canManageSettings(user))
     admin.push({ to: '/app/admin/settings', label: 'Settings', icon: Settings2 });
   if (canViewLogs(user))
     admin.push({ to: '/app/admin/logs', label: 'Activity log', icon: ScrollText });

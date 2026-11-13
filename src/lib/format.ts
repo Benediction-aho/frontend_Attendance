@@ -1,3 +1,9 @@
+/**
+ * Clock format used everywhere times are shown (owner decision pending):
+ * 'h23' = 24-hour (08:10, 17:00); switch to 'h12' for AM/PM in this one line.
+ */
+export const HOUR_CYCLE: 'h23' | 'h12' = 'h23';
+
 const dateFmt = new Intl.DateTimeFormat('en-GB', {
   day: 'numeric',
   month: 'short',
@@ -10,6 +16,7 @@ const dateTimeFmt = new Intl.DateTimeFormat('en-GB', {
   year: 'numeric',
   hour: '2-digit',
   minute: '2-digit',
+  hourCycle: HOUR_CYCLE,
   timeZone: 'Africa/Accra',
 });
 

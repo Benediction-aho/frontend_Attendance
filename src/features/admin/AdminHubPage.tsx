@@ -8,7 +8,7 @@ import { useMe } from '../auth/useSession';
 const DESCRIPTIONS: Record<string, string> = {
   '/app/admin/requests': 'Approve or reject people asking for an account.',
   '/app/admin/users': 'Search accounts, block, unlock, send new codes and manage access.',
-  '/app/admin/settings': 'Office location, working hours, reports and security rules.',
+  '/app/admin/settings': 'Attendance, report and security rules you are allowed to manage.',
   '/app/admin/logs': 'Everything that happens on each account, read-only.',
   '/app/admin/attendance':
     "Today's check-ins, history per employee, missions and refused attempts.",

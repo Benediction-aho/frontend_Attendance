@@ -6,14 +6,28 @@ const p = await c.newPage();
 await k.bossSignIn(p);
 await p.goto(k.BASE + '/app');
 await p.waitForTimeout(2500);
-const pend = async () => (await p.getByTestId('admin-pending').innerText().catch(() => '-')).replace(/\s+/g, ' ');
+const pend = async () =>
+  (
+    await p
+      .getByTestId('admin-pending')
+      .innerText()
+      .catch(() => '-')
+  ).replace(/\s+/g, ' ');
 k.out('before', await pend());
 await p.getByRole('link', { name: /Mission check-ins/ }).click();
 await p.waitForTimeout(2000);
-await p.getByRole('button', { name: /^Approve/ }).first().click();
+await p
+  .getByRole('button', { name: /^Approve/ })
+  .first()
+  .click();
 await p.waitForTimeout(800);
 const d = p.getByRole('dialog');
-if (await d.isVisible().catch(() => false)) { await d.getByRole('button', { name: /Approve/ }).last().click(); }
+if (await d.isVisible().catch(() => false)) {
+  await d
+    .getByRole('button', { name: /Approve/ })
+    .last()
+    .click();
+}
 await p.waitForTimeout(2000);
 k.out('missions page', (await k.mainText(p)).slice(0, 200));
 await p.locator('a[href="/app"]').first().click();

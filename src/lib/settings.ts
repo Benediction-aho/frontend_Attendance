@@ -1,4 +1,38 @@
 import type { Setting, SettingGroup, SettingType } from './types';
+import { SETTINGS_SECTIONS, type SettingsSection } from './permissions';
+
+export const isSettingsSection = (v: string | undefined): v is SettingsSection =>
+  (SETTINGS_SECTIONS as readonly string[]).includes(v ?? '');
+
+export const SECTION_INFO: Record<SettingsSection, { title: string; description: string }> = {
+  attendance: {
+    title: 'Attendance',
+    description: 'Office location, check-in perimeter and working hours.',
+  },
+  reports: { title: 'Reports', description: 'When reports are generated and sent.' },
+  security: {
+    title: 'Security',
+    description: 'Sign-in protection, codes, sessions, storage and logs.',
+  },
+};
+
+/** Part a setting belongs to; the API field wins, the group is a fallback (system → security). */
+export function sectionOf(s: Pick<Setting, 'section' | 'group'>): SettingsSection {
+  if (s.section) return s.section;
+  return s.group === 'attendance' || s.group === 'reports' ? s.group : 'security';
+}
+
+/**
+ * Normalises what was typed in a 24-hour time field: "8:10" → "08:10", "810" → "08:10",
+ * "1700" → "17:00". Anything else is returned unchanged (validation reports it).
+ */
+export function normalizeTime(raw: string): string {
+  const s = raw.trim().replace(/[.h]/i, ':');
+  let m = s.match(/^(\d{1,2}):(\d{2})$/);
+  if (!m) m = s.match(/^(\d{1,2})(\d{2})$/);
+  if (!m) return raw.trim();
+  return `${(m[1] ?? '').padStart(2, '0')}:${m[2] ?? ''}`;
+}
 
 export const GROUPS: { key: SettingGroup; title: string; description: string }[] = [
   {
@@ -94,10 +128,12 @@ function parseType(
       return s !== '' && Number.isFinite(Number(s))
         ? { ok: true, value: Number(s) }
         : { ok: false, error: 'Enter a number.' };
-    case 'time':
-      return /^([01]\d|2[0-3]):[0-5]\d$/.test(s)
-        ? { ok: true, value: s }
-        : { ok: false, error: 'Use the HH:MM format.' };
+    case 'time': {
+      const t = normalizeTime(s);
+      return /^([01]\d|2[0-3]):[0-5]\d$/.test(t)
+        ? { ok: true, value: t }
+        : { ok: false, error: 'Use the 24-hour HH:MM format, e.g. 08:10 or 17:00.' };
+    }
     case 'int_list': {
       if (s === '') return { ok: true, value: [] };
       const parts = s.split(/[\s,;]+/).filter(Boolean);

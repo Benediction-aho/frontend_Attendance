@@ -139,6 +139,10 @@ test('settings: change values with an effective date', async ({ page }) => {
     values: { checkin_radius_m: 60, faceid_required: false },
     effective_from: '2026-12-01',
   });
+  await page.getByRole('tab', { name: 'History' }).click();
+  await expect(page.getByText('No changes yet')).toBeVisible();
+  await page.getByRole('link', { name: 'Security', exact: true }).click();
+  await expect(page).toHaveURL(/\/app\/admin\/settings\/security$/);
   await expect(page.getByLabel('Time zone')).toBeDisabled();
   await page.getByRole('tab', { name: 'History' }).click();
   await expect(page.getByText('No changes yet')).toBeVisible();

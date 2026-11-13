@@ -4,6 +4,13 @@ import { Skeleton } from '../../ui/Skeleton';
 import { cx } from '../../ui/cx';
 import type { PermissionTier } from '../../lib/types';
 
+/** Short explanations shown when the API gives none. */
+const TIER_DESCRIPTIONS: Record<string, string> = {
+  manage_settings_attendance: 'Office location, check-in perimeter and working hours.',
+  manage_settings_reports: 'When reports are generated and sent.',
+  manage_settings_security: 'Sign-in protection, codes, sessions, storage and logs.',
+};
+
 /** Checkbox list of the permission tiers returned by the API. */
 export function PermissionChecklist({
   catalogue,
@@ -56,7 +63,14 @@ export function PermissionChecklist({
                 onChange={() => toggle(p.key)}
                 className="mt-0.5 size-4 shrink-0 accent-primary-600"
               />
-              <span>{p.label}</span>
+              <span>
+                {p.label}
+                {(p.description ?? TIER_DESCRIPTIONS[p.key]) && (
+                  <span className="mt-0.5 block text-xs text-ink-500">
+                    {p.description ?? TIER_DESCRIPTIONS[p.key]}
+                  </span>
+                )}
+              </span>
             </label>
           );
         })}

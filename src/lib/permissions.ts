@@ -68,3 +68,19 @@ export const canViewReports = (u: User | null | undefined) => can(u, 'view_repor
 /** Weekly PDF list and files (server: `view_reports` or `receive_weekly_reports`). */
 export const canSeeWeeklyPdfs = (u: User | null | undefined) =>
   can(u, 'view_reports') || can(u, 'receive_weekly_reports');
+
+/** The three configuration parts and the tier that opens each one. */
+export const SETTINGS_SECTIONS = ['attendance', 'reports', 'security'] as const;
+export type SettingsSection = (typeof SETTINGS_SECTIONS)[number];
+export const SETTINGS_TIER: Record<SettingsSection, string> = {
+  attendance: 'manage_settings_attendance',
+  reports: 'manage_settings_reports',
+  security: 'manage_settings_security',
+};
+
+/** Parts of the settings the user may open (super admins: all three). Display only. */
+export function settingsSections(user: User | null | undefined): SettingsSection[] {
+  return SETTINGS_SECTIONS.filter((s) => can(user, SETTINGS_TIER[s]));
+}
+
+export const canManageSettings = (u: User | null | undefined) => settingsSections(u).length > 0;

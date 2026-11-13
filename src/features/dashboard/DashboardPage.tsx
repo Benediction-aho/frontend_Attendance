@@ -1,3 +1,4 @@
+import { HOUR_CYCLE } from '../../lib/format';
 import { motion } from 'motion/react';
 import { Link } from 'react-router';
 import { serverNow } from '../../lib/serverTime';
@@ -27,7 +28,7 @@ const accraHour = (d: Date) =>
   Number(
     new Intl.DateTimeFormat('en-GB', {
       hour: 'numeric',
-      hour12: false,
+      hourCycle: HOUR_CYCLE,
       timeZone: 'Africa/Accra',
     }).format(d),
   );
@@ -69,7 +70,9 @@ function TodaySection({ t }: { t: NonNullable<AdminDashboard['today']> }) {
         <div className="flex flex-col gap-1 border-t border-ink-100 px-5 py-3 text-sm text-ink-600">
           {secondary && <p data-testid="today-secondary">{secondary}</p>}
           {extra > 0 && (
-            <p data-testid="today-unexpected">{formatCount(extra)} checked in on a day they were not expected</p>
+            <p data-testid="today-unexpected">
+              {formatCount(extra)} checked in on a day they were not expected
+            </p>
           )}
           {refused > 0 && (
             <Link

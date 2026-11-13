@@ -1,5 +1,5 @@
 import { useEffect, useMemo, useState } from 'react';
-import { useBlocker } from 'react-router';
+import { Link, useBlocker, useParams } from 'react-router';
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
 import { AnimatePresence, motion } from 'motion/react';
 import { Alert } from '../../ui/Alert';
@@ -25,16 +25,28 @@ import {
   displayValue,
   friendlyServerMessage,
   groupSettings,
+  isSettingsSection,
+  normalizeTime,
   parseInput,
+  SECTION_INFO,
+  sectionOf,
   sameValue,
   toInput,
 } from '../../lib/settings';
 import type { Paginated, Setting, SettingHistoryEntry } from '../../lib/types';
+import { settingsSections, type SettingsSection } from '../../lib/permissions';
+import { useMe } from '../auth/useSession';
+
+interface SettingsResponse {
+  data: Setting[];
+  /** Parts the caller may edit (absent on older API versions). */
+  sections?: SettingsSection[];
+}
 
 function useSettings() {
   return useQuery({
     queryKey: ['admin', 'settings'],
-    queryFn: async () => (await api.get<{ data: Setting[] }>('/admin/settings')).data,
+    queryFn: () => api.get<SettingsResponse>('/admin/settings'),
   });
 }
 
@@ -76,13 +88,44 @@ function SettingControl({
   return (
     <Input
       label={s.label}
-      type={s.type === 'time' ? 'time' : 'text'}
-      inputMode={s.type === 'int' ? 'numeric' : s.type === 'float' ? 'decimal' : undefined}
+      // Never a native time input: it follows the browser locale and may show AM/PM.
+      type="text"
+      inputMode={
+        s.type === 'int' || s.type === 'time'
+          ? 'numeric'
+          : s.type === 'float'
+            ? 'decimal'
+            : undefined
+      }
+      placeholder={s.type === 'time' ? 'HH:MM' : undefined}
+      maxLength={s.type === 'time' ? 5 : undefined}
+      autoComplete="off"
       value={String(value)}
       disabled={!s.editable}
       onChange={(e) => onChange(e.target.value)}
+      onBlur={
+        s.type === 'time'
+          ? (e) => {
+              const t = normalizeTime(e.target.value);
+              if (t !== e.target.value) onChange(t);
+            }
+          : undefined
+      }
       error={error}
-      hint={s.editable ? hint : 'Fixed by the system.'}
+      hint={
+        s.editable ? (
+          <>
+            {s.type === 'time' && (
+              <span className="block">24-hour clock, e.g. 08:10 or 17:00.</span>
+            )}
+            {hint}
+          </>
+        ) : s.super_admin_only ? (
+          'Only a super admin can change this.'
+        ) : (
+          'Fixed by the system.'
+        )
+      }
     />
   );
 }
@@ -119,7 +162,15 @@ function useLeaveGuard(dirty: boolean) {
   return blocker;
 }
 
-function SettingsForm({ settings }: { settings: Setting[] }) {
+function SettingsForm({
+  settings,
+  canEdit,
+  superA,
+}: {
+  settings: Setting[];
+  canEdit: boolean;
+  superA: boolean;
+}) {
   const qc = useQueryClient();
   const toast = useToast();
   const [draft, setDraft] = useState<Record<string, string | boolean>>({});
@@ -158,12 +209,13 @@ function SettingsForm({ settings }: { settings: Setting[] }) {
 
   const save = useMutation({
     mutationFn: () =>
-      api.put<{ data: Setting[] }>('/admin/settings', {
+      api.put<SettingsResponse>('/admin/settings', {
         values: parsed.values,
         ...(effective ? { effective_from: effective } : {}),
       }),
-    onSuccess: (r) => {
-      qc.setQueryData(['admin', 'settings'], r.data);
+    onSuccess: () => {
+      // Refetch: the PUT answer may not carry the caller's sections.
+      void qc.invalidateQueries({ queryKey: ['admin', 'settings'] });
       void qc.invalidateQueries({ queryKey: ['admin', 'settings', 'history'] });
       toast.show(
         effective
@@ -183,6 +235,14 @@ function SettingsForm({ settings }: { settings: Setting[] }) {
           out.effective_from ?? 'Some values were not accepted. Check the highlighted fields.',
           'danger',
         );
+      } else if (e instanceof ApiError && e.status === 403) {
+        toast.show(
+          'You are not allowed to change these settings. Your access may have changed.',
+          'danger',
+        );
+        discard();
+        void qc.invalidateQueries({ queryKey: ['admin', 'settings'] });
+        void qc.invalidateQueries({ queryKey: ['me'] });
       } else toast.show(errorMessage(e), 'danger');
     },
   });
@@ -205,7 +265,7 @@ function SettingsForm({ settings }: { settings: Setting[] }) {
                 {g.items.map((s) => (
                   <SettingControl
                     key={s.key}
-                    s={s}
+                    s={canEdit && (superA || !s.super_admin_only) ? s : { ...s, editable: false }}
                     value={draft[s.key] ?? toInput(s.value, s.type)}
                     error={parsed.errors[s.key] ?? serverErrors[s.key]}
                     onChange={(v) => {
@@ -307,13 +367,24 @@ function SettingsForm({ settings }: { settings: Setting[] }) {
   );
 }
 
-function History({ labels }: { labels: Record<string, string> }) {
+function History({
+  labels,
+  section,
+}: {
+  labels: Record<string, string>;
+  section: SettingsSection;
+}) {
   const [page, setPage] = useState(1);
   const [key, setKey] = useState('');
   const h = useQuery({
-    queryKey: ['admin', 'settings', 'history', page, key],
-    queryFn: () =>
-      api.get<Paginated<SettingHistoryEntry>>(`/admin/settings/history${qs({ page, key })}`),
+    queryKey: ['admin', 'settings', 'history', section, page, key],
+    queryFn: async () => {
+      const r = await api.get<Paginated<SettingHistoryEntry>>(
+        `/admin/settings/history${qs({ page, key, section })}`,
+      );
+      // Only changes to settings of this part (the server filters too).
+      return { ...r, data: r.data.filter((e) => e.key in labels) };
+    },
     placeholderData: (p) => p,
   });
   return (
@@ -410,19 +481,28 @@ function History({ labels }: { labels: Record<string, string> }) {
   );
 }
 
-export function SettingsPage() {
+export function SettingsPage({ section: forced }: { section?: SettingsSection }) {
+  const { part } = useParams();
+  const section: SettingsSection = forced ?? (isSettingsSection(part) ? part : 'attendance');
   const settings = useSettings();
+  const { data: me } = useMe();
+  const parts = settingsSections(me);
   const [tab, setTab] = useState<'settings' | 'history'>('settings');
-  const labels = useMemo(
-    () => Object.fromEntries((settings.data ?? []).map((s) => [s.key, s.label])),
-    [settings.data],
+  const mine = useMemo(
+    () => (settings.data?.data ?? []).filter((s) => sectionOf(s) === section),
+    [settings.data, section],
   );
-  const scheduled = (settings.data ?? []).filter((s) => s.scheduled.length).length;
+  const labels = useMemo(() => Object.fromEntries(mine.map((s) => [s.key, s.label])), [mine]);
+  const editable = settings.data?.sections;
+  // Older API (no `sections`): only super admins could read settings at all.
+  const canEdit = editable ? editable.includes(section) : true;
+  const scheduled = mine.filter((s) => s.scheduled.length).length;
+  const info = SECTION_INFO[section];
   return (
     <>
       <PageHeader
-        title="Settings"
-        description="Every rule of the system. Changes are recorded and can start on a future date."
+        title={parts.length > 1 ? 'Settings' : `Settings – ${info.title}`}
+        description={`${info.description} Changes are recorded and can start on a future date.`}
         back={{ to: '/app/admin', label: 'Administration' }}
         actions={
           scheduled > 0 && (
@@ -432,6 +512,29 @@ export function SettingsPage() {
           )
         }
       />
+      {parts.length > 1 && (
+        <nav aria-label="Settings parts" className="-mx-4 mb-4 overflow-x-auto px-4">
+          <ul className="flex min-w-max gap-1 border-b border-ink-200">
+            {parts.map((p) => (
+              <li key={p}>
+                <Link
+                  to={`/app/admin/settings/${p}`}
+                  aria-current={p === section ? 'page' : undefined}
+                  onClick={() => setTab('settings')}
+                  className={cx(
+                    '-mb-px inline-flex min-h-11 items-center border-b-2 px-4 text-sm font-medium transition-colors',
+                    p === section
+                      ? 'border-primary-600 text-primary-700'
+                      : 'border-transparent text-ink-600 hover:text-ink-900',
+                  )}
+                >
+                  {SECTION_INFO[p].title}
+                </Link>
+              </li>
+            ))}
+          </ul>
+        </nav>
+      )}
       <div
         role="tablist"
         aria-label="Settings views"
@@ -452,16 +555,28 @@ export function SettingsPage() {
           </button>
         ))}
       </div>
-      {tab === 'history' ? (
-        <History labels={labels} />
-      ) : settings.isPending ? (
+      {settings.isPending ? (
         <Card>
           <SkeletonRows />
         </Card>
       ) : settings.isError ? (
         <Alert tone="danger">{errorMessage(settings.error)}</Alert>
+      ) : tab === 'history' ? (
+        <History key={section} labels={labels} section={section} />
+      ) : mine.length === 0 ? (
+        <Card>
+          <EmptyState
+            title="No settings in this part"
+            description="Nothing to configure here yet."
+          />
+        </Card>
       ) : (
-        <SettingsForm settings={settings.data} />
+        <SettingsForm
+          key={section}
+          settings={mine}
+          canEdit={canEdit}
+          superA={me?.role === 'super_admin'}
+        />
       )}
     </>
   );

@@ -35,6 +35,8 @@ export interface MockState {
   calls: { method: string; path: string; body: unknown }[];
   loginReply?: { status: number; body: unknown };
   settings?: unknown[];
+  /** Force the status of PUT /admin/settings (e.g. 403 after a permission change). */
+  settingsPutStatus?: number;
   notifications?: Record<string, unknown>[];
   logs?: Record<string, unknown>[];
   /** GET /admin/dashboard `data` (phase 6). */
@@ -230,10 +232,32 @@ export async function mockApi(page: Page, state: MockState) {
       if (act === 'role') u.role = (body as { role: string }).role;
       return send(200, { message: 'ok', data: u });
     }
-    if (path === '/admin/settings' && method === 'GET')
-      return send(200, { data: state.settings ?? [] });
+    const allowedSections = () =>
+      ['attendance', 'reports', 'security'].filter(
+        (x) =>
+          state.me.role === 'super_admin' ||
+          ((state.me.permissions as string[]) ?? []).includes(`manage_settings_${x}`),
+      );
+    const sectionOfKey = (s: unknown) => {
+      const ss = s as { section?: string; group: string };
+      return ss.section ?? (ss.group === 'system' ? 'security' : ss.group);
+    };
+    if (path === '/admin/settings' && method === 'GET') {
+      const allowed = allowedSections();
+      if (!allowed.length) return send(403, { message: 'Forbidden.' });
+      return send(200, {
+        data: (state.settings ?? []).filter((s) => allowed.includes(sectionOfKey(s))),
+        sections: allowed,
+      });
+    }
     if (path === '/admin/settings' && method === 'PUT') {
       const values = (body as { values: Record<string, unknown> }).values;
+      const allowed = allowedSections();
+      const outside = (state.settings ?? []).some(
+        (s) => (s as { key: string }).key in values && !allowed.includes(sectionOfKey(s)),
+      );
+      if (outside || state.settingsPutStatus === 403)
+        return send(403, { message: 'This action is unauthorized.' });
       state.settings = (state.settings ?? []).map((s) => {
         const ss = s as { key: string };
         return ss.key in values ? { ...ss, value: values[ss.key] } : s;

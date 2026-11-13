@@ -19,7 +19,12 @@ for (const jt of ['Accountant', 'Driver']) {
     employee_type: 'employee',
     job_title: jt,
   });
-  const l = await k.call('GET', '/admin/users?status=pending&search=' + encodeURIComponent(email), null, tok);
+  const l = await k.call(
+    'GET',
+    '/admin/users?status=pending&search=' + encodeURIComponent(email),
+    null,
+    tok,
+  );
   const u = (l.body.data ?? []).find((x) => x.email === email);
   await k.call('POST', `/admin/users/${u.id}/approve`, {}, tok);
 }
@@ -38,17 +43,34 @@ for (const dev of (process.env.DEVS ?? 'iphone,android').split(',')) {
   await p.getByLabel('New task').fill(LONG);
   await p.getByRole('button', { name: 'Plan task' }).click();
   await p.waitForTimeout(1000);
-  await p.getByLabel('Client name', { exact: true }).first().fill('C' + LONG);
-  await p.getByLabel('Service', { exact: true }).first().fill('S' + LONG.slice(0, 100));
+  await p
+    .getByLabel('Client name', { exact: true })
+    .first()
+    .fill('C' + LONG);
+  await p
+    .getByLabel('Service', { exact: true })
+    .first()
+    .fill('S' + LONG.slice(0, 100));
   await p.getByRole('button', { name: 'Add client' }).click();
   await p.waitForTimeout(1200);
   const sw = await p.evaluate(() => [document.documentElement.scrollWidth, innerWidth]);
   k.out(dev, 'work scrollWidth/viewport', sw);
   await k.shot5(p, `j7-long-work-${dev}`);
   // Options sheet reachable
-  await p.getByRole('button', { name: /^Options/ }).first().click();
+  await p
+    .getByRole('button', { name: /^Options/ })
+    .first()
+    .click();
   await p.waitForTimeout(500);
-  k.out(dev, 'options sheet buttons', await p.getByRole('dialog').getByRole('button').allInnerTexts().catch(() => 'no dialog'));
+  k.out(
+    dev,
+    'options sheet buttons',
+    await p
+      .getByRole('dialog')
+      .getByRole('button')
+      .allInnerTexts()
+      .catch(() => 'no dialog'),
+  );
   await k.shot5(p, `j7-options-${dev}`);
   await p.keyboard.press('Escape');
   for (const path of ['/app/reports/daily', '/app/reports/weekly']) {
@@ -61,7 +83,10 @@ for (const dev of (process.env.DEVS ?? 'iphone,android').split(',')) {
     await p.waitForTimeout(1500);
     const before = k.sql(`select count(*) from clients`);
     for (const q of ['0', '1000', '-2', '1.5']) {
-      await p.getByLabel('Client name', { exact: true }).first().fill('Qty ' + q);
+      await p
+        .getByLabel('Client name', { exact: true })
+        .first()
+        .fill('Qty ' + q);
       await p.getByLabel('Service', { exact: true }).first().fill('Visa');
       await p.getByLabel('Quantity', { exact: true }).first().fill(q);
       await p.getByRole('button', { name: 'Add client' }).click();
@@ -69,20 +94,32 @@ for (const dev of (process.env.DEVS ?? 'iphone,android').split(',')) {
       k.out('qty', q, '->', (await k.mainText(p)).match(/Quantity.{0,70}/)?.[0]);
       if (q === '0') await k.shot5(p, 'j7-qty0-iphone');
     }
-    k.out('clients saved during qty tests', Number(k.sql(`select count(*) from clients`)) - Number(before));
+    k.out(
+      'clients saved during qty tests',
+      Number(k.sql(`select count(*) from clients`)) - Number(before),
+    );
   }
 }
 
 // 2. Offline upload during open window, then automatic send
-const ids = [k.setSetting('weekly_window_start', '00:00'), k.setSetting('weekly_window_end', '23:00')];
+const ids = [
+  k.setSetting('weekly_window_start', '00:00'),
+  k.setSetting('weekly_window_end', '23:00'),
+];
 k.flushSettings();
 try {
   const { p, u } = await k.checkedIn(b, { prefix: 'offl' });
   await p.goto(k.BASE + '/app/reports/weekly');
   await p.waitForTimeout(2000);
   await p.context().setOffline(true);
-  await p.locator('input[type=file]').first().setInputFiles(D + 'ok.pdf');
-  await p.getByRole('button', { name: /Send|Upload|Replace/ }).first().click();
+  await p
+    .locator('input[type=file]')
+    .first()
+    .setInputFiles(D + 'ok.pdf');
+  await p
+    .getByRole('button', { name: /Send|Upload|Replace/ })
+    .first()
+    .click();
   await p.waitForTimeout(2500);
   k.out('offline msg', (await k.mainText(p)).slice(0, 500));
   await k.shot5(p, 'j7-offline-iphone');
@@ -90,7 +127,12 @@ try {
   await p.waitForTimeout(6000);
   k.out('after online', (await k.mainText(p)).slice(0, 500));
   await k.shot5(p, 'j7-online-iphone');
-  k.out('versions in DB', k.sql(`select count(*) from weekly_reports r join weekly_report_versions v on v.weekly_report_id=r.id where r.user_id=${u.id}`));
+  k.out(
+    'versions in DB',
+    k.sql(
+      `select count(*) from weekly_reports r join weekly_report_versions v on v.weekly_report_id=r.id where r.user_id=${u.id}`,
+    ),
+  );
 } catch (e) {
   k.out('offline step error', e.message.slice(0, 300));
 } finally {
@@ -112,7 +154,10 @@ try {
   k.out('show all button', await more.count());
   await p.goto(k.BASE + '/app/admin/reports/daily');
   await p.waitForTimeout(2500);
-  const link = p.locator('a[href*="/weekly"]').filter({ hasNotText: /^Weekly/ }).first();
+  const link = p
+    .locator('a[href*="/weekly"]')
+    .filter({ hasNotText: /^Weekly/ })
+    .first();
   k.out('daily->user link', await link.getAttribute('href').catch(() => 'none'));
   await link.click().catch((e) => k.out('click err', e.message.slice(0, 100)));
   await p.waitForTimeout(2000);
@@ -123,7 +168,10 @@ await b.close();
 
 // 4. Catch-up close for the week of 6 Nov + current week
 k.sql(`delete from scheduled_runs where task='weekly_close'`);
-const cids = [k.setSetting('weekly_window_start', '00:00'), k.setSetting('weekly_window_end', hm(new Date(Date.now() - 60000)))];
+const cids = [
+  k.setSetting('weekly_window_start', '00:00'),
+  k.setSetting('weekly_window_end', hm(new Date(Date.now() - 60000))),
+];
 k.flushSettings();
 try {
   const o = k.h.logSize();
@@ -141,8 +189,16 @@ try {
 k.sql(`delete from scheduled_runs where task='monthly_report'`);
 const hmNow = hm(new Date(Date.now() - 60000));
 const mids = [
-  k.sql(`insert into settings(key,value,effective_from) values ('monthly_report_day','13','2026-10-01 00:00:07+00') returning id`).split('\n')[0],
-  k.sql(`insert into settings(key,value,effective_from) values ('monthly_report_time','"${hmNow}"','2026-10-01 00:00:07+00') returning id`).split('\n')[0],
+  k
+    .sql(
+      `insert into settings(key,value,effective_from) values ('monthly_report_day','13','2026-10-01 00:00:07+00') returning id`,
+    )
+    .split('\n')[0],
+  k
+    .sql(
+      `insert into settings(key,value,effective_from) values ('monthly_report_time','"${hmNow}"','2026-10-01 00:00:07+00') returning id`,
+    )
+    .split('\n')[0],
 ];
 k.flushSettings();
 try {
@@ -150,7 +206,11 @@ try {
   k.out('monthly', k.artisan('reports:monthly').trim());
   const t = readFileSync(k.h.LOG).subarray(o).toString('latin1');
   const i = t.indexOf('Content-Type: application/pdf');
-  const body = t.slice(i, i + 3000000).split(/\r?\n\r?\n/)[1].split('--')[0].replace(/\s/g, '');
+  const body = t
+    .slice(i, i + 3000000)
+    .split(/\r?\n\r?\n/)[1]
+    .split('--')[0]
+    .replace(/\s/g, '');
   writeFileSync(process.env.UX_SCRATCH + '/monthly7.pdf', Buffer.from(body, 'base64'));
   k.out('monthly pdf saved');
 } finally {

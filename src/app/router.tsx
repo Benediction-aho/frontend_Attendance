@@ -1,4 +1,4 @@
-import { createBrowserRouter, Navigate } from 'react-router';
+import { createBrowserRouter, Navigate, useParams } from 'react-router';
 import { AppPrefixRedirect } from './AppPrefixRedirect';
 import { AppLayout } from './AppLayout';
 import { RequireAuth, RedirectIfSignedIn, Gate } from '../features/auth/guards';
@@ -13,9 +13,12 @@ import {
   canViewAttendance,
   canViewReports,
   canViewLogs,
+  canManageSettings,
   isEmployee,
   isSuperAdmin,
+  settingsSections,
 } from '../lib/permissions';
+import { isSettingsSection } from '../lib/settings';
 import { TodayPage } from '../features/attendance/TodayPage';
 import type { User } from '../lib/types';
 
@@ -137,7 +140,26 @@ const anyAdmin = (u: User | undefined) =>
   canViewLogs(u) ||
   canViewAttendance(u) ||
   can(u, 'approve_faceid_devices') ||
-  canSeeWeeklyPdfs(u);
+  canSeeWeeklyPdfs(u) ||
+  canManageSettings(u);
+/** /app/admin/settings → the first part the user may manage (or "no access"). */
+function SettingsIndex() {
+  const { data } = useMe();
+  const first = settingsSections(data)[0];
+  return first ? (
+    <Navigate to={`/app/admin/settings/${first}`} replace />
+  ) : (
+    <Gate allowed={false}>{null}</Gate>
+  );
+}
+
+function SettingsPart() {
+  const { part } = useParams();
+  const { data } = useMe();
+  const ok = isSettingsSection(part) && settingsSections(data).includes(part);
+  return <Gate allowed={ok}>{ok && <SettingsPage />}</Gate>;
+}
+
 const leaveAdmin = (u: User | undefined) => can(u, 'manage_leaves');
 
 export const router = createBrowserRouter([
@@ -336,14 +358,8 @@ export const router = createBrowserRouter([
               </Allowed>
             ),
           },
-          {
-            path: 'admin/settings',
-            element: (
-              <Allowed check={isSuperAdmin}>
-                <SettingsPage />
-              </Allowed>
-            ),
-          },
+          { path: 'admin/settings', element: <SettingsIndex /> },
+          { path: 'admin/settings/:part', element: <SettingsPart /> },
           {
             path: 'admin/logs',
             element: (

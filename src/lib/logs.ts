@@ -1,3 +1,4 @@
+import { HOUR_CYCLE } from './format';
 import { ApiError, errorMessage, roughWait } from './api';
 
 /** Message for a failed CSV export (429 = hourly limit from the settings). */
@@ -24,7 +25,7 @@ export function fallbackExportName(now: Date): string {
     hour: '2-digit',
     minute: '2-digit',
     second: '2-digit',
-    hourCycle: 'h23',
+    hourCycle: HOUR_CYCLE,
     timeZone: 'Africa/Accra',
   }).formatToParts(now);
   const v = (t: string) => parts.find((p) => p.type === t)?.value ?? '00';

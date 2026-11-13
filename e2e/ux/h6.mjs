@@ -233,11 +233,16 @@ export async function checkIn(p, waitMs = 6000) {
 }
 export const SHOTS6 = '/home/user/frontend_Attendance/docs/reports/screens/phase-6';
 export async function shot6(page, name) {
-  await page.screenshot({ path: `${SHOTS6}/ux-${name}${process.env.UX_SUFFIX ?? ""}.png`, fullPage: true });
+  await page.screenshot({
+    path: `${SHOTS6}/ux-${name}${process.env.UX_SUFFIX ?? ''}.png`,
+    fullPage: true,
+  });
 }
 import { execSync } from 'node:child_process';
 export const sql = (q) =>
-  execSync(`PGPASSWORD=attendance psql -h 127.0.0.1 -U attendance attendance_e2e -tAc ${JSON.stringify(q)}`)
+  execSync(
+    `PGPASSWORD=attendance psql -h 127.0.0.1 -U attendance attendance_e2e -tAc ${JSON.stringify(q)}`,
+  )
     .toString()
     .trim();
 export const flushSettings = () => sql(`delete from cache where key like '%settings%'`);
@@ -259,6 +264,7 @@ export async function admin(prefix, perms) {
   const t = await boss();
   const r1 = await call('PUT', `/admin/users/${u.id}/role`, { role: 'admin' }, t);
   const r2 = await call('PUT', `/admin/users/${u.id}/permissions`, { permissions: perms }, t);
-  if (r1.status >= 300 || r2.status >= 300) out('admin setup', r1.status, r2.status, JSON.stringify(r1.body).slice(0, 200));
+  if (r1.status >= 300 || r2.status >= 300)
+    out('admin setup', r1.status, r2.status, JSON.stringify(r1.body).slice(0, 200));
   return u;
 }
