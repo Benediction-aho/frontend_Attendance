@@ -3,7 +3,7 @@
 Updated by the agents at the end of every work session.
 
 ## Current phase
-**Phases 3 and 4 – frontend implemented, ready for frontend-ui-designer** (2026-11-12). Phase 2: UX re-test findings UX2-21..24 fixed, UX2-20 accepted (by design); ready for the final UX check. Report files expected: `docs/reports/phase-3-ui.md`, `docs/reports/phase-4-ui.md` (or one combined), then `-ux.md`.
+**Phases 3 and 4 – UI review (UI34-01..15) and UX test (UX34-01..08) findings fixed, ready for frontend-ui-designer and frontend-ux-tester re-check** (2026-11-13). Wired to backend 9d619bb (Face ID `reregister`, `can_reregister`/`replacement_pending`, `today` in confirm/check-out, `EmployeeSummary`, `replaces_same_device`). Phase 2: UX2-20 accepted; ready for the final UX check.
 
 ### Phases 3–4 – what was delivered (frontend)
 - **Today screen (employees, home `/app`)**: clock synchronised with `server_timestamp_ms` (half round-trip correction), day status (office/remote/day off/holiday/leave), "not expected today" note, check-in flow with a 3-step progress (Location → Face ID → Confirmed): GPS with `watchPosition`, accuracy target from `rules.max_accuracy_m`, visible readings and accuracy bar, automatic re-reading on API `low_accuracy` (up to 3 times); intent → `navigator.credentials.get` → confirm (retried, idempotent). Clear English message for: GPS off/unavailable, permission denied (iPhone/Android steps), timeout, low accuracy (values from the API), out of perimeter (distance + radius, mission suggested), offline (time comes from the server), Face ID cancelled/unsupported/failed, intent expired, 429, not a remote day. Nothing time/date-related is sent.
@@ -62,7 +62,7 @@ The API uses Bearer device tokens only (no cookies), so an HttpOnly cookie is no
 | 0 – Preparation | Frontend skeleton done | – | Legacy v1 kept on `main` at `5f4de51a854ca91bf31c72e282b0f3519d2d3b4f` (tag `legacy-v1` not pushed: tag push not allowed from this session) |
 | 1 – Backend foundations | Not started | – | |
 | 2 – Frontend foundations | Ready for UX re-test | UI: `docs/reports/phase-2-ui.md` (signed off, 20 fixed), UX: `docs/reports/phase-2-ux.md` (19 fixed, UX2-17 backend) | See "Phase 2 – what was delivered" |
-| 3 – Attendance (manual) | Frontend ready for frontend-ui-designer | – | See "Phases 3–4 – what was delivered" |
+| 3 – Attendance (manual) | UI/UX findings fixed, ready for UI/UX re-check | – | See "Phases 3–4 – what was delivered" |
 | 4 – PWA, Face ID, notifications | Frontend ready for frontend-ui-designer | – | Real-device validation pending (test deployment) |
 | 5 – Tasks, clients, reports | Not started | – | |
 | 6 – Dashboards and logs | Not started | – | |
@@ -101,6 +101,7 @@ The API uses Bearer device tokens only (no cookies), so an HttpOnly cookie is no
 _Not given yet._
 
 ## Log
+- 2026-11-13 – Phases 3–4 UI/UX fixes: mission check-in as single primary action out of perimeter, secondary install/push cards after the main action, platform location steps, 30 s GPS budget with elapsed time and early hint, edge-of-perimeter hint, Face ID re-registration after 2 failures (admin check-in mentioned), confirmed attendance rendered at once, rest-day card, onboarding success moment, stacked refused attempts, employee name/job/email disambiguation, history first on phones, en-GB date fields, super admin attendance figures, compact tiles with counts, `/admin/*` redirect, 422 messages (e.g. `pdf_encrypted`) shown as sent. 97 unit tests, 75 mocked e2e (1 skipped real), lint 0 errors, typecheck and build green.
 - Specifications, agents and workflow added to the repository.
 - Switched from native app (Capacitor) to PWA; automatic check-in now based on office Wi-Fi detection.
 - Wi-Fi detection and automatic check-in removed; check-in = GPS perimeter + Face ID (passkey); fixed-time reminder at 08:05.

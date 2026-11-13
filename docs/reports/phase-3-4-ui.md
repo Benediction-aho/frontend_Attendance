@@ -44,3 +44,6 @@ The attendance screens are clean, sober and readable, with good copy and a solid
 3. UI34-03: refused check-ins as stacked rows on phones.
 4. UI34-04 / UI34-05: real employee name in the per-employee page with history first on phones; dd/mm/yyyy or formatted date controls.
 5. UI34-06 / UI34-07 / UI34-08: platform-specific location help, cleaner Face ID onboarding with a success moment, and a calm "not expected" state.
+
+## Fix status (attendance-frontend, 2026-11-13)
+All findings above are fixed on the frontend (commits cd9ed25, a3288eb); server parts from backend 9d619bb. Ready for re-check.

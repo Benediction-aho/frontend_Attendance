@@ -13,14 +13,14 @@ Tester: `frontend-ux-tester` – 2026-11-12/13. Branch `claude/upbeat-noether-f7
 
 | ID | Severity | Title | Status |
 |---|---|---|---|
-| UX34-01 | High | Face ID passkey lost on the phone (Face ID reset, passkey deleted) → endless "Face ID not completed – try again"; no way to re-register | Open |
-| UX34-02 | Medium | After a successful check-in on a slow network the card shows "You have not checked in yet" + the check-in button again for several seconds | Open |
-| UX34-03 | Medium | Indoor with stable poor accuracy the employee waits ~65 s on "Improving the position, reading 1…" before any message | Open |
-| UX34-04 | Medium | Admin lists (daily attendance, Leave "Employee" select) show only the name: homonyms cannot be told apart | Open |
-| UX34-05 | Medium | "New account request" email button points to `/admin/users/<id>` (no `/app`) → lands on Home, not on the request | Open (server link) |
-| UX34-06 | Low | Second tab: both tabs tapped → second tab stays on "Look at your phone to confirm with Face ID" (>37 s), never notices the check-in done in the other tab | Open |
-| UX34-07 | Low | Check-out hint "Before 17:00 you will be asked for a reason" still shown after 17:00; mission/remote day chip shows "Office day" for a mission check-in | Open |
-| UX34-08 | Low | Edge of perimeter: 70 m away with ±30 m accuracy refused ("You are 70 m from the office") – correct per server, but a user standing at the gate sees no hint that a better reading may help | Open (question: should accuracy be credited?) |
+| UX34-01 | High | Face ID passkey lost on the phone (Face ID reset, passkey deleted) → endless "Face ID not completed – try again"; no way to re-register | Fixed (2026-11-13) |
+| UX34-02 | Medium | After a successful check-in on a slow network the card shows "You have not checked in yet" + the check-in button again for several seconds | Fixed (2026-11-13) |
+| UX34-03 | Medium | Indoor with stable poor accuracy the employee waits ~65 s on "Improving the position, reading 1…" before any message | Fixed (2026-11-13) |
+| UX34-04 | Medium | Admin lists (daily attendance, Leave "Employee" select) show only the name: homonyms cannot be told apart | Fixed (2026-11-13) |
+| UX34-05 | Medium | "New account request" email button points to `/admin/users/<id>` (no `/app`) → lands on Home, not on the request | Fixed (2026-11-13) |
+| UX34-06 | Low | Second tab: both tabs tapped → second tab stays on "Look at your phone to confirm with Face ID" (>37 s), never notices the check-in done in the other tab | Fixed (2026-11-13) |
+| UX34-07 | Low | Check-out hint "Before 17:00 you will be asked for a reason" still shown after 17:00; mission/remote day chip shows "Office day" for a mission check-in | Fixed (2026-11-13) |
+| UX34-08 | Low | Edge of perimeter: 70 m away with ±30 m accuracy refused ("You are 70 m from the office") – correct per server, but a user standing at the gate sees no hint that a better reading may help | Fixed (2026-11-13) |
 
 ### UX34-01 – High – Lost passkey: no way out
 - Role/device: employee, iPhone. Script `p34-j3-faceid.mjs nocred`, screen `ux-j3-faceid-nocred.png`.
@@ -71,3 +71,6 @@ Tester: `frontend-ux-tester` – 2026-11-12/13. Branch `claude/upbeat-noether-f7
 ## Forgotten check-out (00:00)
 - Run after the real midnight (13 Nov 00:00 UTC): `php artisan attendance:auto-checkout` → "Closed 13 attendance(s)", `check_out_at` = 00:00.
 - Employee (iPhone) History: "12 Nov 2026 · Late · Check-out forgotten · Check-out Forgotten – Closed automatically at midnight" (`ux-j8-forgotten-history.png`); Today is a fresh day. Admin day list for 12 Nov: "Check-out forgotten · In 19:24 · Out forgotten" (`ux-j8-admin-yesterday.png`). **Passed.**
+
+## Fix status (attendance-frontend, 2026-11-13)
+All findings above are fixed on the frontend (commits cd9ed25, a3288eb); server parts from backend 9d619bb. Ready for re-check.
