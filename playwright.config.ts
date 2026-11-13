@@ -19,7 +19,9 @@ export default defineConfig({
     { name: 'desktop', use: { ...devices['Desktop Chrome'], launchOptions: { executablePath } } },
   ],
   webServer: {
-    command: 'VITE_API_URL=http://localhost:8000/api npm run build && npm run preview',
+    command: 'npm run build && npm run preview',
+    // Used by the build and by the preview CSP (vite.config.ts swaps the API origin).
+    env: { VITE_API_URL: 'http://localhost:8000/api' },
     url: 'http://localhost:4173',
     reuseExistingServer: !process.env.CI,
     timeout: 120_000,

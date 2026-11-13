@@ -140,10 +140,14 @@ The API uses Bearer device tokens only (no cookies), so an HttpOnly cookie is no
 - `npm run e2e` – Playwright (builds with `VITE_API_URL=http://localhost:8000/api`, serves on :4173, API mocked by route interception; uses Chromium at `/opt/pw-browsers/chromium`, override with `PW_CHROMIUM_PATH`). `E2E_REAL_API=1 npm run e2e -- e2e/signup-approval.real.spec.ts --project=desktop` runs the journey against a local backend.
 - CI: `.github/workflows/frontend-ci.yml` (lint, format, typecheck, unit tests, build).
 
+## Security headers (REL-04) – API host dependency
+`vercel.json` sends a strict CSP and security headers on every route. The CSP allows the API only at `https://attendance-api-1xgl.onrender.com` (`connect-src` and `img-src`, for signed file URLs). **If `VITE_API_URL` changes (custom API domain for production), update both directives in `vercel.json` (and `PROD_API_ORIGIN` in `vite.config.ts`) in the same change, or every API call is blocked.** `vite preview` applies the same headers (API origin swapped for `VITE_API_URL`), so the Playwright suite runs under the CSP; `e2e/security-headers.spec.ts` asserts the headers and no CSP violation.
+
 ## Owner approval for production
 _Not given yet._
 
 ## Log
+- 2026-11-13 – Release security REL-04 and REL-12: security headers in `vercel.json` (CSP without inline/eval scripts, frame-ancestors none, X-Frame-Options DENY, nosniff, Referrer-Policy, Permissions-Policy with geolocation and publickey-credentials for self, HSTS), same headers on `vite preview` + e2e check; Tailwind banner comment stripped from built CSS.
 - 2026-11-13 – Owner requests: check-in shows the server's `low_accuracy`, `already_checked_in` and new `checkin_not_open` messages; Today shows "Check-in opens at 6:00 AM" instead of the button before `rules.checkin_opens_at`, and "See you tomorrow – check-in opens at 6:00 AM" after check-out; Settings – Attendance keeps the GPS uncertainty setting next to the perimeter radius with a helper text.
 - 2026-11-13 – Phase 6 frontend: employee and admin dashboards from server figures, activity log CSV export (super admin, 429 and cap), UX5-11 back links. Ready for frontend-ui-designer.
 - 2026-11-13 – Phase 6 review fixes: dashboards refreshed after every write, Today hierarchy, nowrap figures, pending rows, day_off/holiday/checked_in_not_expected, week_end, CSV header button, 429 warning with retry time, server file name; e2e recovery URL relative.
