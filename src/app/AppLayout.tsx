@@ -9,20 +9,19 @@ import {
   ListChecks,
   LayoutDashboard,
   LogOut,
-  Menu,
   ScrollText,
   Settings2,
   ShieldCheck,
-  UserRound,
   UsersRound,
   type LucideIcon,
 } from 'lucide-react';
-import { AnimatePresence, motion } from 'motion/react';
+import { AnimatePresence, motion, useReducedMotion } from 'motion/react';
 import { useEffect, useState } from 'react';
 import { onCheckInRequired } from '../lib/api';
 import { useToast } from '../ui/Toast';
 import { Link, NavLink, useLocation, useNavigate, useOutlet } from 'react-router';
 import { Modal } from '../ui/Modal';
+import { Button } from '../ui/Button';
 import { Logo } from '../ui/Logo';
 import { Avatar } from '../ui/Avatar';
 import { cx } from '../ui/cx';
@@ -61,11 +60,9 @@ export function navFor(user: User | undefined, unread = 0) {
     icon: Bell,
     badge: unread,
   };
-  const profile: NavItem = { to: '/app/profile', label: 'Profile', icon: UserRound };
   const work: NavItem = { to: '/app/work', label: 'My work', icon: ListChecks };
-  const main: NavItem[] = employee
-    ? [home, work, history, alerts, profile]
-    : [home, alerts, profile];
+  // The profile is reached from the avatar (top bar on phones, footer of the sidebar).
+  const main: NavItem[] = employee ? [home, work, history, alerts] : [home, alerts];
   const admin: NavItem[] = [];
   if (canViewAttendance(user))
     admin.push({ to: '/app/admin/attendance', label: 'Attendance', icon: Clock3 });
@@ -83,11 +80,10 @@ export function navFor(user: User | undefined, unread = 0) {
     admin.push({ to: '/app/admin/settings', label: 'Settings', icon: Settings2 });
   if (canViewLogs(user))
     admin.push({ to: '/app/admin/logs', label: 'Activity log', icon: ScrollText });
-  // Phones: at most four entries; admin sections are grouped behind "Admin".
-  // Employees: History stays reachable from the Today screen.
+  // Phones: at most four links (admin sections grouped behind "Admin"), then the
+  // Sign out button rendered by the floating bar. History stays reachable from Today.
   const mobile: NavItem[] = employee ? [home, work, alerts] : [home, alerts];
   if (admin.length) mobile.push({ to: '/app/admin', label: 'Admin', icon: ShieldCheck });
-  mobile.push(profile);
   return { main, admin, mobile };
 }
 
@@ -156,10 +152,9 @@ export function AppLayout() {
     });
   }, [navigate, toast]);
   const logout = () => void signOut().then(() => navigate('/sign-in', { replace: true }));
-  // The phone menu belongs to the page it was opened on: navigating closes it.
-  const [menuPath, setMenuPath] = useState<string | null>(null);
-  const menuOpen = menuPath === location.pathname;
-  const setMenuOpen = (open: boolean) => setMenuPath(open ? location.pathname : null);
+  // Signing out from the floating bar always asks first: no accidental logout.
+  const [confirmOut, setConfirmOut] = useState(false);
+  const reduce = useReducedMotion();
 
   return (
     <div className="min-h-dvh lg:flex">
@@ -182,7 +177,9 @@ export function AppLayout() {
         </nav>
         {me && (
           <div className="mt-4 flex items-center gap-3 border-t border-ink-100 pt-4">
-            <Avatar src={me.photo_url} first={me.first_name} last={me.last_name} size="sm" />
+            <Link to="/app/profile" aria-label="Open profile" className="rounded-full">
+              <Avatar src={me.photo_url} first={me.first_name} last={me.last_name} size="sm" />
+            </Link>
             <div className="min-w-0 flex-1">
               <p className="truncate text-sm font-semibold text-ink-800">{me.full_name}</p>
               <p className="truncate text-xs text-ink-500">{me.job_title ?? me.email}</p>
@@ -203,30 +200,18 @@ export function AppLayout() {
       <div className="flex min-w-0 flex-1 flex-col">
         <header className="sticky top-0 z-30 flex items-center justify-between border-b border-ink-100 bg-surface/90 px-4 pt-[env(safe-area-inset-top)] backdrop-blur lg:hidden">
           <Logo variant="topbar" className="my-2.5" />
-          <div className="flex items-center gap-1">
-            {me && (
-              <Link
-                to="/app/profile"
-                aria-label="My profile"
-                className="flex size-11 items-center justify-center rounded-full"
-              >
-                <Avatar src={me.photo_url} first={me.first_name} last={me.last_name} size="sm" />
-              </Link>
-            )}
-            <button
-              type="button"
-              onClick={() => setMenuOpen(true)}
-              aria-label="Open menu"
-              aria-haspopup="dialog"
-              aria-expanded={menuOpen}
-              data-testid="mobile-menu-button"
-              className="flex size-11 items-center justify-center rounded-control text-ink-600 hover:bg-ink-50 hover:text-ink-900"
+          {me && (
+            <Link
+              to="/app/profile"
+              aria-label="Open profile"
+              data-testid="topbar-profile"
+              className="-mr-1.5 flex size-11 items-center justify-center rounded-full"
             >
-              <Menu aria-hidden size={22} strokeWidth={1.5} />
-            </button>
-          </div>
+              <Avatar src={me.photo_url} first={me.first_name} last={me.last_name} size="sm" />
+            </Link>
+          )}
         </header>
-        <main className="mx-auto w-full max-w-6xl flex-1 px-4 pt-5 pb-[calc(6rem+env(safe-area-inset-bottom))] sm:px-6 lg:px-8 lg:pt-8 lg:pb-10">
+        <main className="mx-auto w-full max-w-6xl flex-1 px-4 pt-5 pb-[calc(6.5rem+env(safe-area-inset-bottom))] sm:px-6 lg:px-8 lg:pt-8 lg:pb-10">
           <AnimatePresence mode="wait" initial={false}>
             <motion.div
               key={location.pathname}
@@ -241,35 +226,35 @@ export function AppLayout() {
         </main>
       </div>
 
-      <Modal open={menuOpen} onClose={() => setMenuOpen(false)} title="Menu" showClose>
-        <nav aria-label="Full menu" className="flex flex-col gap-1">
-          {nav.main.map((i) => (
-            <SideLink key={i.to} item={i} activeId="menu-active" />
-          ))}
-          {nav.admin.length > 0 && (
-            <>
-              <p className="mt-4 mb-1 px-3 text-xs font-semibold tracking-wide text-ink-400 uppercase">
-                Administration
-              </p>
-              {nav.admin.map((i) => (
-                <SideLink key={i.to} item={i} activeId="menu-active" />
-              ))}
-            </>
-          )}
-          <button
-            type="button"
-            onClick={logout}
-            className="mt-4 flex min-h-11 items-center gap-3 rounded-control border-t border-ink-100 px-3 pt-2 text-sm font-medium text-ink-600 hover:bg-ink-50 hover:text-ink-900"
-          >
-            <LogOut aria-hidden size={18} strokeWidth={1.5} />
-            Sign out
-          </button>
-        </nav>
-      </Modal>
+      <Modal
+        open={confirmOut}
+        onClose={() => setConfirmOut(false)}
+        title="Sign out of this device?"
+        description="You will need to sign in again to check in."
+        footer={
+          <>
+            <Button variant="outline" onClick={() => setConfirmOut(false)}>
+              Cancel
+            </Button>
+            <Button
+              onClick={() => {
+                setConfirmOut(false);
+                logout();
+              }}
+            >
+              Confirm
+            </Button>
+          </>
+        }
+      />
 
-      <nav
+      <motion.nav
         aria-label="Bottom menu"
-        className="fixed inset-x-0 bottom-0 z-30 flex border-t border-ink-100 bg-surface pb-[env(safe-area-inset-bottom)] lg:hidden"
+        data-testid="floating-nav"
+        initial={reduce ? false : { opacity: 0, y: 24 }}
+        animate={{ opacity: 1, y: 0 }}
+        transition={{ duration: duration.slow, ease: easing.standard }}
+        className="glass-pill fixed inset-x-4 bottom-[calc(env(safe-area-inset-bottom)+8px)] z-30 mx-auto flex h-16 max-w-md items-stretch rounded-full border border-white/60 px-1.5 shadow-[0_8px_24px_-8px_rgb(15_23_42/0.18)] ring-1 ring-ink-900/5 lg:hidden"
       >
         {nav.mobile.map(({ to, label, icon: Icon, end, badge }) => (
           <NavLink
@@ -278,33 +263,31 @@ export function AppLayout() {
             end={end}
             className={({ isActive }) =>
               cx(
-                'relative flex min-h-14 flex-1 flex-col items-center justify-center gap-1 text-xs',
-                isActive ? 'font-semibold text-primary-700' : 'text-ink-500',
+                'flex min-h-11 min-w-11 flex-1 flex-col items-center justify-center gap-0.5 rounded-full text-[11px] leading-tight transition-colors',
+                isActive ? 'font-semibold text-primary-600' : 'font-medium text-ink-600',
               )
             }
           >
-            {({ isActive }) => (
-              <>
-                {isActive && (
-                  <motion.span
-                    layoutId="tab-active"
-                    className="absolute inset-x-6 top-0 h-0.5 rounded-full bg-primary-600"
-                  />
-                )}
-                <span className="relative">
-                  <Icon aria-hidden size={20} strokeWidth={1.5} />
-                  {badge ? (
-                    <span className="absolute -top-1 -right-2 size-2.5 rounded-full bg-secondary-500 ring-2 ring-surface">
-                      <span className="sr-only">{badge} unread</span>
-                    </span>
-                  ) : null}
+            <span className="relative">
+              <Icon aria-hidden size={22} strokeWidth={1.75} />
+              {badge ? (
+                <span className="absolute -top-1 -right-2 size-2.5 rounded-full bg-secondary-500 ring-2 ring-surface">
+                  <span className="sr-only">{badge} unread</span>
                 </span>
-                {label}
-              </>
-            )}
+              ) : null}
+            </span>
+            <span className="max-w-full truncate px-0.5">{label}</span>
           </NavLink>
         ))}
-      </nav>
+        <button
+          type="button"
+          onClick={() => setConfirmOut(true)}
+          className="flex min-h-11 min-w-11 flex-1 flex-col items-center justify-center gap-0.5 rounded-full text-[11px] leading-tight font-medium text-ink-600"
+        >
+          <LogOut aria-hidden size={22} strokeWidth={1.75} />
+          <span className="max-w-full truncate px-0.5">Sign out</span>
+        </button>
+      </motion.nav>
     </div>
   );
 }

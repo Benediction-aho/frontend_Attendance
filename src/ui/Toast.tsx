@@ -86,7 +86,7 @@ export function ToastProvider({ children }: { children: ReactNode }) {
           'pointer-events-none fixed z-[60] flex flex-col items-center gap-2 md:inset-x-auto md:top-4 md:right-4 md:bottom-auto md:items-end',
           top
             ? 'inset-x-4 top-[calc(1rem+env(safe-area-inset-top))]'
-            : 'inset-x-4 bottom-[calc(5rem+env(safe-area-inset-bottom))]',
+            : 'inset-x-4 bottom-[calc(6rem+env(safe-area-inset-bottom))]',
         )}
       >
         <AnimatePresence initial={false}>

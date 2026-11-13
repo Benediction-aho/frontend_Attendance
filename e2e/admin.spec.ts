@@ -216,21 +216,21 @@ test('activity log: filter by type and expand an entry', async ({ page }) => {
   );
 });
 
-test('phones: menu button opens the full menu; filters open in a sheet', async ({
+test('phones: floating bar (no menu button), admin hub; filters open in a sheet', async ({
   page,
 }, testInfo) => {
   test.skip(testInfo.project.name !== 'iphone', 'Phone layout only');
   const state = newState(SUPER, [pending, makeUser({ id: 3 })]);
   await mockApi(page, state);
   await signInUi(page, 'kofi@assistance.test');
-  const menuButton = page.getByRole('button', { name: 'Open menu' });
-  await expect(menuButton).toBeVisible();
-  await menuButton.click();
-  const menu = page.getByRole('dialog', { name: 'Menu' });
-  await expect(menu.getByRole('link', { name: 'Activity log' })).toBeVisible();
-  await menu.getByRole('link', { name: 'Users' }).click();
-  await expect(page).toHaveURL(/\/app\/admin\/users$/);
-  await expect(page.getByRole('dialog')).toHaveCount(0);
+  await expect(page.getByRole('button', { name: 'Open menu' })).toHaveCount(0);
+  const bar = page.getByRole('navigation', { name: 'Bottom menu' });
+  await expect(bar.getByRole('link')).toHaveText(['Home', 'Notifications', 'Admin']);
+  await expect(bar.getByRole('button', { name: 'Sign out' })).toBeVisible();
+  await expect(bar.getByRole('link', { name: 'Profile' })).toHaveCount(0);
+  await page.getByRole('link', { name: 'Open profile' }).click();
+  await expect(page).toHaveURL(/\/app\/profile$/);
+  await page.goto('/app/admin/users');
   // Only the search field is on screen; the other filters are behind "Filters".
   await expect(page.getByLabel('Status')).toBeHidden();
   await page.getByRole('button', { name: 'Filters', exact: true }).click();

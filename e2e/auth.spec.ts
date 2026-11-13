@@ -198,3 +198,25 @@ test('profile: edit details, photo with preview, email change', async ({ page })
   await page.getByRole('button', { name: 'Send confirmation link' }).click();
   await expect(page.getByText(/confirmation link is on its way/)).toBeVisible();
 });
+
+test('phones: Sign out in the floating bar asks for confirmation first', async ({
+  page,
+}, testInfo) => {
+  test.skip(testInfo.project.name !== 'iphone', 'Phone layout only');
+  await mockApi(page, newState());
+  await signInUi(page);
+  const bar = page.getByRole('navigation', { name: 'Bottom menu' });
+  await expect(bar.getByRole('link')).toHaveText(['Today', 'My work', 'Notifications']);
+  // 360 px: four items with labels fit inside the pill, none clipped.
+  await page.setViewportSize({ width: 360, height: 740 });
+  const fits = await bar.evaluate((n) => n.scrollWidth <= n.clientWidth);
+  expect(fits).toBe(true);
+  await bar.getByRole('button', { name: 'Sign out' }).click();
+  const dialog = page.getByRole('dialog', { name: 'Sign out of this device?' });
+  await dialog.getByRole('button', { name: 'Cancel' }).click();
+  await expect(dialog).toHaveCount(0);
+  await expect(page).toHaveURL(/\/app/);
+  await bar.getByRole('button', { name: 'Sign out' }).click();
+  await page.getByRole('dialog').getByRole('button', { name: 'Confirm' }).click();
+  await expect(page.getByRole('heading', { name: 'Sign in' })).toBeVisible();
+});

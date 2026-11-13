@@ -5,6 +5,12 @@ Updated by the agents at the end of every work session.
 ## Current phase
 **Phase 6 – Dashboards and logs: complete on the frontend** (2026-11-13). UI signed off (r2), UX re-test passed; polish UI6-13..15 and UX6-10 fixed. UX6-08 (denominator) and the readable CSV Device column are backend items. Phase 5 re-checks remain as listed below.
 
+### Floating phone navigation (owner decision, 2026-11-13) – ready for frontend-ui-designer, then frontend-ux-tester
+- Phones: hamburger button and its sheet menu removed; top bar = logo + avatar (link "Open profile").
+- Bottom nav replaced by a floating glass pill (inset 16 px, 64 px high, safe-area aware, blur with solid fallback, entrance animation off under reduced motion). Active item primary token + semibold, inactive ink-600, no top indicator; unread dot kept.
+- Items: employee Today · My work · Notifications · Sign out; admin Home · Notifications · Admin · Sign out (max 4 links, then Sign out). Profile tab removed (avatar instead). Sign out asks "Sign out of this device?" (Confirm/Cancel); Profile page keeps its Sign out.
+- Main content and toasts lifted above the bar. Tests: `src/app/navFor.test.ts`, e2e `auth.spec.ts` (confirmation, 360 px fit) and `admin.spec.ts` (phone bar).
+
 ### Settings split in three parts (owner decision, 2026-11-13) – ready for frontend-ui-designer, then frontend-ux-tester
 - Settings page split into Attendance / Reports / Security (`/app/admin/settings/<part>`, underline tabs, scrollable on phones); only parts allowed by `manage_settings_attendance|reports|security` (super admin: all). `/app/admin/settings` opens the first allowed part; forbidden or unknown parts show the no-access page. Menu/hub "Settings" entry for super admins and admins with at least one tier.
 - Uses `section` per setting (fallback from group, system → security), `sections` from the API for editability, `super_admin_only` settings read-only for admins ("Only a super admin can change this."). History filtered by part (`section` query + client filter by keys). PUT 403: clear message, draft discarded, settings and profile refetched, session kept.
