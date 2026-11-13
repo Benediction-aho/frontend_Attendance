@@ -47,3 +47,50 @@ The attendance screens are clean, sober and readable, with good copy and a solid
 
 ## Fix status (attendance-frontend, 2026-11-13)
 All findings above are fixed on the frontend (commits cd9ed25, a3288eb); server parts from backend 9d619bb. Ready for re-check.
+
+## Re-review 2 (frontend-ui-designer, 2026-11-13, commit 8738a5a)
+Same method (private preview build, port 4191, mocked API, 360 / 768 / 1440). New captures: `docs/reports/screens/phase-3-4/r2-<screen>-<width>.png`, including the new states `r2-today-gps-wait`, `r2-today-gps-wait-hint`, `r2-today-edge-hint`, `r2-today-faceid-help`, `r2-today-faceid-reregister`, `r2-today-success-ring` (viewport only, 120 ms after check-in), `r2-dashboard-super-tile`, `r2-admin-day-previous`.
+
+### Status of earlier findings
+| ID | Status | Evidence |
+|---|---|---|
+| UI34-01 | Fixed | `r2-today-out-of-perimeter-360.png`: one filled "Mission check-in", outline "Try again at the office", no orange button. |
+| UI34-02 | Fixed | `r2-today-ready-360.png` has no install/reminder card; after check-in the install card is tinted, no shadow, outline "Show me how" + "Not now" (`r2-today-success-ring-360.png`). |
+| UI34-03 | Fixed | `r2-admin-attempts-360.png`: stacked rows, name + badge, "07:55 · 3.2 km · ± 12 m". |
+| UI34-04 | Fixed | `r2-admin-employee-history-360.png`: title "Ama Mensah", "Accountant · Attendance history", history before Working week / Leave. |
+| UI34-05 | Fixed | Date fields show "13 Nov 2026" / `dd/mm/yyyy`; admin day has Previous day / Today / Next day (`r2-admin-day-previous-360.png`). See UI34-17 for the layout. |
+| UI34-06 | Fixed | `r2-today-location-blocked-360.png`: warning tone, iPhone-only numbered list. |
+| UI34-07 | Fixed | `r2-welcome-faceid-360.png`: one paragraph, labels on one line. Success state checked in code (`FaceIdSetup`). |
+| UI34-08 | Fixed | `r2-today-day-off-360.png`: "Enjoy your day off." with no instructions. See UI34-21 (minor duplication). |
+| UI34-09 | Fixed (placement: see UI34-16) | `r2-dashboard-super-tile-1440.png`: "Checked in 1 / 2", "Late 1", link to today's attendance; notifications tile removed. |
+| UI34-10 | Fixed | `r2-admin-day-360.png` / `-1440.png`: compact tiles, "Missions · 1", "Refused check-ins · 2", ring only when > 0. |
+| UI34-11 | Fixed | Title "You are checked in"; success ring + scale (0.6 s) in `CheckedInPanel`, disabled with `useReducedMotion`. |
+| UI34-12 | Fixed | `r2-schedule-filled-360.png`: hint "You have chosen your 1 day off...", Remote blue, Day off orange. |
+| UI34-13 | Fixed | "Working outside? Mission check-in" fits on one line at 360. |
+| UI34-14 | Fixed | Single line "No device details recorded (registered before this version)." (`FaceIdDevicesPage.tsx`). |
+| UI34-15 | Fixed | `r2-inapp-signin-360.png`: notice above the card, iPhone-only instruction. |
+
+### New elements – verdict
+- GPS wait progress (`r2-today-gps-wait-360.png`, `r2-today-gps-wait-hint-360.png`): good. Stepper, live accuracy text, animated bar, "11 s of up to 30 s" counter, and a calm hint appearing after 10 s with `fadeUp`. Sober and guiding.
+- Face ID re-registration (`r2-today-faceid-help-360.png`, `r2-today-faceid-reregister-360.png`): clear and secondary until needed; one primary action on the re-registration card. See UI34-19.
+- Success ring: subtle, short, respects reduced motion. Good.
+
+### New findings
+| ID | Screen / width | Screenshot | Severity | Problem | Recommendation |
+|---|---|---|---|---|---|
+| UI34-16 | Super-admin home, 1440 | `r2-dashboard-super-tile-1440.png` | Medium | The "Attendance today" tile, the most useful daily figure, is placed last and spans the full width under a half-empty grid row; its figures sit in the left 15 % of a 1090 px card. | Place it first in the grid, same width as the other tiles (`StatTile`, no `col-span-2`), so the grid is 2 x 2 at 1440 with no hole. |
+| UI34-17 | Admin day, 360 | `r2-admin-day-previous-360.png` | Medium | Day navigation wraps: "Previous day" sits next to the date field, "Today" and "Next day" drop to a second line under it, so the three controls are not read as one group. The page subtitle also repeats the date shown in the field. | Below `sm`, put the controls in one row under the field: `grid grid-cols-3 gap-2` with "Previous" / "Today" / "Next" (short labels, `min-h-11`), or a compact `‹ 12 Nov 2026 ›` control around the date. Drop the date from the subtitle (or keep it only when the field is hidden). |
+| UI34-18 | Today, out of perimeter near the edge, 360 | `r2-today-edge-hint-360.png` | Medium | When the position is imprecise near the edge (70 m, radius 50 m, ± 35 m), the user is probably at the office, but "Mission check-in" stays the primary button and the red alert grows to 9 lines with the accuracy hint inside the error. | When `nearEdge` is true: keep "Try again at the office" as the primary button and "Mission check-in" as outline; render the accuracy hint as a separate neutral line (`text-sm text-ink-700`) below the alert, not inside the red block. |
+| UI34-19 | Today, Face ID help, 360 | `r2-today-faceid-help-360.png` | Low | Inside the card there are three stacked messages (red alert, help box, then "Try again" + mission link); the help box text is 5 lines and the action pushes the main button under the bottom bar. | Shorten to two lines ("Face ID reset on this phone? Register it again; an administrator will approve it.") and show the help box as a text link "Register Face ID again" under "Try again". |
+| UI34-20 | Refused check-ins, 360 | `r2-admin-attempts-360.png` | Low | Missing distance is shown as a lone dash: "08:01 · – · ± 120 m". | Omit the missing part: "08:01 · ± 120 m". |
+| UI34-21 | Today, day off, 360 | `r2-today-day-off-360.png` | Low | The info alert ("You are not expected today / Today is your day off.") and the card ("Enjoy your day off.") say the same thing twice. | When no check-in is available, show only the card (one calm line, `Day off` badge already in the header); keep the alert only when check-ins are still possible. |
+
+### Verdict
+All 15 earlier findings are fixed. The new elements are well done: the GPS wait is sober and reassuring, the success feedback is subtle and accessible. No Critical or High finding is open. Three Medium findings (super-admin tile placement, day navigation layout at 360, near-edge primary action) and three Low polish items remain.
+
+### Top 5 priorities
+1. UI34-18: near the edge, "Try again at the office" primary, accuracy hint outside the red alert.
+2. UI34-17: one-row day navigation at 360, no duplicate date.
+3. UI34-16: attendance tile first in the super-admin grid.
+4. UI34-19: shorter Face ID help.
+5. UI34-20 / UI34-21: small copy cleanups.
