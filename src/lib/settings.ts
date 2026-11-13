@@ -1,5 +1,6 @@
 import type { Setting, SettingGroup, SettingType } from './types';
 import { SETTINGS_SECTIONS, type SettingsSection } from './permissions';
+import { formatHhmm, parseTimeInput } from './format';
 
 export const isSettingsSection = (v: string | undefined): v is SettingsSection =>
   (SETTINGS_SECTIONS as readonly string[]).includes(v ?? '');
@@ -23,15 +24,12 @@ export function sectionOf(s: Pick<Setting, 'section' | 'group'>): SettingsSectio
 }
 
 /**
- * Normalises what was typed in a 24-hour time field: "8:10" → "08:10", "810" → "08:10",
- * "1700" → "17:00". Anything else is returned unchanged (validation reports it).
+ * Normalises what was typed in a time field for display: "8.10pm" → "8:10 PM",
+ * "17:00" → "5:00 PM". Anything unreadable is returned unchanged (validation reports it).
  */
 export function normalizeTime(raw: string): string {
-  const s = raw.trim().replace(/[.h]/i, ':');
-  let m = s.match(/^(\d{1,2}):(\d{2})$/);
-  if (!m) m = s.match(/^(\d{1,2})(\d{2})$/);
-  if (!m) return raw.trim();
-  return `${(m[1] ?? '').padStart(2, '0')}:${m[2] ?? ''}`;
+  const t = parseTimeInput(raw);
+  return t ? formatHhmm(t) : raw.trim();
 }
 
 export const GROUPS: { key: SettingGroup; title: string; description: string }[] = [
@@ -50,6 +48,7 @@ export function toInput(value: unknown, type: SettingType): string | boolean {
   if (type === 'bool') return Boolean(value);
   if (type === 'int_list') return Array.isArray(value) ? value.join(', ') : '';
   if (value === null || value === undefined) return '';
+  if (type === 'time' && typeof value === 'string') return formatHhmm(value);
   return String(value);
 }
 
@@ -105,7 +104,7 @@ export function friendlyServerMessage(message: string): string {
     return 'Choose today or a later date.';
   if (/must be an integer/i.test(message)) return 'Enter a whole number.';
   if (/must be a number|must be numeric/i.test(message)) return 'Enter a number.';
-  if (/does not match the format/i.test(message)) return 'Use the HH:MM format.';
+  if (/does not match the format/i.test(message)) return 'Enter a time such as 8:10 AM or 5:00 PM.';
   if (/duplicate|distinct/i.test(message)) return 'Each value can appear only once.';
   if (/selected .* is invalid|is invalid/i.test(message)) return 'This value is not accepted.';
   if (/is required/i.test(message)) return 'This value is required.';
@@ -129,10 +128,10 @@ function parseType(
         ? { ok: true, value: Number(s) }
         : { ok: false, error: 'Enter a number.' };
     case 'time': {
-      const t = normalizeTime(s);
-      return /^([01]\d|2[0-3]):[0-5]\d$/.test(t)
+      const t = parseTimeInput(s);
+      return t
         ? { ok: true, value: t }
-        : { ok: false, error: 'Use the 24-hour HH:MM format, e.g. 08:10 or 17:00.' };
+        : { ok: false, error: 'Enter a time such as 8:10 AM or 5:00 PM.' };
     }
     case 'int_list': {
       if (s === '') return { ok: true, value: [] };
@@ -154,6 +153,7 @@ export function displayValue(value: unknown): string {
   if (typeof value === 'boolean') return value ? 'On' : 'Off';
   if (Array.isArray(value)) return value.length ? value.join(', ') : 'None';
   if (value === null || value === undefined || value === '') return '–';
+  if (typeof value === 'string' && /^([01]\d|2[0-3]):[0-5]\d$/.test(value)) return formatHhmm(value);
   return String(value);
 }
 

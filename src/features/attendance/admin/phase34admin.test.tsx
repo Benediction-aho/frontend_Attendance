@@ -77,7 +77,7 @@ describe('phase 3-4 admin fixes', () => {
     renderAt(<AttemptsPage />, '/');
     const list = await screen.findByTestId('attempts-stacked');
     expect(list).toHaveTextContent('Ama Mensah');
-    expect(list).toHaveTextContent('07:55 · 3.2 km · ± 12 m');
+    expect(list).toHaveTextContent('7:55 AM · 3.2 km · ± 12 m');
   });
 
   it('explains when the schedule limit is reached (UI34-12)', () => {
@@ -134,7 +134,7 @@ describe('phase 3-4 admin fixes', () => {
     });
     renderAt(<AttemptsPage />, '/');
     const list = await screen.findByTestId('attempts-stacked');
-    expect(list).toHaveTextContent('08:01 · ± 120 m');
+    expect(list).toHaveTextContent('8:01 AM · ± 120 m');
     expect(list.textContent).not.toContain('· –');
   });
 });

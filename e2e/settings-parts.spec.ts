@@ -59,7 +59,7 @@ const ADMIN = {
 const parts = (page: import('@playwright/test').Page) =>
   page.getByRole('navigation', { name: 'Settings parts' }).getByRole('link');
 
-test('super admin sees the three parts and times in 24-hour format', async ({ page }) => {
+test('super admin sees the three parts and times in 12-hour format', async ({ page }) => {
   const state = newState(SUPER, []);
   state.settings = SETTINGS;
   await mockApi(page, state);
@@ -68,18 +68,18 @@ test('super admin sees the three parts and times in 24-hour format', async ({ pa
   await expect(page).toHaveURL(/\/app\/admin\/settings\/attendance$/);
   await expect(parts(page)).toHaveText(['Attendance', 'Reports', 'Security']);
   const start = page.getByLabel('Work start time');
-  await expect(start).toHaveValue('08:10');
+  await expect(start).toHaveValue('8:10 AM');
   await expect(start).toHaveAttribute('type', 'text');
-  await expect(page.getByText(/\b(AM|PM)\b/)).toHaveCount(0);
-  await start.fill('730');
+  await expect(page.getByText('12-hour clock, e.g. 8:10 AM or 5:00 PM.').first()).toBeVisible();
+  await start.fill('7.30am');
   await start.blur();
-  await expect(start).toHaveValue('07:30');
+  await expect(start).toHaveValue('7:30 AM');
   await page.getByRole('button', { name: 'Save now' }).click();
   await expect(page.getByText('Settings saved. They apply now.')).toBeVisible();
   const put = state.calls.find((c) => c.method === 'PUT')?.body;
   expect(put).toEqual({ values: { work_start_time: '07:30' } });
   await parts(page).filter({ hasText: 'Reports' }).click();
-  await expect(page.getByLabel('Daily report time')).toHaveValue('17:00');
+  await expect(page.getByLabel('Daily report time')).toHaveValue('5:00 PM');
   await expect(page.getByLabel('Check-in perimeter radius (m)')).toHaveCount(0);
 });
 
@@ -96,7 +96,7 @@ test('admin with one tier sees only that part; others show no access', async ({ 
   await expect(page).toHaveURL(/\/app\/admin\/settings\/reports$/);
   await expect(page.getByRole('heading', { name: 'Settings – Reports' })).toBeVisible();
   await expect(page.getByRole('navigation', { name: 'Settings parts' })).toHaveCount(0);
-  await expect(page.getByLabel('Daily report time')).toHaveValue('17:00');
+  await expect(page.getByLabel('Daily report time')).toHaveValue('5:00 PM');
   await page.goto('/app/admin/settings/security');
   await expect(page.getByText('You do not have access to this page')).toBeVisible();
   await page.goto('/app/admin/settings/attendance');

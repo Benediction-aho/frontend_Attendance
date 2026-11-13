@@ -1,4 +1,3 @@
-import { HOUR_CYCLE } from '../../lib/format';
 import { motion } from 'motion/react';
 import { Link } from 'react-router';
 import { serverNow } from '../../lib/serverTime';
@@ -28,7 +27,7 @@ const accraHour = (d: Date) =>
   Number(
     new Intl.DateTimeFormat('en-GB', {
       hour: 'numeric',
-      hourCycle: HOUR_CYCLE,
+      hourCycle: 'h23',
       timeZone: 'Africa/Accra',
     }).format(d),
   );

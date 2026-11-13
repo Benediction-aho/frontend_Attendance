@@ -5,7 +5,7 @@ import { useQueryClient } from '@tanstack/react-query';
 import { Link } from 'react-router';
 import { formatDistance, type Today } from '../../lib/attendance';
 import { Badge } from '../../ui/Badge';
-import { formatLongDay } from '../../lib/format';
+import { formatHhmm, formatLongDay } from '../../lib/format';
 import { Alert } from '../../ui/Alert';
 import { Button } from '../../ui/Button';
 import { Card, CardBody } from '../../ui/Card';
@@ -371,7 +371,7 @@ function CheckedInPanel({ today, celebrate }: { today: Today; celebrate: boolean
             <p className="mt-2 text-xs text-ink-500" data-testid="checkout-hint">
               You can check out from anywhere.
               {today.rules.end_of_day && looksBeforeEndOfDay(today.rules)
-                ? ` Before ${today.rules.end_of_day} you will be asked for a reason.`
+                ? ` Before ${formatHhmm(today.rules.end_of_day)} you will be asked for a reason.`
                 : ''}
             </p>
             <CheckOutDialog open={open} onClose={() => setOpen(false)} rules={today.rules} />

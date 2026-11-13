@@ -91,14 +91,14 @@ function SettingControl({
       // Never a native time input: it follows the browser locale and may show AM/PM.
       type="text"
       inputMode={
-        s.type === 'int' || s.type === 'time'
+        s.type === 'int'
           ? 'numeric'
           : s.type === 'float'
             ? 'decimal'
             : undefined
       }
-      placeholder={s.type === 'time' ? 'HH:MM' : undefined}
-      maxLength={s.type === 'time' ? 5 : undefined}
+      placeholder={s.type === 'time' ? 'e.g. 8:10 AM' : undefined}
+      maxLength={s.type === 'time' ? 10 : undefined}
       autoComplete="off"
       value={String(value)}
       disabled={!s.editable}
@@ -116,7 +116,7 @@ function SettingControl({
         s.editable ? (
           <>
             {s.type === 'time' && (
-              <span className="block">24-hour clock, e.g. 08:10 or 17:00.</span>
+              <span className="block">12-hour clock, e.g. 8:10 AM or 5:00 PM.</span>
             )}
             {hint}
           </>

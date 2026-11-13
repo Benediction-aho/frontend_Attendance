@@ -1,8 +1,50 @@
 /**
- * Clock format used everywhere times are shown (owner decision pending):
- * 'h23' = 24-hour (08:10, 17:00); switch to 'h12' for AM/PM in this one line.
+ * Clock format used everywhere times are shown (owner decision: 12-hour, e.g. 8:10 AM).
+ * Server values stay HH:MM (24-hour) on the wire; only the display uses this.
  */
-export const HOUR_CYCLE: 'h23' | 'h12' = 'h23';
+export const HOUR_CYCLE: 'h23' | 'h12' = 'h12';
+/** Locale whose 12-hour output reads "8:10 AM" (en-GB would give "8:10 am"). */
+export const TIME_LOCALE = HOUR_CYCLE === 'h12' ? 'en-US' : 'en-GB';
+const HOUR_STYLE = HOUR_CYCLE === 'h12' ? 'numeric' : '2-digit';
+
+/** Shared options for every displayed time of day. */
+export const TIME_OPTIONS: Intl.DateTimeFormatOptions = {
+  hour: HOUR_STYLE,
+  minute: '2-digit',
+  hourCycle: HOUR_CYCLE,
+  timeZone: 'Africa/Accra',
+};
+
+/** "17:00" (server HH:MM) → "5:00 PM". Anything not HH:MM is returned unchanged. */
+export function formatHhmm(hhmm: string | null | undefined): string {
+  if (!hhmm) return '–';
+  const m = /^([01]?\d|2[0-3]):([0-5]\d)(?::\d{2})?$/.exec(hhmm.trim());
+  if (!m) return hhmm;
+  const h = Number(m[1]);
+  if (HOUR_CYCLE === 'h23') return `${String(h).padStart(2, '0')}:${m[2]}`;
+  return `${h % 12 === 0 ? 12 : h % 12}:${m[2]} ${h < 12 ? 'AM' : 'PM'}`;
+}
+
+/**
+ * Parses what an admin typed as a time and returns server HH:MM (24-hour), or null.
+ * Accepts "8:10 am", "8.10pm", "8 pm", "810pm", "17:00", "1700", "8:10".
+ */
+export function parseTimeInput(raw: string): string | null {
+  const s = raw.trim().toLowerCase().replace(/\s+/g, ' ');
+  const m = /^(\d{1,2})(?:[:.h ]?(\d{2}))? ?([ap])?\.? ?(?:m\.?)?$/.exec(s);
+  if (!m) return null;
+  let h = Number(m[1]);
+  const min = m[2] === undefined ? 0 : Number(m[2]);
+  if (min > 59) return null;
+  const ap = m[3];
+  if (ap) {
+    if (h < 1 || h > 12) return null;
+    h = (h % 12) + (ap === 'p' ? 12 : 0);
+  } else {
+    if (m[2] === undefined || h > 23) return null;
+  }
+  return `${String(h).padStart(2, '0')}:${String(min).padStart(2, '0')}`;
+}
 
 const dateFmt = new Intl.DateTimeFormat('en-GB', {
   day: 'numeric',
@@ -10,21 +52,13 @@ const dateFmt = new Intl.DateTimeFormat('en-GB', {
   year: 'numeric',
   timeZone: 'Africa/Accra',
 });
-const dateTimeFmt = new Intl.DateTimeFormat('en-GB', {
-  day: 'numeric',
-  month: 'short',
-  year: 'numeric',
-  hour: '2-digit',
-  minute: '2-digit',
-  hourCycle: HOUR_CYCLE,
-  timeZone: 'Africa/Accra',
-});
+const timeOfDayFmt = new Intl.DateTimeFormat(TIME_LOCALE, TIME_OPTIONS);
 
 /** Formats a server timestamp in the office time zone (Africa/Accra). */
 export function formatDateTime(iso: string | null | undefined): string {
   if (!iso) return '–';
   const d = new Date(iso);
-  return Number.isNaN(d.getTime()) ? '–' : dateTimeFmt.format(d);
+  return Number.isNaN(d.getTime()) ? '–' : `${dateFmt.format(d)}, ${timeOfDayFmt.format(d)}`;
 }
 
 export function formatDate(iso: string | null | undefined): string {

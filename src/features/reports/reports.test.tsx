@@ -117,7 +117,7 @@ describe('report helpers', () => {
         err(422, { code: 'window_not_open', opens_at: '2026-11-13T16:00:00Z' }),
         10,
       ),
-    ).toMatch(/opens on Friday 13 Nov at 16:00/);
+    ).toMatch(/opens on Friday 13 Nov at 4:00 PM/);
     expect(writeErrorMessage(err(422, { code: 'invalid_characters' }))).toMatch(/not allowed/);
   });
 

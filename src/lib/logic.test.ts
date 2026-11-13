@@ -53,7 +53,8 @@ describe('settings values', () => {
     // 24-hour entry is normalised; AM/PM is never accepted.
     expect(parseInput('8:15', 'time')).toEqual({ ok: true, value: '08:15' });
     expect(parseInput('1700', 'time')).toEqual({ ok: true, value: '17:00' });
-    expect(parseInput('5:00 PM', 'time').ok).toBe(false);
+    expect(parseInput('5:00 PM', 'time')).toEqual({ ok: true, value: '17:00' });
+    expect(parseInput('13:00 PM', 'time').ok).toBe(false);
     expect(parseInput('24:00', 'time').ok).toBe(false);
     expect(parseInput('10, 20 30', 'int_list')).toEqual({ ok: true, value: [10, 20, 30] });
     expect(parseInput('10,x', 'int_list').ok).toBe(false);

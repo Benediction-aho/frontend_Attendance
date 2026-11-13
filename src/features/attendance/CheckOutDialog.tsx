@@ -1,4 +1,4 @@
-import { HOUR_CYCLE } from '../../lib/format';
+import { formatHhmm } from '../../lib/format';
 import { useMutation, useQueryClient } from '@tanstack/react-query';
 import { useState } from 'react';
 import { api, ApiError, errorMessage } from '../../lib/api';
@@ -21,7 +21,7 @@ import { TODAY_KEY } from './useAttendance';
 const hhmm = new Intl.DateTimeFormat('en-GB', {
   hour: '2-digit',
   minute: '2-digit',
-  hourCycle: HOUR_CYCLE,
+  hourCycle: 'h23',
   timeZone: 'Africa/Accra',
 });
 
@@ -73,7 +73,7 @@ export function CheckOutDialog({
       if (e instanceof ApiError && e.code === 'reason_required') {
         setNeedReason(true);
         setFieldError(
-          `Please give a reason for leaving before ${rules.end_of_day ?? 'the end of the day'}.`,
+          `Please give a reason for leaving before ${rules.end_of_day ? formatHhmm(rules.end_of_day) : 'the end of the day'}.`,
         );
       }
       if (
@@ -88,7 +88,7 @@ export function CheckOutDialog({
   const submit = () => {
     if (showReason && reason.trim().length < 3) {
       setFieldError(
-        `Please give a reason for leaving before ${rules.end_of_day ?? 'the end of the day'}.`,
+        `Please give a reason for leaving before ${rules.end_of_day ? formatHhmm(rules.end_of_day) : 'the end of the day'}.`,
       );
       return;
     }
@@ -129,7 +129,7 @@ export function CheckOutDialog({
             value={reason}
             onChange={(e) => setReason(e.target.value)}
             error={fieldError}
-            hint={`Needed before ${rules.end_of_day ?? 'the end of the day'}. Authorised administrators can read it.`}
+            hint={`Needed before ${rules.end_of_day ? formatHhmm(rules.end_of_day) : 'the end of the day'}. Authorised administrators can read it.`}
           />
         )}
         {otherError && <Alert tone="danger">{otherError}</Alert>}
