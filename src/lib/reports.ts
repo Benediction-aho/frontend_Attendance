@@ -320,3 +320,9 @@ export function hasGrace(s: Pick<SubmissionStatus, 'deadline' | 'closes_at'>): b
 }
 
 export { formatDateTime };
+
+/** UX5-11: keeps the day / week the admin came from (validated ISO date only). */
+export function backQuery(p: URLSearchParams): string {
+  const b = p.get('back') ?? '';
+  return /^\d{4}-\d{2}-\d{2}$/.test(b) ? `?date=${b}` : '';
+}

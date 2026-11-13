@@ -26,6 +26,7 @@ import {
   WeeklySummaryView,
 } from '../parts';
 import { useDateParam } from '../ReportPages';
+import { backQuery } from '../../../lib/reports';
 import {
   useAdminDaily,
   useAdminSubmission,
@@ -189,7 +190,7 @@ function DailyRowCard({ row, date }: { row: AdminDailyRow; date: string }) {
             </div>
             <div className="border-t border-ink-100 px-2 py-1">
               <Link
-                to={`/app/admin/reports/users/${row.user.id}/weekly?date=${date}&from=daily`}
+                to={`/app/admin/reports/users/${row.user.id}/weekly?date=${date}&from=daily&back=${date}`}
                 className="inline-flex min-h-11 items-center rounded-control px-3 text-sm font-medium text-primary-700 hover:bg-primary-50"
               >
                 Week summary<span className="sr-only"> of {fullName(row.user)}</span>
@@ -248,7 +249,8 @@ export function AdminWeeklyReportsPage() {
                     users={missing}
                     summaryHref={
                       full
-                        ? (u) => `/app/admin/reports/users/${u.id}/weekly?date=${d.week_start}`
+                        ? (u) =>
+                            `/app/admin/reports/users/${u.id}/weekly?date=${d.week_start}&back=${d.week_start}`
                         : undefined
                     }
                   />
@@ -287,7 +289,7 @@ export function AdminWeeklyReportsPage() {
                         <div className="-ml-3 flex w-full flex-wrap gap-1 sm:ml-0 sm:w-auto">
                           {s && (
                             <Link
-                              to={`/app/admin/reports/weekly/submissions/${s.id}`}
+                              to={`/app/admin/reports/weekly/submissions/${s.id}?back=${d.week_start}`}
                               className="inline-flex min-h-11 items-center rounded-control px-3 text-sm font-medium text-primary-700 hover:bg-primary-50"
                             >
                               Open report<span className="sr-only"> of {fullName(r.user)}</span>
@@ -295,7 +297,7 @@ export function AdminWeeklyReportsPage() {
                           )}
                           {full && (
                             <Link
-                              to={`/app/admin/reports/users/${r.user.id}/weekly?date=${d.week_start}`}
+                              to={`/app/admin/reports/users/${r.user.id}/weekly?date=${d.week_start}&back=${d.week_start}`}
                               className="inline-flex min-h-11 items-center rounded-control px-3 text-sm font-medium text-primary-700 hover:bg-primary-50"
                             >
                               Week summary<span className="sr-only"> of {fullName(r.user)}</span>
@@ -363,7 +365,8 @@ export function MissingList({
 export function AdminSubmissionPage() {
   const { id } = useParams();
   const q = useAdminSubmission(id);
-  const back = { to: '/app/admin/reports/weekly', label: 'Weekly reports' };
+  const [sp] = useSearchParams();
+  const back = { to: `/app/admin/reports/weekly${backQuery(sp)}`, label: 'Weekly reports' };
   if (q.isPending)
     return (
       <div>
@@ -440,8 +443,8 @@ export function AdminUserWeeklyPage() {
   const q = useAdminUserWeekly(id, date === today ? undefined : date);
   const back =
     params.get('from') === 'daily'
-      ? { to: '/app/admin/reports', label: 'Daily reports' }
-      : { to: '/app/admin/reports/weekly', label: 'Weekly reports' };
+      ? { to: `/app/admin/reports${backQuery(params)}`, label: 'Daily reports' }
+      : { to: `/app/admin/reports/weekly${backQuery(params)}`, label: 'Weekly reports' };
   return (
     <div className="max-w-3xl">
       <PageHeader
