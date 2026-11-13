@@ -394,4 +394,42 @@ describe('phase 5 UI/UX fixes', () => {
     fireEvent.click(screen.getByRole('button', { name: 'Show all (12)' }));
     expect(screen.getAllByRole('listitem')).toHaveLength(12);
   });
+  it('missing list: week summary link per name when allowed (UI5-13)', async () => {
+    const { MissingList } = await import('./admin/AdminReportsPages');
+    const { render } = await import('@testing-library/react');
+    const { MemoryRouter } = await import('react-router');
+    render(
+      <MemoryRouter>
+        <MissingList
+          users={[{ id: 7, first_name: 'Yaw', last_name: 'Boateng' }] as never}
+          summaryHref={(u) => `/app/admin/reports/users/${u.id}/weekly?date=2026-11-09`}
+        />
+      </MemoryRouter>,
+    );
+    expect(screen.getByRole('link', { name: /Week summary/ }).getAttribute('href')).toBe(
+      '/app/admin/reports/users/7/weekly?date=2026-11-09',
+    );
+  });
+
+  it('week summary without day rows shows an empty state, not a bare table (UI5-14)', async () => {
+    const { WeeklySummaryView } = await import('./parts');
+    const { render } = await import('@testing-library/react');
+    render(
+      <WeeklySummaryView
+        week={
+          {
+            week_start: '2026-11-09',
+            week_end: '2026-11-13',
+            days: [],
+            tasks_planned: 0,
+            tasks_done: 0,
+            clients_count: 0,
+            services: [],
+          } as never
+        }
+      />,
+    );
+    expect(screen.getByText('Nothing recorded this week.')).toBeTruthy();
+    expect(screen.queryByTestId('week-days')).toBeNull();
+  });
 });

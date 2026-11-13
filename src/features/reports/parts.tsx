@@ -153,29 +153,38 @@ export function WeeklySummaryView({ week }: { week: WeeklySummary }) {
               <Figure label="Tasks done" value={`${week.tasks_done} / ${week.tasks_planned}`} />
             </dl>
           </CardBody>
-          <Table data-testid="week-days">
-            <THead>
-              <tr>
-                <TH>Day</TH>
-                <TH className="text-right">Tasks done</TH>
-                <TH className="text-right">Clients</TH>
-              </tr>
-            </THead>
-            <TBody>
-              {week.days.map((d) => (
-                <TR key={d.work_date}>
-                  <TD>
-                    <span className="font-medium text-ink-900">{weekday(d.work_date)}</span>{' '}
-                    <span className="text-ink-500">{dayMonth(d.work_date)}</span>
-                  </TD>
-                  <TD className="text-right tabular-nums">
-                    {d.tasks_done} / {d.tasks_planned}
-                  </TD>
-                  <TD className="text-right tabular-nums">{d.clients_count}</TD>
-                </TR>
-              ))}
-            </TBody>
-          </Table>
+          {week.days.length === 0 ? (
+            <p
+              className="border-t border-ink-100 px-5 py-4 text-sm text-ink-500"
+              data-testid="week-days-empty"
+            >
+              Nothing recorded this week.
+            </p>
+          ) : (
+            <Table data-testid="week-days">
+              <THead>
+                <tr>
+                  <TH>Day</TH>
+                  <TH className="text-right">Tasks done</TH>
+                  <TH className="text-right">Clients</TH>
+                </tr>
+              </THead>
+              <TBody>
+                {week.days.map((d) => (
+                  <TR key={d.work_date}>
+                    <TD>
+                      <span className="font-medium text-ink-900">{weekday(d.work_date)}</span>{' '}
+                      <span className="text-ink-500">{dayMonth(d.work_date)}</span>
+                    </TD>
+                    <TD className="text-right tabular-nums">
+                      {d.tasks_done} / {d.tasks_planned}
+                    </TD>
+                    <TD className="text-right tabular-nums">{d.clients_count}</TD>
+                  </TR>
+                ))}
+              </TBody>
+            </Table>
+          )}
         </Card>
       </motion.div>
       <motion.div variants={fadeUp}>

@@ -109,3 +109,8 @@ All 12 phase-5 findings and the five phase 3-4 items are fixed and visually conf
 1. UI5-13: avoid listing missing employees twice.
 2. UI5-14: empty state for a week without day rows.
 3. UI5-15: confirm the per-employee summary filled state.
+
+### Fixes after re-review 2 (attendance-frontend, 2026-11-13)
+- UI5-13: **Fixed** – "Not received" is the only place missing employees appear; each name there carries its "Week summary" link (full-report viewers). The second card is now "Reports received" and lists only received/late and not-expected rows (hidden when empty). Tests: `reports.test.tsx`, e2e `reports.spec.ts` (missing list).
+- UI5-14: **Fixed** – a week without day rows shows "Nothing recorded this week." instead of a header-only table. Test: `reports.test.tsx`.
+- UI5-15: **Fixed** – app call `/admin/users/{id}/reports/weekly` and shape `{user, data: {week_start, week_end, days[], tasks_planned, tasks_done, clients_count, services, clients?}}` match the OpenAPI contract and `AdminReportController::userWeekly`. The error state came from the mocked e2e route using a wrong path (`/admin/reports/users/{id}/weekly`); mock corrected and the filled state is now asserted in e2e.

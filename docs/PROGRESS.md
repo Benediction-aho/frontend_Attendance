@@ -6,6 +6,7 @@ Updated by the agents at the end of every work session.
 **Phase 5 – Tasks, clients and reports: UI5-01..12 and UX5-01, 03..07 fixed – ready for frontend-ui-designer and frontend-ux-tester re-check** (2026-11-13).
 
 ### Phase 5 – review fixes (frontend)
+- Re-review 2 polish: UI5-13 (missing employees listed once, week summary link in "Not received"), UI5-14 (empty state for a week without day rows), UI5-15 (per-employee weekly matches the contract; e2e mock path fixed, filled state tested) – fixed.
 - UX5-01: global safe wrap (`overflow-wrap:anywhere` on body, `wrap-anywhere` instead of `break-words`/`break-all`, `min-width:0` on main/li/td/th); e2e at 360 px checks `scrollWidth <= innerWidth` on My work, daily and weekly.
 - UI5-01: rows use one quiet "Options" button (sheet with Edit / Delete) below `sm`; inline Edit + neutral Delete (red on hover/focus) from `sm`.
 - UI5-02..12 done (outline Replace once sent, "Link not available" without `file_url`, admin daily row on two lines at 360, `max-w-3xl` detail pages and 4-column figures, day without year, no repeated late line, file name wrap, shorter placeholder, no seconds above 10 min, singular "employee", aligned links).

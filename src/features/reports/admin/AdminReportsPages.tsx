@@ -214,6 +214,8 @@ export function AdminWeeklyReportsPage() {
   const missing = d
     ? (d.missing ?? d.data.filter((r) => r.expected && !r.submission).map((r) => r.user))
     : [];
+  // Missing employees are listed once, in "Not received" (UI5-13).
+  const rows = d ? d.data.filter((r) => r.submission || !r.expected) : [];
   return (
     <div>
       <PageHeader title="Reports" description="Weekly PDF reports, Monday to Friday." />
@@ -241,59 +243,72 @@ export function AdminWeeklyReportsPage() {
                   <Figure label="Received" value={`${d.received_count} of ${d.expected_count}`} />
                   <Figure label="Missing" value={missing.length} />
                 </dl>
-                {missing.length > 0 && <MissingList users={missing} />}
+                {missing.length > 0 && (
+                  <MissingList
+                    users={missing}
+                    summaryHref={
+                      full
+                        ? (u) => `/app/admin/reports/users/${u.id}/weekly?date=${d.week_start}`
+                        : undefined
+                    }
+                  />
+                )}
               </CardBody>
             </Card>
           </motion.div>
-          <motion.div variants={fadeUp}>
-            <Card>
-              <CardHeader title="Employees" />
-              <ul className="divide-y divide-ink-100" data-testid="weekly-rows">
-                {d.data.map((r) => {
-                  const s = r.submission;
-                  return (
-                    <li key={r.user.id} className="flex flex-wrap items-center gap-2 px-5 py-3">
-                      <div className="min-w-0 flex-1">
-                        <p className="font-medium wrap-anywhere text-ink-900">{fullName(r.user)}</p>
-                        <p className="text-xs wrap-anywhere text-ink-500">
-                          {s
-                            ? `Version ${s.version} · ${dayAndTime(s.submitted_at)}`
-                            : employeeDetail(r.user)}
-                        </p>
-                      </div>
-                      {s ? (
-                        <Badge tone={s.is_late ? 'warning' : 'success'}>
-                          {s.is_late ? 'Late' : 'Received'}
-                        </Badge>
-                      ) : r.expected ? (
-                        <Badge tone="danger">Missing</Badge>
-                      ) : (
-                        <Badge tone="neutral">Not expected</Badge>
-                      )}
-                      <div className="-ml-3 flex w-full flex-wrap gap-1 sm:ml-0 sm:w-auto">
-                        {s && (
-                          <Link
-                            to={`/app/admin/reports/weekly/submissions/${s.id}`}
-                            className="inline-flex min-h-11 items-center rounded-control px-3 text-sm font-medium text-primary-700 hover:bg-primary-50"
-                          >
-                            Open report<span className="sr-only"> of {fullName(r.user)}</span>
-                          </Link>
+          {rows.length > 0 && (
+            <motion.div variants={fadeUp}>
+              <Card>
+                <CardHeader title="Reports received" />
+                <ul className="divide-y divide-ink-100" data-testid="weekly-rows">
+                  {rows.map((r) => {
+                    const s = r.submission;
+                    return (
+                      <li key={r.user.id} className="flex flex-wrap items-center gap-2 px-5 py-3">
+                        <div className="min-w-0 flex-1">
+                          <p className="font-medium wrap-anywhere text-ink-900">
+                            {fullName(r.user)}
+                          </p>
+                          <p className="text-xs wrap-anywhere text-ink-500">
+                            {s
+                              ? `Version ${s.version} · ${dayAndTime(s.submitted_at)}`
+                              : employeeDetail(r.user)}
+                          </p>
+                        </div>
+                        {s ? (
+                          <Badge tone={s.is_late ? 'warning' : 'success'}>
+                            {s.is_late ? 'Late' : 'Received'}
+                          </Badge>
+                        ) : r.expected ? (
+                          <Badge tone="danger">Missing</Badge>
+                        ) : (
+                          <Badge tone="neutral">Not expected</Badge>
                         )}
-                        {full && (
-                          <Link
-                            to={`/app/admin/reports/users/${r.user.id}/weekly?date=${d.week_start}`}
-                            className="inline-flex min-h-11 items-center rounded-control px-3 text-sm font-medium text-primary-700 hover:bg-primary-50"
-                          >
-                            Week summary<span className="sr-only"> of {fullName(r.user)}</span>
-                          </Link>
-                        )}
-                      </div>
-                    </li>
-                  );
-                })}
-              </ul>
-            </Card>
-          </motion.div>
+                        <div className="-ml-3 flex w-full flex-wrap gap-1 sm:ml-0 sm:w-auto">
+                          {s && (
+                            <Link
+                              to={`/app/admin/reports/weekly/submissions/${s.id}`}
+                              className="inline-flex min-h-11 items-center rounded-control px-3 text-sm font-medium text-primary-700 hover:bg-primary-50"
+                            >
+                              Open report<span className="sr-only"> of {fullName(r.user)}</span>
+                            </Link>
+                          )}
+                          {full && (
+                            <Link
+                              to={`/app/admin/reports/users/${r.user.id}/weekly?date=${d.week_start}`}
+                              className="inline-flex min-h-11 items-center rounded-control px-3 text-sm font-medium text-primary-700 hover:bg-primary-50"
+                            >
+                              Week summary<span className="sr-only"> of {fullName(r.user)}</span>
+                            </Link>
+                          )}
+                        </div>
+                      </li>
+                    );
+                  })}
+                </ul>
+              </Card>
+            </motion.div>
+          )}
         </motion.div>
       )}
     </div>
@@ -303,7 +318,14 @@ export function AdminWeeklyReportsPage() {
 const MISSING_COLLAPSED = 10;
 
 /** Missing weekly reports: one per line with the disambiguator, collapsed after 10. */
-export function MissingList({ users }: { users: EmployeeSummary[] }) {
+export function MissingList({
+  users,
+  summaryHref,
+}: {
+  users: EmployeeSummary[];
+  /** Link to the employee's week summary (only for viewers allowed to see it). */
+  summaryHref?: (u: EmployeeSummary) => string;
+}) {
   const [all, setAll] = useState(false);
   const shown = all ? users : users.slice(0, MISSING_COLLAPSED);
   return (
@@ -311,9 +333,21 @@ export function MissingList({ users }: { users: EmployeeSummary[] }) {
       <h3 className="text-sm font-semibold text-ink-800">Not received</h3>
       <ul className="mt-1 divide-y divide-ink-100">
         {shown.map((u) => (
-          <li key={u.id} className="py-2">
-            <p className="text-sm font-medium text-ink-900">{fullName(u)}</p>
-            {employeeDetail(u) && <p className="text-xs text-ink-500">{employeeDetail(u)}</p>}
+          <li key={u.id} className="flex flex-wrap items-center gap-2 py-2">
+            <div className="min-w-0 flex-1">
+              <p className="text-sm font-medium wrap-anywhere text-ink-900">{fullName(u)}</p>
+              {employeeDetail(u) && (
+                <p className="text-xs wrap-anywhere text-ink-500">{employeeDetail(u)}</p>
+              )}
+            </div>
+            {summaryHref && (
+              <Link
+                to={summaryHref(u)}
+                className="inline-flex min-h-11 items-center rounded-control px-3 text-sm font-medium text-primary-700 hover:bg-primary-50"
+              >
+                Week summary<span className="sr-only"> of {fullName(u)}</span>
+              </Link>
+            )}
           </li>
         ))}
       </ul>

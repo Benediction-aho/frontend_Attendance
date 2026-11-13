@@ -244,17 +244,25 @@ async function mockReports(page: Page, state: MockState, rep: Rep) {
         },
       });
     }
-    if (/^\/admin\/reports\/users\/\d+\/weekly$/.test(path))
+    if (/^\/admin\/users\/\d+\/reports\/weekly$/.test(path))
       return send(200, {
         user: ama,
         data: {
           week_start: '2026-11-09',
           week_end: '2026-11-13',
-          days: [],
-          tasks_planned: 0,
-          tasks_done: 0,
-          clients_count: 0,
-          services: [],
+          days: [
+            {
+              work_date: '2026-11-09',
+              tasks_planned: 2,
+              tasks_done: 2,
+              clients_count: 1,
+              services: [],
+            },
+          ],
+          tasks_planned: 2,
+          tasks_done: 2,
+          clients_count: 1,
+          services: [{ service: 'Visa', service_key: 'visa', quantity: 1 }],
         },
       });
     return route.fallback();
@@ -362,7 +370,7 @@ test('super admin: daily details, weekly N of M with missing names, submission w
   await expect(page.getByText('Call embassy')).toBeVisible();
   await page.getByRole('link', { name: 'Weekly reports' }).click();
   await expect(page.getByText('1 of 2')).toBeVisible();
-  await expect(page.getByTestId('missing').getByText('Yaw Asante')).toBeVisible();
+  await expect(page.getByTestId('missing').getByText('Yaw Asante', { exact: true })).toBeVisible();
   await page.getByRole('link', { name: /Open report/ }).click();
   await expect(page.getByRole('heading', { name: 'Ama Mensah' })).toBeVisible();
   await expect(page.getByText('Kwame Owusu')).toBeVisible();
@@ -488,6 +496,16 @@ test('admin: missing list with job title; week summary from daily goes back to d
   await page.getByRole('button', { name: /Details/ }).click();
   await page.getByRole('link', { name: /Week summary/ }).click();
   await expect(page.getByRole('link', { name: 'Back to daily reports' })).toBeVisible();
+  // Filled state (UI5-15): the mock follows the contract path /admin/users/{id}/reports/weekly.
+  await expect(page.getByTestId('week-days')).toContainText('Mon');
+  await expect(page.getByText('2 / 2').first()).toBeVisible();
   await page.goto('/app/admin/reports/weekly');
   await expect(page.getByTestId('missing').getByText('Officer')).toBeVisible();
+  // UI5-13: a missing employee is listed once, with the week summary link in "Not received".
+  await expect(page.getByTestId('weekly-rows')).not.toContainText('Missing');
+  await page
+    .getByTestId('missing')
+    .getByRole('link', { name: /Week summary/ })
+    .click();
+  await expect(page).toHaveURL(/\/app\/admin\/reports\/users\/\d+\/weekly\?date=2026-11-09/);
 });
