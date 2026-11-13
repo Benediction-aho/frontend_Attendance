@@ -1,4 +1,5 @@
-import { useRef, useState, type ChangeEvent } from 'react';
+import { useEffect, useRef, useState, type ChangeEvent } from 'react';
+import { ApiError } from '../../lib/api';
 import { useSearchParams } from 'react-router';
 import { AnimatePresence, motion } from 'motion/react';
 import { formatTime } from '../../lib/attendance';
@@ -50,7 +51,16 @@ export function useDateParam(today: string): [string, (d: string) => void] {
   const raw = params.get('date');
   const value = raw && /^\d{4}-\d{2}-\d{2}$/.test(raw) ? raw : today;
   const set = (d: string) =>
-    setParams(d === today ? {} : { date: d }, { replace: true, preventScrollReset: true });
+    setParams(
+      (prev) => {
+        // Keep other parameters (e.g. ?from=daily for the back link).
+        const next = new URLSearchParams(prev);
+        if (d === today) next.delete('date');
+        else next.set('date', d);
+        return next;
+      },
+      { replace: true, preventScrollReset: true },
+    );
   return [value, set];
 }
 
@@ -107,7 +117,7 @@ export function DailyReportView({ report }: { report: DailyReport }) {
             <ul className="divide-y divide-ink-100" data-testid="report-tasks">
               {report.tasks.map((t) => (
                 <li key={t.id} className="flex items-start justify-between gap-3 px-5 py-2.5">
-                  <span className="min-w-0 text-sm break-words text-ink-900">{t.title}</span>
+                  <span className="min-w-0 text-sm wrap-anywhere text-ink-900">{t.title}</span>
                   {t.status === 'done' ? (
                     <Badge tone="success">
                       Done{t.completed_at ? ` ${formatTime(t.completed_at)}` : ''}
@@ -138,8 +148,8 @@ export function DailyReportView({ report }: { report: DailyReport }) {
               <TBody>
                 {report.clients.map((c) => (
                   <TR key={c.id}>
-                    <TD className="break-words">{c.name}</TD>
-                    <TD className="break-words">{c.service}</TD>
+                    <TD className="wrap-anywhere">{c.name}</TD>
+                    <TD className="wrap-anywhere">{c.service}</TD>
                     <TD className="text-right tabular-nums">{c.quantity}</TD>
                   </TR>
                 ))}
@@ -239,7 +249,25 @@ export function SubmissionCard() {
   const now = useServerNow();
   const input = useRef<HTMLInputElement>(null);
   const [file, setFile] = useState<File | null>(null);
-  const [message, setMessage] = useState<{ tone: 'danger' | 'warning'; text: string } | null>(null);
+  const [message, setMessage] = useState<{
+    tone: 'danger' | 'warning' | 'info';
+    text: string;
+  } | null>(null);
+  /** Offline when sending: resent automatically once the connection is back. */
+  const [waitingOnline, setWaitingOnline] = useState(false);
+  const sendBtn = useRef<HTMLButtonElement>(null);
+
+  useEffect(() => {
+    if (!waitingOnline) return;
+    const onOnline = () => {
+      setWaitingOnline(false);
+      setMessage({ tone: 'info', text: 'You are back online. Sending your report…' });
+      // Send the same file again (the button stays enabled while waiting).
+      setTimeout(() => sendBtn.current?.click(), 0);
+    };
+    window.addEventListener('online', onOnline);
+    return () => window.removeEventListener('online', onOnline);
+  }, [waitingOnline]);
 
   if (q.isPending) return <SkeletonRows rows={3} />;
   if (q.isError) return <LoadError what="Your weekly PDF status" retry={() => void q.refetch()} />;
@@ -264,17 +292,46 @@ export function SubmissionCard() {
 
   const send = () => {
     if (!file) return;
+    const offlineNow = typeof navigator !== 'undefined' && navigator.onLine === false;
+    if (offlineNow) {
+      setWaitingOnline(true);
+      setMessage({
+        tone: 'warning',
+        text: 'You are offline. Your report was not sent yet. It will be sent automatically when you are back online.',
+      });
+      return;
+    }
     upload.mutate(file, {
       onSuccess: (r) => {
         setFile(null);
+        setWaitingOnline(false);
         setMessage(null);
         toast.show(
-          r.data.is_late ? 'Report received. It was marked late.' : 'Report received.',
+          r.data.is_late
+            ? `Report received (version ${r.data.version}). It was marked late.`
+            : `Report received (version ${r.data.version}).`,
           'success',
         );
       },
-      onError: (err) =>
-        setMessage({ tone: 'danger', text: uploadErrorMessage(err, s.max_size_mb) }),
+      onError: (err) => {
+        if (err instanceof ApiError && err.kind === 'network') {
+          if (typeof navigator !== 'undefined' && navigator.onLine === false) {
+            setWaitingOnline(true);
+            setMessage({
+              tone: 'warning',
+              text: 'You are offline. Your report was not sent yet. It will be sent automatically when you are back online.',
+            });
+          } else {
+            setMessage({
+              tone: 'danger',
+              text: 'The connection was lost and your report may not have been sent. Check the versions below, then send it again if needed.',
+            });
+            void q.refetch();
+          }
+          return;
+        }
+        setMessage({ tone: 'danger', text: uploadErrorMessage(err, s.max_size_mb) });
+      },
     });
   };
 
@@ -288,7 +345,7 @@ export function SubmissionCard() {
         <Alert tone={state.tone} title={state.title}>
           {state.text}
         </Alert>
-        {canUpload && s.is_late_now && !s.current && state.tone !== 'danger' && (
+        {canUpload && s.is_late_now && !s.current && windowPhase(s, now) === 'open' && (
           <p className="text-sm text-ink-600">If you send it now, it will be marked late.</p>
         )}
         {canUpload && (
@@ -313,7 +370,7 @@ export function SubmissionCard() {
                   className="overflow-hidden"
                 >
                   <div className="rounded-control border border-ink-100 bg-surface-muted px-4 py-3 text-sm">
-                    <p className="font-medium break-all text-ink-900">{file.name}</p>
+                    <p className="font-medium wrap-anywhere text-ink-900">{file.name}</p>
                     <p className="text-ink-500">{formatSize(file.size)}</p>
                   </div>
                 </motion.div>
@@ -322,15 +379,19 @@ export function SubmissionCard() {
             {message && <Alert tone={message.tone}>{message.text}</Alert>}
             <div className="grid gap-2 sm:flex">
               <Button
-                variant={file ? 'outline' : 'primary'}
+                variant={file || s.current ? 'outline' : 'primary'}
                 onClick={() => input.current?.click()}
                 disabled={upload.isPending}
               >
                 {file ? 'Choose another file' : s.current ? 'Replace the PDF' : 'Choose the PDF'}
               </Button>
               {file && (
-                <Button onClick={send} loading={upload.isPending}>
-                  {s.current ? 'Send new version' : 'Send report'}
+                <Button ref={sendBtn} onClick={send} loading={upload.isPending}>
+                  {waitingOnline
+                    ? 'Waiting for connection'
+                    : s.current
+                      ? 'Send new version'
+                      : 'Send report'}
                 </Button>
               )}
             </div>

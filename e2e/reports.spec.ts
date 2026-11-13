@@ -221,6 +221,7 @@ async function mockReports(page: Page, state: MockState, rep: Rep) {
           { user: ama, expected: true, submission: version({ is_late: true }) },
           { user: yaw, expected: true, submission: null },
         ],
+        missing: [yaw],
       });
     if (path === '/admin/reports/weekly/submissions/31') {
       const canClients = state.me.role === 'super_admin';
@@ -243,6 +244,19 @@ async function mockReports(page: Page, state: MockState, rep: Rep) {
         },
       });
     }
+    if (/^\/admin\/reports\/users\/\d+\/weekly$/.test(path))
+      return send(200, {
+        user: ama,
+        data: {
+          week_start: '2026-11-09',
+          week_end: '2026-11-13',
+          days: [],
+          tasks_planned: 0,
+          tasks_done: 0,
+          clients_count: 0,
+          services: [],
+        },
+      });
     return route.fallback();
   });
 }
@@ -378,4 +392,102 @@ test('weekly-recipient admin: no daily tab, no client names when not returned', 
   await page.getByRole('link', { name: /Open report/ }).click();
   await expect(page.getByText('Visa').first()).toBeVisible();
   await expect(page.getByText('Kwame Owusu')).toHaveCount(0);
+});
+
+const LONG = 'X'.repeat(160);
+
+test('360 px: long unbroken task/client text wraps, no horizontal overflow; Options sheet on phones', async ({
+  page,
+}) => {
+  await page.setViewportSize({ width: 360, height: 740 });
+  const state = newState();
+  const rep = newRep({
+    tasks: [{ id: 1, work_date: '2026-11-12', title: LONG, status: 'planned', completed_at: null }],
+    clients: [
+      {
+        id: 1,
+        work_date: '2026-11-12',
+        name: LONG,
+        service: `https://ex.test/${LONG}`,
+        quantity: 1,
+        service_key: 'x',
+      },
+    ],
+  });
+  await mockApi(page, state);
+  await mockReports(page, state, rep);
+  await signInUi(page);
+  const noOverflow = async () =>
+    expect(await page.evaluate('document.documentElement.scrollWidth <= window.innerWidth')).toBe(
+      true,
+    );
+  await page.goto('/app/work');
+  await expect(page.getByTestId('tasks')).toBeVisible();
+  await expect(page.getByTestId('clients')).toBeVisible();
+  await noOverflow();
+  await expect(page.getByRole('button', { name: /^Delete/ })).toHaveCount(0);
+  await page.getByRole('button', { name: /Options for task/ }).click();
+  await expect(page.getByTestId('row-options')).toBeVisible();
+  await page.getByRole('button', { name: 'Delete task' }).click();
+  await expect(page.getByText('Delete this task?')).toBeVisible();
+  await expect(page.getByTestId('row-options')).toHaveCount(0);
+  await page.getByRole('button', { name: 'Cancel' }).click();
+  await page.goto('/app/reports/daily');
+  await expect(page.getByTestId('report-tasks')).toBeVisible();
+  await noOverflow();
+  await page.goto('/app/reports/weekly');
+  await expect(page.getByTestId('weekly-clients')).toBeVisible();
+  await noOverflow();
+});
+
+test('quantity 0 is refused with a clear message', async ({ page }) => {
+  const state = newState();
+  await mockApi(page, state);
+  await mockReports(page, state, newRep());
+  await signInUi(page);
+  await page.goto('/app/work');
+  await page.getByLabel('Client name').fill('Kofi');
+  await page.getByLabel(/^Service/).fill('Visa');
+  await page.getByLabel('Quantity').fill('0');
+  await page.getByRole('button', { name: 'Add client' }).click();
+  await expect(page.getByText('Quantity must be at least 1.')).toBeVisible();
+  expect(state.calls.find((c) => c.path === '/me/clients')).toBeUndefined();
+});
+
+test('offline upload: clear message, sent automatically when back online', async ({
+  page,
+  context,
+}) => {
+  const state = newState();
+  await mockApi(page, state);
+  await mockReports(page, state, newRep());
+  await signInUi(page);
+  await page.goto('/app/reports/weekly');
+  await page.getByTestId('pdf-input').setInputFiles({
+    name: 'w.pdf',
+    mimeType: 'application/pdf',
+    buffer: Buffer.from('%PDF-1.4\n'),
+  });
+  await context.setOffline(true);
+  await page.getByRole('button', { name: 'Send report' }).click();
+  await expect(page.getByText(/You are offline\. Your report was not sent yet/)).toBeVisible();
+  await context.setOffline(false);
+  await expect(page.getByText(/Report received \(version 1\)/)).toBeVisible();
+  await expect(page.getByText('Report sent')).toBeVisible();
+});
+
+test('admin: missing list with job title; week summary from daily goes back to daily', async ({
+  page,
+}) => {
+  const state = newState(SUPER);
+  await mockApi(page, state);
+  await mockReports(page, state, newRep());
+  await signInUi(page, 'kofi@assistance.test');
+  await page.goto('/app/admin/reports');
+  await expect(page.getByText(/1 of 1 employee recorded/)).toBeVisible();
+  await page.getByRole('button', { name: /Details/ }).click();
+  await page.getByRole('link', { name: /Week summary/ }).click();
+  await expect(page.getByRole('link', { name: 'Back to daily reports' })).toBeVisible();
+  await page.goto('/app/admin/reports/weekly');
+  await expect(page.getByTestId('missing').getByText('Officer')).toBeVisible();
 });

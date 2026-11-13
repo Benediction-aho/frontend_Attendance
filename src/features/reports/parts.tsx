@@ -100,7 +100,7 @@ export function ServicesList({ services, empty }: { services: ServiceTotal[]; em
     <ul className="divide-y divide-ink-100" data-testid="services">
       {services.map((s) => (
         <li key={s.service_key} className="flex items-center justify-between gap-3 py-2 text-sm">
-          <span className="min-w-0 break-words text-ink-800">{s.service}</span>
+          <span className="min-w-0 wrap-anywhere text-ink-800">{s.service}</span>
           <span className="shrink-0 font-semibold text-ink-900 tabular-nums">{s.quantity}</span>
         </li>
       ))}
@@ -116,8 +116,8 @@ export function WeeklyClientsList({ clients }: { clients: WeeklyClient[] }) {
       {clients.map((c, i) => (
         <li key={`${c.work_date}-${i}`} className="flex items-start justify-between gap-3 py-2.5">
           <div className="min-w-0">
-            <p className="break-words text-sm font-medium text-ink-900">{c.name}</p>
-            <p className="break-words text-xs text-ink-500">
+            <p className="wrap-anywhere text-sm font-medium text-ink-900">{c.name}</p>
+            <p className="wrap-anywhere text-xs text-ink-500">
               {c.service} · {formatDayEnGb(c.work_date)}
             </p>
           </div>
@@ -132,6 +132,13 @@ export function WeeklyClientsList({ clients }: { clients: WeeklyClient[] }) {
 
 const weekdayFmt = new Intl.DateTimeFormat('en-GB', { weekday: 'short', timeZone: 'UTC' });
 const weekday = (iso: string) => weekdayFmt.format(new Date(`${iso}T00:00:00Z`));
+const dayMonthFmt = new Intl.DateTimeFormat('en-GB', {
+  day: 'numeric',
+  month: 'short',
+  timeZone: 'UTC',
+});
+/** "9 Nov" – the week range above already gives the year. */
+const dayMonth = (iso: string) => dayMonthFmt.format(new Date(`${iso}T00:00:00Z`));
 
 /** Monday → Friday summary with totals, services and (when returned) the clients recap. */
 export function WeeklySummaryView({ week }: { week: WeeklySummary }) {
@@ -141,7 +148,7 @@ export function WeeklySummaryView({ week }: { week: WeeklySummary }) {
         <Card>
           <CardHeader title="Week" description={weekLabel(week.week_start, week.week_end)} />
           <CardBody>
-            <dl className="grid grid-cols-2 gap-3 sm:grid-cols-3">
+            <dl className="grid grid-cols-2 gap-3 sm:grid-cols-4">
               <Figure label="Clients" value={week.clients_count} />
               <Figure label="Tasks done" value={`${week.tasks_done} / ${week.tasks_planned}`} />
             </dl>
@@ -159,7 +166,7 @@ export function WeeklySummaryView({ week }: { week: WeeklySummary }) {
                 <TR key={d.work_date}>
                   <TD>
                     <span className="font-medium text-ink-900">{weekday(d.work_date)}</span>{' '}
-                    <span className="text-ink-500">{formatDayEnGb(d.work_date)}</span>
+                    <span className="text-ink-500">{dayMonth(d.work_date)}</span>
                   </TD>
                   <TD className="text-right tabular-nums">
                     {d.tasks_done} / {d.tasks_planned}
@@ -207,14 +214,18 @@ export function VersionRow({ v }: { v: WeeklySubmission }) {
           {formatDateTime(v.submitted_at)} · {formatSize(v.size_bytes)}
         </p>
       </div>
-      <a
-        href={v.file_url}
-        target="_blank"
-        rel="noopener noreferrer"
-        className="inline-flex min-h-11 items-center rounded-control px-3 text-sm font-medium text-primary-700 hover:bg-primary-50"
-      >
-        Open PDF<span className="sr-only">, version {v.version}</span>
-      </a>
+      {v.file_url ? (
+        <a
+          href={v.file_url}
+          target="_blank"
+          rel="noopener noreferrer"
+          className="inline-flex min-h-11 items-center rounded-control px-3 text-sm font-medium text-primary-700 hover:bg-primary-50"
+        >
+          Open PDF<span className="sr-only">, version {v.version}</span>
+        </a>
+      ) : (
+        <span className="px-3 text-xs text-ink-500">Link not available</span>
+      )}
     </li>
   );
 }

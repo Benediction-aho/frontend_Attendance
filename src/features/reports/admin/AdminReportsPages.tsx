@@ -1,11 +1,11 @@
 import { useState } from 'react';
-import { Link, Navigate, useParams } from 'react-router';
+import { Link, Navigate, useParams, useSearchParams } from 'react-router';
 import { AnimatePresence, motion } from 'motion/react';
 import { useMe } from '../../auth/useSession';
 import { canViewReports } from '../../../lib/permissions';
 import { employeeDetail, formatTime } from '../../../lib/attendance';
 import { formatDayEnGb } from '../../../lib/format';
-import type { AdminDailyRow } from '../../../lib/reports';
+import type { AdminDailyRow, EmployeeSummary } from '../../../lib/reports';
 import { dayAndTime, fullName, weekLabel } from '../../../lib/reports';
 import { Alert } from '../../../ui/Alert';
 import { Badge } from '../../../ui/Badge';
@@ -82,11 +82,12 @@ export function AdminDailyReportsPage() {
           className="flex flex-col gap-3"
         >
           <motion.p variants={fadeUp} className="text-sm text-ink-600">
-            {withData} of {rows.length} employees recorded work on {formatDayEnGb(date)}.
+            {withData} of {rows.length} {rows.length === 1 ? 'employee' : 'employees'} recorded work
+            on {formatDayEnGb(date)}.
           </motion.p>
           {rows.map((r) => (
             <motion.div key={r.user.id} variants={fadeUp}>
-              <DailyRowCard row={r} />
+              <DailyRowCard row={r} date={date} />
             </motion.div>
           ))}
         </motion.div>
@@ -95,17 +96,17 @@ export function AdminDailyReportsPage() {
   );
 }
 
-function DailyRowCard({ row }: { row: AdminDailyRow }) {
+function DailyRowCard({ row, date }: { row: AdminDailyRow; date: string }) {
   const [open, setOpen] = useState(false);
   const hasDetail = Boolean(row.tasks?.length || row.clients?.length || row.services.length);
   return (
     <Card data-testid="daily-row">
-      <div className="flex flex-wrap items-center gap-3 px-5 py-3">
-        <div className="min-w-0 flex-1">
-          <p className="font-medium break-words text-ink-900">{fullName(row.user)}</p>
-          <p className="text-xs break-words text-ink-500">{employeeDetail(row.user)}</p>
+      <div className="grid grid-cols-[minmax(0,1fr)_auto] items-center gap-x-3 gap-y-1 px-5 py-3 sm:grid-cols-[minmax(0,1fr)_auto_auto]">
+        <div className="min-w-0">
+          <p className="font-medium text-ink-900">{fullName(row.user)}</p>
+          <p className="text-xs text-ink-500">{employeeDetail(row.user)}</p>
         </div>
-        <dl className="flex gap-4 text-sm">
+        <dl className="order-3 col-span-2 flex gap-6 text-sm sm:order-2 sm:col-span-1">
           <div>
             <dt className="text-xs text-ink-500">Tasks done</dt>
             <dd className="font-semibold tabular-nums">
@@ -117,11 +118,19 @@ function DailyRowCard({ row }: { row: AdminDailyRow }) {
             <dd className="font-semibold tabular-nums">{row.clients_count}</dd>
           </div>
         </dl>
-        {hasDetail && (
-          <Button variant="ghost" size="sm" aria-expanded={open} onClick={() => setOpen((o) => !o)}>
+        {hasDetail ? (
+          <Button
+            variant="ghost"
+            size="sm"
+            className="order-2 sm:order-3"
+            aria-expanded={open}
+            onClick={() => setOpen((o) => !o)}
+          >
             {open ? 'Hide' : 'Details'}
             <span className="sr-only"> for {fullName(row.user)}</span>
           </Button>
+        ) : (
+          <span className="order-2 sm:order-3" />
         )}
       </div>
       <AnimatePresence initial={false}>
@@ -143,7 +152,7 @@ function DailyRowCard({ row }: { row: AdminDailyRow }) {
                     <ul className="divide-y divide-ink-100">
                       {row.tasks.map((t) => (
                         <li key={t.id} className="flex justify-between gap-3 py-2 text-sm">
-                          <span className="min-w-0 break-words">{t.title}</span>
+                          <span className="min-w-0 wrap-anywhere">{t.title}</span>
                           {t.status === 'done' ? (
                             <Badge tone="success">
                               Done{t.completed_at ? ` ${formatTime(t.completed_at)}` : ''}
@@ -166,7 +175,7 @@ function DailyRowCard({ row }: { row: AdminDailyRow }) {
                     <ul className="divide-y divide-ink-100" data-testid="admin-clients">
                       {row.clients.map((c) => (
                         <li key={c.id} className="flex justify-between gap-3 py-2 text-sm">
-                          <span className="min-w-0 break-words">
+                          <span className="min-w-0 wrap-anywhere">
                             {c.name}
                             <span className="block text-xs text-ink-500">{c.service}</span>
                           </span>
@@ -177,6 +186,14 @@ function DailyRowCard({ row }: { row: AdminDailyRow }) {
                   </>
                 )}
               </section>
+            </div>
+            <div className="border-t border-ink-100 px-2 py-1">
+              <Link
+                to={`/app/admin/reports/users/${row.user.id}/weekly?date=${date}&from=daily`}
+                className="inline-flex min-h-11 items-center rounded-control px-3 text-sm font-medium text-primary-700 hover:bg-primary-50"
+              >
+                Week summary<span className="sr-only"> of {fullName(row.user)}</span>
+              </Link>
             </div>
           </motion.div>
         )}
@@ -194,7 +211,9 @@ export function AdminWeeklyReportsPage() {
   const q = useAdminWeekly(date === today ? undefined : date);
   const full = canViewReports(me);
   const d = q.data;
-  const missing = d ? d.data.filter((r) => r.expected && !r.submission) : [];
+  const missing = d
+    ? (d.missing ?? d.data.filter((r) => r.expected && !r.submission).map((r) => r.user))
+    : [];
   return (
     <div>
       <PageHeader title="Reports" description="Weekly PDF reports, Monday to Friday." />
@@ -222,14 +241,7 @@ export function AdminWeeklyReportsPage() {
                   <Figure label="Received" value={`${d.received_count} of ${d.expected_count}`} />
                   <Figure label="Missing" value={missing.length} />
                 </dl>
-                {missing.length > 0 && (
-                  <div data-testid="missing">
-                    <h3 className="text-sm font-semibold text-ink-800">Not received</h3>
-                    <p className="text-sm break-words text-ink-700">
-                      {missing.map((r) => fullName(r.user)).join(', ')}
-                    </p>
-                  </div>
-                )}
+                {missing.length > 0 && <MissingList users={missing} />}
               </CardBody>
             </Card>
           </motion.div>
@@ -242,8 +254,8 @@ export function AdminWeeklyReportsPage() {
                   return (
                     <li key={r.user.id} className="flex flex-wrap items-center gap-2 px-5 py-3">
                       <div className="min-w-0 flex-1">
-                        <p className="font-medium break-words text-ink-900">{fullName(r.user)}</p>
-                        <p className="text-xs break-words text-ink-500">
+                        <p className="font-medium wrap-anywhere text-ink-900">{fullName(r.user)}</p>
+                        <p className="text-xs wrap-anywhere text-ink-500">
                           {s
                             ? `Version ${s.version} · ${dayAndTime(s.submitted_at)}`
                             : employeeDetail(r.user)}
@@ -258,7 +270,7 @@ export function AdminWeeklyReportsPage() {
                       ) : (
                         <Badge tone="neutral">Not expected</Badge>
                       )}
-                      <div className="flex w-full flex-wrap gap-1 sm:w-auto">
+                      <div className="-ml-3 flex w-full flex-wrap gap-1 sm:ml-0 sm:w-auto">
                         {s && (
                           <Link
                             to={`/app/admin/reports/weekly/submissions/${s.id}`}
@@ -283,6 +295,32 @@ export function AdminWeeklyReportsPage() {
             </Card>
           </motion.div>
         </motion.div>
+      )}
+    </div>
+  );
+}
+
+const MISSING_COLLAPSED = 10;
+
+/** Missing weekly reports: one per line with the disambiguator, collapsed after 10. */
+export function MissingList({ users }: { users: EmployeeSummary[] }) {
+  const [all, setAll] = useState(false);
+  const shown = all ? users : users.slice(0, MISSING_COLLAPSED);
+  return (
+    <div data-testid="missing">
+      <h3 className="text-sm font-semibold text-ink-800">Not received</h3>
+      <ul className="mt-1 divide-y divide-ink-100">
+        {shown.map((u) => (
+          <li key={u.id} className="py-2">
+            <p className="text-sm font-medium text-ink-900">{fullName(u)}</p>
+            {employeeDetail(u) && <p className="text-xs text-ink-500">{employeeDetail(u)}</p>}
+          </li>
+        ))}
+      </ul>
+      {users.length > MISSING_COLLAPSED && (
+        <Button variant="ghost" size="sm" className="-ml-3" onClick={() => setAll((a) => !a)}>
+          {all ? 'Show fewer' : `Show all (${users.length})`}
+        </Button>
       )}
     </div>
   );
@@ -318,7 +356,7 @@ export function AdminSubmissionPage() {
         variants={stagger}
         initial="hidden"
         animate="show"
-        className="flex flex-col gap-4"
+        className="flex max-w-3xl flex-col gap-4"
       >
         <motion.div variants={fadeUp}>
           <Card>
@@ -339,7 +377,7 @@ export function AdminSubmissionPage() {
           <Card>
             <CardHeader title="Week" />
             <CardBody className="flex flex-col gap-4">
-              <dl className="grid grid-cols-2 gap-3">
+              <dl className="grid grid-cols-2 gap-3 sm:grid-cols-4">
                 <Figure label="Clients" value={s.week.clients_count} />
               </dl>
               <section>
@@ -362,15 +400,20 @@ export function AdminSubmissionPage() {
 
 export function AdminUserWeeklyPage() {
   const { id } = useParams();
+  const [params] = useSearchParams();
   const today = useServerToday();
   const [date, setDate] = useDateParam(today);
   const q = useAdminUserWeekly(id, date === today ? undefined : date);
+  const back =
+    params.get('from') === 'daily'
+      ? { to: '/app/admin/reports', label: 'Daily reports' }
+      : { to: '/app/admin/reports/weekly', label: 'Weekly reports' };
   return (
-    <div>
+    <div className="max-w-3xl">
       <PageHeader
         title={q.data ? fullName(q.data.user) : 'Weekly summary'}
         description={q.data ? employeeDetail(q.data.user) || 'Weekly summary' : undefined}
-        back={{ to: '/app/admin/reports/weekly', label: 'Weekly reports' }}
+        back={back}
       />
       <DateNav label="Week of" value={date} today={today} step={7} unit="week" onChange={setDate} />
       {q.isPending ? (

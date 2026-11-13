@@ -158,6 +158,8 @@ export function useUploadReport() {
       fd.append('file', file);
       return api.post<{ data: WeeklySubmission }>('/me/reports/weekly/submission', fd);
     },
+    // Fail at once when offline (no silently paused mutation): the page explains and retries.
+    networkMode: 'always',
     onSuccess: () => void qc.invalidateQueries({ queryKey: SUBMISSION_KEY }),
   });
 }

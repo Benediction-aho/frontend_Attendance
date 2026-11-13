@@ -128,7 +128,7 @@ describe('report helpers', () => {
       /Opens in 1 h 00 min/,
     );
     expect(submissionState(status(), new Date('2026-11-13T16:30:00Z')).text).toMatch(
-      /Closes in 30 min 00 s/,
+      /Closes in 30 min\./,
     );
     expect(submissionState(status(), new Date('2026-11-13T17:30:00Z')).title).toBe(
       'Deadline passed',
@@ -317,5 +317,81 @@ describe('weekly PDF upload', () => {
     expect(screen.getByText('Late')).toBeTruthy();
     expect(screen.getByRole('link', { name: /Open PDF/ }).getAttribute('href')).toBe(v.file_url);
     expect(screen.getByRole('button', { name: 'Replace the PDF' })).toBeTruthy();
+  });
+});
+
+describe('phase 5 UI/UX fixes', () => {
+  it('quantity: min 1 on the client, server bound and messages in plain English', async () => {
+    const { quantityError, clientFieldErrors } = await import('../../lib/reports');
+    expect(quantityError('0')).toBe('Quantity must be at least 1.');
+    expect(quantityError('1.5')).toBe('Enter a whole number, 1 or more.');
+    expect(quantityError('5000', 999)).toBe('Enter a number from 1 to 999.');
+    expect(quantityError('3')).toBeUndefined();
+    const raw = err(422, {
+      message: 'x',
+      errors: { quantity: ['The quantity field must not be greater than 999.'] },
+    });
+    expect(clientFieldErrors(raw)).toEqual({ quantity: 'Enter a number from 1 to 999.', max: 999 });
+    const plain = err(422, {
+      message: 'x',
+      errors: {
+        quantity: ['Quantity must be between 1 and 999.'],
+        name: ['Enter the client name.'],
+      },
+    });
+    expect(clientFieldErrors(plain)).toEqual({
+      quantity: 'Quantity must be between 1 and 999.',
+      max: 999,
+      name: 'Enter the client name.',
+    });
+  });
+
+  it('countdown hides seconds above 10 minutes', () => {
+    const now = new Date('2026-11-13T16:00:00Z');
+    expect(countdown('2026-11-13T16:49:59Z', now)).toBe('49 min');
+    expect(countdown('2026-11-13T16:05:30Z', now)).toBe('5 min 30 s');
+  });
+
+  it('sent report: Replace is outline, no dead link without file_url', async () => {
+    const { VersionRow } = await import('./parts');
+    const { render } = await import('@testing-library/react');
+    render(
+      <ul>
+        <VersionRow
+          v={{
+            id: 1,
+            week_start: '2026-11-09',
+            window_date: '2026-11-13',
+            version: 1,
+            is_current: true,
+            file_name: 'a.pdf',
+            size_bytes: 10,
+            submitted_at: '2026-11-13T16:00:00Z',
+            is_late: false,
+            forwarded_at: null,
+            file_url: null,
+          }}
+        />
+      </ul>,
+    );
+    expect(screen.getByText('Link not available')).toBeTruthy();
+    expect(screen.queryByRole('link', { name: /Open PDF/ })).toBeNull();
+  });
+
+  it('missing list: one per line with job title, collapsed after 10', async () => {
+    const { MissingList } = await import('./admin/AdminReportsPages');
+    const { render } = await import('@testing-library/react');
+    const users = Array.from({ length: 12 }, (_, i) => ({
+      id: i + 1,
+      first_name: 'Ama',
+      last_name: `Mensah${i}`,
+      job_title: 'Officer',
+      email: i === 0 ? 'ama@x.test' : undefined,
+    }));
+    render(<MissingList users={users as never} />);
+    expect(screen.getAllByRole('listitem')).toHaveLength(10);
+    expect(screen.getByText('Officer · ama@x.test')).toBeTruthy();
+    fireEvent.click(screen.getByRole('button', { name: 'Show all (12)' }));
+    expect(screen.getAllByRole('listitem')).toHaveLength(12);
   });
 });

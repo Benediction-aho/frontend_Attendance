@@ -107,19 +107,19 @@ export function AttendanceDetails({ a }: { a: Attendance }) {
         <div className="col-span-2">
           <dt className="text-ink-500">Reason</dt>
           {/* Free text is always rendered as plain text. */}
-          <dd className="break-words whitespace-pre-line text-ink-800">{a.reason}</dd>
+          <dd className="wrap-anywhere whitespace-pre-line text-ink-800">{a.reason}</dd>
         </div>
       )}
       {a.early_leave_reason && (
         <div className="col-span-2">
           <dt className="text-ink-500">Early check-out reason</dt>
-          <dd className="break-words whitespace-pre-line text-ink-800">{a.early_leave_reason}</dd>
+          <dd className="wrap-anywhere whitespace-pre-line text-ink-800">{a.early_leave_reason}</dd>
         </div>
       )}
       {a.mission_note && (
         <div className="col-span-2">
           <dt className="text-ink-500">Administrator note</dt>
-          <dd className="break-words whitespace-pre-line text-ink-800">{a.mission_note}</dd>
+          <dd className="wrap-anywhere whitespace-pre-line text-ink-800">{a.mission_note}</dd>
         </div>
       )}
     </dl>
