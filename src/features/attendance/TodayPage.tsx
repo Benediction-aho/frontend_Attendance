@@ -5,7 +5,7 @@ import { useQueryClient } from '@tanstack/react-query';
 import { Link } from 'react-router';
 import { formatDistance, type Today } from '../../lib/attendance';
 import { Badge } from '../../ui/Badge';
-import { formatDate } from '../../lib/format';
+import { formatLongDay } from '../../lib/format';
 import { Alert } from '../../ui/Alert';
 import { Button } from '../../ui/Button';
 import { Card, CardBody } from '../../ui/Card';
@@ -449,7 +449,7 @@ export function TodayPage() {
         <h1 className="text-sm font-medium text-ink-500">Hello {me?.first_name}</h1>
         <ServerClock />
         <p className="mt-1 flex flex-wrap items-center gap-2 text-sm text-ink-600">
-          {t ? formatDate(t.work_date) : <Skeleton className="h-4 w-32" />}
+          {t ? formatLongDay(t.work_date) : <Skeleton className="h-4 w-32" />}
           {t &&
             (missionDay ? (
               <Badge tone="primary">Mission</Badge>

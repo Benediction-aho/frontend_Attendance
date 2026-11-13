@@ -11,9 +11,10 @@ import { fadeUp, stagger } from '../../ui/motion';
 import { useMe } from '../auth/useSession';
 import { useUnreadCount } from '../notifications/useNotifications';
 import { Figures, Section, type FigureItem } from './parts';
-import { periodLabel, ratio } from './logic';
+import { periodLabel, ratio, todaySecondary } from './logic';
+import { cx } from '../../ui/cx';
 import { useAdminDashboard } from './useDashboard';
-import { formatDate, formatDateTime } from '../../lib/format';
+import { formatDate, formatDateTime, formatLongDay } from '../../lib/format';
 import type { AdminDashboard } from './types';
 
 function greeting(hour: number) {
@@ -36,9 +37,12 @@ const accraDate = (d: Date) =>
     day: 'numeric',
     month: 'long',
     timeZone: 'Africa/Accra',
-  }).format(d);
+  })
+    .format(d)
+    .replace(',', '');
 
 function TodaySection({ t }: { t: NonNullable<AdminDashboard['today']> }) {
+  // UI6-02: three key figures; the rest on one quiet secondary line.
   const items: FigureItem[] = [
     {
       label: 'Checked in',
@@ -48,57 +52,69 @@ function TodaySection({ t }: { t: NonNullable<AdminDashboard['today']> }) {
     },
     { label: 'Not checked in yet', value: t.missing, attention: (t.missing ?? 0) > 0 },
     { label: 'Late', value: t.late, attention: (t.late ?? 0) > 0 },
-    { label: 'On leave', value: t.on_leave },
-    { label: 'Remote', value: t.remote },
-    { label: 'Day off', value: t.not_working },
-    {
-      label: 'Missions to approve',
-      value: t.missions_pending,
-      to: t.missions_pending ? '/app/admin/attendance/missions' : undefined,
-      attention: (t.missions_pending ?? 0) > 0,
-    },
-    {
-      label: 'Refused check-ins',
-      value: t.refused_attempts,
-      to: t.refused_attempts ? '/app/admin/attendance/attempts' : undefined,
-    },
   ];
+  const secondary = todaySecondary(t);
+  const extra = t.checked_in_not_expected ?? 0;
+  const refused = t.refused_attempts ?? 0;
   return (
     <Section
       title="Today"
-      action={{ to: '/app/admin/attendance', label: "Open today's attendance" }}
+      action={{ to: '/app/admin/attendance', label: "Open today's attendance", short: 'Open' }}
       testId="admin-today"
     >
-      <Figures items={items} />
+      <Figures cols={3} items={items} />
+      {(secondary || extra > 0 || refused > 0) && (
+        <div className="flex flex-col gap-1 border-t border-ink-100 px-5 py-3 text-sm text-ink-600">
+          {secondary && <p data-testid="today-secondary">{secondary}</p>}
+          {extra > 0 && (
+            <p data-testid="today-unexpected">{extra} checked in on a day they were not expected</p>
+          )}
+          {refused > 0 && (
+            <Link
+              to="/app/admin/attendance/attempts"
+              className="inline-flex min-h-11 items-center self-start font-semibold text-primary-700 hover:underline"
+            >
+              {refused} refused check-in{refused === 1 ? '' : 's'}
+            </Link>
+          )}
+        </div>
+      )}
     </Section>
   );
 }
 
 function WeekSection({ w }: { w: NonNullable<AdminDashboard['week']> }) {
   const value = ratio(w.weekly_reports_received, w.weekly_reports_expected);
+  // UI6-04 / UX6-09: the closing time is secondary text, never a big wrapping figure.
+  const soon =
+    !w.closed &&
+    w.closes_at !== undefined &&
+    new Date(w.closes_at).getTime() - serverNow().getTime() < 24 * 3600_000;
   return (
     <Section
       title="Weekly reports"
-      description={`Week of ${formatDate(w.week_start)}`}
+      description={
+        w.week_end ? periodLabel(w.week_start, w.week_end) : `Week of ${formatDate(w.week_start)}`
+      }
       action={{
         to: `/app/admin/reports/weekly?date=${w.week_start}`,
         label: 'Open weekly reports',
+        short: 'Reports',
       }}
       testId="admin-week"
     >
-      <Figures
-        cols={2}
-        items={[
-          { label: 'Received', value, testId: 'fig-weekly' },
-          {
-            label: w.closed ? 'Closed' : 'Closes',
-            value:
-              w.closes_at === undefined ? undefined : (
-                <span className="text-base">{formatDateTime(w.closes_at)}</span>
-              ),
-          },
-        ]}
-      />
+      <Figures cols={1} items={[{ label: 'Received', value, testId: 'fig-weekly' }]} />
+      {w.closes_at !== undefined && (
+        <p
+          className={cx(
+            'border-t border-ink-100 px-5 py-3 text-sm',
+            soon ? 'font-medium text-secondary-700' : 'text-ink-600',
+          )}
+          data-testid="week-closes"
+        >
+          {w.closed ? 'Closed' : 'Closes'} {formatDateTime(w.closes_at)}
+        </p>
+      )}
     </Section>
   );
 }
@@ -124,12 +140,19 @@ function MonthSection({ m }: { m: NonNullable<AdminDashboard['month']> }) {
           {top.length === 0 ? (
             <p className="mt-1 text-sm text-ink-600">No service recorded yet.</p>
           ) : (
-            <table className="mt-1 w-full text-sm" data-testid="services-top">
+            <table className="mt-1 w-full table-fixed text-sm" data-testid="services-top">
+              <colgroup>
+                <col />
+                <col className="w-16" />
+              </colgroup>
               <tbody className="divide-y divide-ink-100">
                 {top.map((s) => (
                   <tr key={s.service_key}>
-                    <td className="py-2 pr-3 wrap-anywhere text-ink-800">{s.service}</td>
-                    <td className="py-2 text-right font-semibold tabular-nums text-ink-900">
+                    <td className="py-2 pr-3 break-words text-ink-800">{s.service}</td>
+                    <td
+                      className="py-2 pl-3 text-right align-top font-semibold whitespace-nowrap [overflow-wrap:normal] tabular-nums text-ink-900"
+                      data-testid="service-qty"
+                    >
                       {s.quantity}
                     </td>
                   </tr>
@@ -148,31 +171,53 @@ function PendingSection({ p }: { p: NonNullable<AdminDashboard['pending']> }) {
     { n: p.sign_up_requests, label: 'Sign-up requests', to: '/app/admin/requests' },
     { n: p.faceid_devices, label: 'Face ID devices', to: '/app/admin/faceid-devices' },
     { n: p.missions, label: 'Mission check-ins', to: '/app/admin/attendance/missions' },
-  ].filter((r): r is { n: number; label: string; to: string } => r.n !== undefined);
+  ]
+    .filter((r): r is { n: number; label: string; to: string } => r.n !== undefined)
+    // UI6-05: what needs action first, biggest first (stable otherwise).
+    .sort((a, b) => b.n - a.n);
   if (rows.length === 0) return null;
   const total = rows.reduce((a, r) => a + r.n, 0);
+  const first = rows[0];
+  if (total === 0 && first) {
+    // UI6-06: one message, one quiet link, no "None" repeated.
+    return (
+      <Section title="Waiting for you" testId="admin-pending">
+        <div className="flex flex-wrap items-center justify-between gap-x-3 px-5 py-3">
+          <p className="text-sm text-ink-600">Nothing to review.</p>
+          <Link
+            to={first.to}
+            className="inline-flex min-h-11 items-center text-sm text-primary-700 hover:underline"
+          >
+            See {first.label.toLowerCase()}
+          </Link>
+        </div>
+      </Section>
+    );
+  }
   return (
-    <Section
-      title="Waiting for you"
-      description={total === 0 ? 'Nothing to review.' : undefined}
-      testId="admin-pending"
-    >
+    <Section title="Waiting for you" testId="admin-pending">
       <ul className="divide-y divide-ink-100">
         {rows.map((r) => (
           <li key={r.label}>
             <Link
               to={r.to}
-              className="flex min-h-12 items-center justify-between gap-3 px-5 py-3 transition-colors hover:bg-surface-muted focus-visible:outline-offset-[-2px]"
+              className="flex min-h-12 items-center justify-between gap-3 px-5 py-3 transition-colors hover:bg-surface-muted active:bg-surface-muted focus-visible:outline-2 focus-visible:outline-offset-[-2px] focus-visible:outline-primary-600"
             >
-              <span className="text-sm text-ink-800">{r.label}</span>
+              <span className="min-w-0 text-sm text-ink-800">
+                {r.label}
+                {r.n > 0 && (
+                  <span className="ml-2 rounded-full bg-secondary-50 px-2 py-0.5 text-xs font-semibold whitespace-nowrap tabular-nums text-secondary-700">
+                    {r.n}
+                  </span>
+                )}
+              </span>
               <span
-                className={
-                  r.n > 0
-                    ? 'rounded-full bg-secondary-50 px-2.5 py-0.5 text-sm font-semibold tabular-nums text-secondary-700'
-                    : 'text-sm tabular-nums text-ink-500'
-                }
+                className={cx(
+                  'shrink-0 text-sm whitespace-nowrap',
+                  r.n > 0 ? 'font-semibold text-primary-700' : 'text-ink-500',
+                )}
               >
-                {r.n > 0 ? `${r.n} to review` : 'None'}
+                {r.n > 0 ? 'Review' : 'None'}
               </span>
             </Link>
           </li>
@@ -195,7 +240,7 @@ export function DashboardPage() {
     <>
       <PageHeader
         title={`${greeting(accraHour(now))}, ${me?.first_name ?? ''}`}
-        description={accraDate(now)}
+        description={d?.work_date ? formatLongDay(d.work_date) : accraDate(now)}
       />
       {q.isPending ? (
         <div className="grid gap-4">

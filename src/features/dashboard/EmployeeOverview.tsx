@@ -95,9 +95,9 @@ export function EmployeeOverview() {
           <Figures
             cols={3}
             items={[
-              { label: 'Days present', value: month.presence_days },
-              { label: 'Late arrivals', value: month.late_count, attention: month.late_count > 0 },
-              { label: 'Clients served', value: month.clients_count },
+              { label: 'Present', value: month.presence_days },
+              { label: 'Late', value: month.late_count, attention: month.late_count > 0 },
+              { label: 'Clients', value: month.clients_count },
             ]}
           />
         </Section>

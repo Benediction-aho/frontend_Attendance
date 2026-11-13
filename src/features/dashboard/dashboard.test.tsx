@@ -152,3 +152,95 @@ describe('Admin DashboardPage', () => {
     expect(pending).not.toHaveTextContent('Face ID');
   });
 });
+
+describe('Phase 6 review fixes', () => {
+  it('words the secondary line with distinct day off / holiday counts (UX6-03)', async () => {
+    const { todaySecondary } = await import('./logic');
+    expect(todaySecondary({ on_leave: 1, remote: 2, day_off: 4, holiday: 0, not_working: 5 })).toBe(
+      '1 on leave · 2 remote · 4 day off',
+    );
+    expect(todaySecondary({ not_working: 3 })).toBe('3 not working');
+    expect(todaySecondary({ late: 1 })).toBeUndefined();
+  });
+  it('shows 3 key figures, the unexpected check-ins, nowrap quantities and sorted pending rows', async () => {
+    stubApi({
+      '/me': { data: { id: 1, first_name: 'Kofi', role: 'super_admin', permissions: [] } },
+      '/notifications/unread-count': { count: 0 },
+      '/admin/dashboard': {
+        data: {
+          server_time: '2026-11-13T09:00:00Z',
+          work_date: '2026-11-13',
+          today: {
+            expected: 10,
+            checked_in: 7,
+            missing: 3,
+            late: 1,
+            on_leave: 1,
+            remote: 0,
+            day_off: 2,
+            holiday: 0,
+            not_working: 3,
+            checked_in_not_expected: 1,
+            missions_pending: 2,
+          },
+          week: {
+            week_start: '2026-11-09',
+            week_end: '2026-11-13',
+            closes_at: '2026-11-14T08:00:00Z',
+            weekly_reports_received: 5,
+            weekly_reports_expected: 12,
+          },
+          month: {
+            period_start: '2026-10-26',
+            period_end: '2026-11-25',
+            services_top: [
+              { service: 'A very long service name '.repeat(5), service_key: 'x', quantity: 15 },
+            ],
+          },
+          pending: { sign_up_requests: 0, faceid_devices: 3, missions: 2 },
+        },
+      },
+    });
+    renderAt(<DashboardPage />, '/app');
+    const today = await screen.findByTestId('admin-today');
+    expect(today).not.toHaveTextContent('Missions to approve');
+    expect(screen.getByTestId('today-secondary')).toHaveTextContent('1 on leave · 2 day off');
+    expect(screen.getByTestId('today-unexpected')).toHaveTextContent('1 checked in');
+    expect(screen.getByTestId('admin-week')).toHaveTextContent('9 Nov – 13 Nov 2026');
+    expect(screen.getByTestId('week-closes')).toHaveTextContent(/^Closes /);
+    expect(screen.getByTestId('service-qty').className).toContain('whitespace-nowrap');
+    const links = within(screen.getByTestId('admin-pending')).getAllByRole('link');
+    expect(links.map((l) => l.textContent)).toEqual([
+      'Face ID devices3Review',
+      'Mission check-ins2Review',
+      'Sign-up requestsNone',
+    ]);
+  });
+  it('shows a single message when nothing is pending (UI6-06)', async () => {
+    stubApi({
+      '/me': { data: { id: 1, first_name: 'Kofi', role: 'admin', permissions: [] } },
+      '/notifications/unread-count': { count: 0 },
+      '/admin/dashboard': {
+        data: {
+          server_time: '2026-11-13T09:00:00Z',
+          work_date: '2026-11-13',
+          pending: { sign_up_requests: 0 },
+        },
+      },
+    });
+    renderAt(<DashboardPage />, '/app');
+    const p = await screen.findByTestId('admin-pending');
+    expect(p).toHaveTextContent('Nothing to review.');
+    expect(p).not.toHaveTextContent('None');
+    expect(within(p).getByRole('link', { name: 'See sign-up requests' })).toBeInTheDocument();
+  });
+  it('names a CSV with the date when the server name is unreadable (UX6-05)', async () => {
+    const { fallbackExportName, exportErrorMessage: m } = await import('../../lib/logs');
+    expect(fallbackExportName(new Date('2026-11-13T06:10:20Z'))).toBe(
+      'activity_log_2026-11-13_061020.csv',
+    );
+    expect(m(new ApiError('client', 429, 'x', { retry_after_seconds: 60 }), '07:10')).toContain(
+      'available again at 07:10',
+    );
+  });
+});

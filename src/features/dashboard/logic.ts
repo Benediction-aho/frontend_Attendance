@@ -1,5 +1,5 @@
 import { formatDateTime } from '../../lib/format';
-import type { MyDashboard } from './types';
+import type { AdminDashboard, MyDashboard } from './types';
 
 /** "3 Nov – 9 Nov 2026" from two ISO days (server values). */
 export function periodLabel(start: string, end: string): string {
@@ -59,4 +59,32 @@ export function weeklyReportText(r: WR): {
 /** "4 of 5" style ratio; undefined if either side is absent from the API. */
 export function ratio(a: number | undefined, b: number | undefined): string | undefined {
   return a === undefined || b === undefined ? undefined : `${a} of ${b}`;
+}
+
+type AdminToday = NonNullable<AdminDashboard['today']>;
+
+/**
+ * Secondary line under the 3 key figures: "1 on leave · 2 remote · 4 day off".
+ * Uses distinct day_off / holiday counts when the API sends them; otherwise the
+ * combined not_working figure is worded as "not working" (never mislabelled).
+ * Zero counts are left out; absent fields (tier) are never shown.
+ */
+export function todaySecondary(t: AdminToday): string | undefined {
+  const parts: string[] = [];
+  const add = (n: number | undefined, label: string) => {
+    if (n !== undefined && n > 0) parts.push(`${n} ${label}`);
+  };
+  add(t.on_leave, 'on leave');
+  add(t.remote, 'remote');
+  if (t.day_off !== undefined || t.holiday !== undefined) {
+    add(t.day_off, 'day off');
+    add(t.holiday, 'on holiday');
+  } else if (t.not_working !== undefined) {
+    add(t.not_working, 'not working');
+  }
+  const anyField = [t.on_leave, t.remote, t.day_off, t.holiday, t.not_working].some(
+    (v) => v !== undefined,
+  );
+  if (!anyField) return undefined;
+  return parts.length ? parts.join(' · ') : 'Nobody on leave, remote or off today';
 }

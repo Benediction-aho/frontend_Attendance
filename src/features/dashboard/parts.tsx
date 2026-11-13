@@ -16,6 +16,7 @@ export interface FigureItem {
 
 /** Sober grid of figures; a figure without a value (absent from the API) is never shown. */
 const COLS = {
+  1: 'grid-cols-1',
   2: 'grid-cols-2',
   3: 'grid-cols-3',
   4: 'grid-cols-2 sm:grid-cols-4',
@@ -29,10 +30,10 @@ export function Figures({ items, cols = 4 }: { items: FigureItem[]; cols?: keyof
       {shown.map((f) => {
         const inner = (
           <>
-            <dt className="text-xs text-ink-500">{f.label}</dt>
+            <dt className="text-xs leading-snug text-ink-500">{f.label}</dt>
             <dd
               className={cx(
-                'mt-1 text-2xl font-semibold tabular-nums',
+                'mt-1 text-2xl font-semibold whitespace-nowrap tabular-nums [overflow-wrap:normal]',
                 f.attention ? 'text-secondary-700' : 'text-primary-700',
               )}
             >
@@ -74,7 +75,8 @@ export function Section({
   title: string;
   description?: ReactNode;
   children: ReactNode;
-  action?: { to: string; label: string };
+  /** `short` replaces the label on phones (< sm) so the header stays on one line (UI6-03). */
+  action?: { to: string; label: string; short?: string };
   testId?: string;
 }) {
   return (
@@ -82,13 +84,22 @@ export function Section({
       <CardHeader
         title={title}
         description={description}
+        align="baseline"
         actions={
           action ? (
             <Link
               to={action.to}
-              className="inline-flex min-h-11 items-center text-sm font-semibold text-primary-700 hover:underline"
+              aria-label={action.label}
+              className="-my-3 inline-flex min-h-11 shrink-0 items-center text-sm font-semibold whitespace-nowrap text-primary-700 hover:underline"
             >
-              {action.label}
+              {action.short ? (
+                <>
+                  <span className="sm:hidden">{action.short}</span>
+                  <span className="hidden sm:inline">{action.label}</span>
+                </>
+              ) : (
+                action.label
+              )}
             </Link>
           ) : undefined
         }

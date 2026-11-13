@@ -76,3 +76,17 @@ export function formatDayEnGb(iso: string): string {
   const d = new Date(`${iso.slice(0, 10)}T00:00:00Z`);
   return Number.isNaN(d.getTime()) ? iso : dayFmt.format(d);
 }
+
+const longDayFmt = new Intl.DateTimeFormat('en-GB', {
+  weekday: 'long',
+  day: 'numeric',
+  month: 'long',
+  timeZone: 'UTC',
+});
+
+/** "Friday 13 November" from a server work date (YYYY-MM-DD); same on both homes (UI6-08). */
+export function formatLongDay(iso: string | null | undefined): string {
+  if (!iso) return '–';
+  const d = new Date(iso.length === 10 ? `${iso}T12:00:00Z` : iso);
+  return Number.isNaN(d.getTime()) ? '–' : longDayFmt.format(d).replace(',', '');
+}

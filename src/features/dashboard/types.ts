@@ -56,13 +56,20 @@ export interface AdminDashboard {
     missing?: number;
     on_leave?: number;
     remote?: number;
+    /** Everyone not expected today (leave + day off + holiday). */
     not_working?: number;
+    /** Distinct counts (UX6-03), when the API sends them. */
+    day_off?: number;
+    holiday?: number;
+    /** Checked in although not expected (day off, leave, holiday). */
+    checked_in_not_expected?: number;
     late?: number;
     refused_attempts?: number;
     missions_pending?: number;
   };
   week?: {
     week_start: string;
+    week_end?: string;
     window_date?: string;
     closes_at?: string;
     closed?: boolean;
