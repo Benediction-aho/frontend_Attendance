@@ -92,7 +92,6 @@ export const ROLE_LABEL = {
   admin: 'Admin',
   employee: 'Staff',
 } as const;
-export const TYPE_LABEL = { intern: 'Intern', employee: 'Employee' } as const;
 export const STATUS_LABEL = {
   pending: 'Pending',
   active: 'Active',

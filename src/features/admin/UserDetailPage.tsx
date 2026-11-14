@@ -13,7 +13,8 @@ import { SkeletonRows } from '../../ui/Skeleton';
 import { useToast } from '../../ui/Toast';
 import { fadeUp, stagger } from '../../ui/motion';
 import { ApiError, errorMessage } from '../../lib/api';
-import { ROLE_LABEL, STATUS_LABEL, TYPE_LABEL, formatDate, formatDateTime } from '../../lib/format';
+import { employeeTypeLabel } from '../../lib/employeeType';
+import { ROLE_LABEL, STATUS_LABEL, formatDate, formatDateTime } from '../../lib/format';
 import { accountActions } from '../../lib/permissions';
 import type { Role, User } from '../../lib/types';
 import { useMe } from '../auth/useSession';
@@ -120,7 +121,7 @@ export function UserDetailPage() {
                 <div className="mt-2 flex flex-wrap gap-2">
                   <Badge tone={STATUS_TONE[u.status]}>{STATUS_LABEL[u.status]}</Badge>
                   <Badge tone="primary">{ROLE_LABEL[u.role]}</Badge>
-                  {u.employee_type && <Badge>{TYPE_LABEL[u.employee_type]}</Badge>}
+                  {u.employee_type && <Badge>{employeeTypeLabel(u)}</Badge>}
                 </div>
               </div>
             </CardBody>

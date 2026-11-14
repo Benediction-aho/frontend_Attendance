@@ -10,9 +10,16 @@ import { Alert } from '../../ui/Alert';
 import { Stepper } from '../../ui/Stepper';
 import { stepVariants } from '../../ui/motion';
 import { ApiError, api, roughWait } from '../../lib/api';
+import {
+  EMPLOYEE_TYPE_OPTIONS,
+  EMPLOYEE_TYPE_OTHER_MAX,
+  employeeTypeFields,
+  employeeTypePayload,
+  requireOtherText,
+} from '../../lib/employeeType';
 import { AuthLayout, AuthTitle } from './AuthLayout';
 
-const schema = z.object({
+const base = z.object({
   first_name: z.string().trim().min(1, 'Enter your first name.').max(100),
   last_name: z.string().trim().min(1, 'Enter your last name.').max(100),
   email: z
@@ -21,9 +28,12 @@ const schema = z.object({
     .min(1, 'Enter your email address.')
     .email('Enter a valid email address.')
     .max(254),
-  employee_type: z.enum(['intern', 'employee'], { message: 'Choose Intern or Employee.' }),
+  ...employeeTypeFields,
   job_title: z.string().trim().min(1, 'Enter your job title.').max(150),
 });
+const schema = base.superRefine((v, ctx) =>
+  requireOtherText(v, ctx, 'Tell us what you are joining as.'),
+);
 type Values = z.infer<typeof schema>;
 
 const STEP1: (keyof Values)[] = ['first_name', 'last_name', 'email'];
@@ -58,14 +68,14 @@ export function SignUpPage() {
     async (v) => {
       setError(null);
       try {
-        await api.post('/auth/register', v);
+        await api.post('/auth/register', employeeTypePayload(v));
         navigate('/sign-up/sent', { replace: true, state: { firstName: v.first_name } });
       } catch (e) {
         if (e instanceof ApiError && e.status === 422) {
           const fe = e.fieldErrors;
           let firstStep = 1;
           for (const [k, m] of Object.entries(fe)) {
-            if (k in schema.shape) setFieldError(k as keyof Values, { message: m });
+            if (k in base.shape) setFieldError(k as keyof Values, { message: m });
             if (STEP1.includes(k as keyof Values)) firstStep = 0;
           }
           if (firstStep === 0) back();
@@ -164,12 +174,18 @@ export function SignUpPage() {
                 name="employee_type"
                 value={watch('employee_type')}
                 onChange={(v) => setValue('employee_type', v, { shouldValidate: true })}
-                options={[
-                  { value: 'intern', label: 'Intern' },
-                  { value: 'employee', label: 'Employee' },
-                ]}
+                options={EMPLOYEE_TYPE_OPTIONS}
                 error={errors.employee_type?.message}
               />
+              {watch('employee_type') === 'other' && (
+                <Input
+                  label="Please specify"
+                  hint="For example: National service, Volunteer, Consultant."
+                  maxLength={EMPLOYEE_TYPE_OTHER_MAX}
+                  error={errors.employee_type_other?.message}
+                  {...register('employee_type_other')}
+                />
+              )}
               <Input
                 label="Job title"
                 autoComplete="organization-title"
@@ -178,7 +194,7 @@ export function SignUpPage() {
                 {...register('job_title')}
               />
               <div className="mt-1 flex gap-2">
-                <Button variant="outline" size="lg" onClick={back}>
+                <Button variant="outline" size="lg" className="shrink-0" onClick={back}>
                   Back
                 </Button>
                 <Button type="submit" size="lg" block loading={isSubmitting}>

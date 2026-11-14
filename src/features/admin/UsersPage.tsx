@@ -14,7 +14,8 @@ import { Alert } from '../../ui/Alert';
 import { Avatar } from '../../ui/Avatar';
 import { Table, TBody, TD, TH, THead, TR } from '../../ui/Table';
 import { errorMessage } from '../../lib/api';
-import { ROLE_LABEL, STATUS_LABEL, TYPE_LABEL, formatDateTime } from '../../lib/format';
+import { employeeTypeLabel } from '../../lib/employeeType';
+import { ROLE_LABEL, STATUS_LABEL, formatDateTime } from '../../lib/format';
 import { can, isSuperAdmin } from '../../lib/permissions';
 import { useMe } from '../auth/useSession';
 import { useUsers } from './useAdminUsers';
@@ -114,9 +115,10 @@ export function UsersPage() {
               </Select>
             )}
             <Select label="Type" value={get('type')} onChange={(e) => set('type', e.target.value)}>
-              <option value="">Interns and employees</option>
+              <option value="">All types</option>
               <option value="intern">Interns</option>
               <option value="employee">Employees</option>
+              <option value="other">Other</option>
             </Select>
           </>
         }
@@ -213,7 +215,7 @@ export function UsersPage() {
                         </div>
                       </TD>
                       <TD>{ROLE_LABEL[u.role]}</TD>
-                      <TD>{u.employee_type ? TYPE_LABEL[u.employee_type] : '–'}</TD>
+                      <TD>{employeeTypeLabel(u) ?? '–'}</TD>
                       <TD>
                         <Badge tone={STATUS_TONE[u.status]}>{STATUS_LABEL[u.status]}</Badge>
                       </TD>

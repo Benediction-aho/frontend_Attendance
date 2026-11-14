@@ -1,5 +1,5 @@
 export type Role = 'super_admin' | 'admin' | 'employee';
-export type EmployeeType = 'intern' | 'employee';
+export type EmployeeType = 'intern' | 'employee' | 'other';
 export type UserStatus = 'pending' | 'active' | 'blocked' | 'locked' | 'deleted';
 
 export interface User {
@@ -10,6 +10,8 @@ export interface User {
   email: string;
   role: Role;
   employee_type: EmployeeType | null;
+  /** The person's own words when the type is "other". */
+  employee_type_other?: string | null;
   job_title: string | null;
   status: UserStatus;
   photo_url?: string | null;

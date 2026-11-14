@@ -12,7 +12,8 @@ import { SkeletonRows } from '../../ui/Skeleton';
 import { Alert } from '../../ui/Alert';
 import { useToast } from '../../ui/Toast';
 import { ApiError, errorMessage } from '../../lib/api';
-import { formatDateTime, TYPE_LABEL } from '../../lib/format';
+import { employeeTypeLabel } from '../../lib/employeeType';
+import { formatDateTime } from '../../lib/format';
 import type { User } from '../../lib/types';
 import { ACTION_DONE, runUserAction, useUsers } from './useAdminUsers';
 
@@ -85,9 +86,7 @@ export function RequestsPage() {
                       <p className="font-semibold text-ink-900">{u.full_name}</p>
                       <p className="truncate text-sm text-ink-500">{u.email}</p>
                       <p className="mt-1 flex flex-wrap items-center gap-2 text-sm text-ink-600">
-                        {u.employee_type && (
-                          <Badge tone="neutral">{TYPE_LABEL[u.employee_type]}</Badge>
-                        )}
+                        {u.employee_type && <Badge tone="neutral">{employeeTypeLabel(u)}</Badge>}
                         <span>{u.job_title ?? '–'}</span>
                         <span className="text-xs text-ink-400">
                           · {formatDateTime(u.created_at)}

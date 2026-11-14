@@ -105,4 +105,34 @@ describe('sign-up page', () => {
       job_title: 'Analyst',
     });
   });
+
+  it('requires a type, and asks for a text when "Other" is chosen', async () => {
+    const f = reply(202, { message: 'ok' });
+    vi.stubGlobal('fetch', f);
+    renderAt(<SignUpPage />, '/sign-up', { '/sign-up/sent': <p>sent page</p> });
+    fireEvent.change(screen.getByLabelText('First name'), { target: { value: 'Yaw' } });
+    fireEvent.change(screen.getByLabelText('Last name'), { target: { value: 'Owusu' } });
+    fireEvent.change(screen.getByLabelText('Work email'), { target: { value: 'yaw@x.test' } });
+    fireEvent.click(screen.getByRole('button', { name: 'Continue' }));
+    fireEvent.change(await screen.findByLabelText('Job title'), { target: { value: 'Desk' } });
+    fireEvent.click(screen.getByRole('button', { name: 'Send request' }));
+    expect(await screen.findByText('Choose Intern, Employee or Other.')).toBeInTheDocument();
+
+    expect(screen.queryByLabelText('Please specify')).not.toBeInTheDocument();
+    fireEvent.click(screen.getByLabelText('Other'));
+    fireEvent.click(screen.getByRole('button', { name: 'Send request' }));
+    expect(await screen.findByText('Tell us what you are joining as.')).toBeInTheDocument();
+    expect(f).not.toHaveBeenCalled();
+
+    fireEvent.change(screen.getByLabelText('Please specify'), {
+      target: { value: ' National service ' },
+    });
+    fireEvent.click(screen.getByRole('button', { name: 'Send request' }));
+    expect(await screen.findByText('sent page')).toBeInTheDocument();
+    const body = JSON.parse(
+      (f.mock.calls[0] as unknown as [string, RequestInit])[1].body as string,
+    );
+    expect(body.employee_type).toBe('other');
+    expect(body.employee_type_other).toBe('National service');
+  });
 });
