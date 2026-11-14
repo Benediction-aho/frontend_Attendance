@@ -162,3 +162,9 @@ _Not given yet._
 - Phase 2 UI review fixes (UI2-01..14): interim logo + icons, danger-ghost button and danger zone, onboarding timeline, phone filter sheet, dashboard next action, no repeated code at first sign-in + strength hint, bottom bar up to lg, phone menu button, consistent badges, en-GB dates, styled selects, text back links, route code splitting. 42 unit tests, 35 mocked e2e passing (+1 phone-only skipped on desktop). Ready for UI re-review.
 - Phases 3–4 frontend: Today/check-in (GPS accuracy retries, Face ID assertion, mission, remote, check-out), schedule, history, admin attendance/missions/attempts/leave/holidays, Face ID registration and device approval, install guide, Web Push, in-app browser notice; UX2-21..24 fixed, UX2-20 accepted. 81 unit tests, 75 mocked e2e. Ready for frontend-ui-designer.
 - Phase 2 UX fixes (UX2-01..20 front parts) and UI re-review fixes (UI2-12, 15-19): 56 unit tests, 45 mocked e2e passing (+1 skipped), lint/typecheck/build green. Ready for frontend-ux-tester re-test.
+
+## 2026-11-14 – v2 replaces v1 (owner decision)
+- Owner merged backend PR #1 and frontend PRs #1–#2 into `main`. Previous v1 `main`: backend `7e53efcb`, frontend `5f4de51a` (the `legacy-v1` tag could not be pushed from the session; create it on those commits if wanted).
+- Vercel production (`main`) serves v2; `VITE_API_URL` (production) points to the v2 API; `attendance.assistanceghana.com` is attached to Production; `frontend-attendance-iota.vercel.app` redirects (308) to it.
+- Old v1 Render service `backend_Attendance` deleted by the owner. Remaining Render service: `attendance-api` (free tier).
+- Hosting is still the free test stack (Render + Supabase); move to the company server (phase 8) later.
