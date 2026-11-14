@@ -6,7 +6,8 @@ import { PageHeader } from '../../ui/PageHeader';
 import { Badge } from '../../ui/Badge';
 import { useToast } from '../../ui/Toast';
 import { fadeUp, stagger } from '../../ui/motion';
-import { ROLE_LABEL, TYPE_LABEL } from '../../lib/format';
+import { employeeTypeLabel } from '../../lib/employeeType';
+import { ROLE_LABEL } from '../../lib/format';
 import { signOut, useMe } from '../auth/useSession';
 import { EmailForm } from './EmailForm';
 import { PasswordForm } from './PasswordForm';
@@ -70,7 +71,7 @@ export function ProfilePage() {
               <CardHeader title="Account" />
               <CardBody className="flex flex-wrap gap-2">
                 <Badge tone="primary">{ROLE_LABEL[me.role]}</Badge>
-                {me.employee_type && <Badge>{TYPE_LABEL[me.employee_type]}</Badge>}
+                {me.employee_type && <Badge>{employeeTypeLabel(me)}</Badge>}
               </CardBody>
             </Card>
           </motion.div>

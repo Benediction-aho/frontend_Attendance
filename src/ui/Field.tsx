@@ -218,7 +218,7 @@ export function Textarea({
   );
 }
 
-/** Two-option segmented choice (e.g. Intern / Employee), rendered as radio buttons. */
+/** Segmented choice of two or three options (e.g. Intern / Employee / Other), rendered as radio buttons. */
 export function Segmented<T extends string>({
   label,
   name,
@@ -237,7 +237,7 @@ export function Segmented<T extends string>({
   return (
     <fieldset className="flex flex-col gap-1.5">
       <legend className="mb-1.5 text-sm font-medium text-ink-700">{label}</legend>
-      <div className="grid grid-cols-2 gap-2">
+      <div className={cx('grid gap-2', options.length === 3 ? 'grid-cols-3' : 'grid-cols-2')}>
         {options.map((o) => {
           const checked = value === o.value;
           return (

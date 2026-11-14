@@ -12,19 +12,29 @@ import { Input, Segmented } from '../../ui/Field';
 import { PageHeader } from '../../ui/PageHeader';
 import { useToast } from '../../ui/Toast';
 import { ApiError, api, errorMessage } from '../../lib/api';
+import {
+  EMPLOYEE_TYPE_OPTIONS,
+  EMPLOYEE_TYPE_OTHER_MAX,
+  employeeTypeFields,
+  employeeTypePayload,
+  requireOtherText,
+} from '../../lib/employeeType';
 import { isSuperAdmin } from '../../lib/permissions';
 import type { Role, User } from '../../lib/types';
 import { useMe } from '../auth/useSession';
 import { PermissionChecklist } from './PermissionsEditor';
 import { conflictMessage, usePermissionCatalogue } from './useAdminUsers';
 
-const schema = z.object({
+const base = z.object({
   first_name: z.string().trim().min(1, 'Enter the first name.').max(100),
   last_name: z.string().trim().min(1, 'Enter the last name.').max(100),
   email: z.string().trim().min(1, 'Enter the email address.').email('Enter a valid email address.'),
-  employee_type: z.enum(['intern', 'employee'], { message: 'Choose Intern or Employee.' }),
+  ...employeeTypeFields,
   job_title: z.string().trim().min(1, 'Enter the job title.').max(150),
 });
+const schema = base.superRefine((v, ctx) =>
+  requireOtherText(v, ctx, 'Enter what this person is joining as.'),
+);
 type Values = z.infer<typeof schema>;
 
 export function CreateUserPage() {
@@ -50,7 +60,7 @@ export function CreateUserPage() {
     setError(null);
     try {
       const res = await api.post<{ data: User }>('/admin/users', {
-        ...v,
+        ...employeeTypePayload(v),
         ...(superA ? { role, permissions: role === 'admin' ? permissions : undefined } : {}),
       });
       await qc.invalidateQueries({ queryKey: ['admin', 'users'] });
@@ -61,7 +71,7 @@ export function CreateUserPage() {
         setFieldError('email', { message: conflictMessage(e.code, e.message) });
       else if (e instanceof ApiError && e.status === 422) {
         for (const [k, m] of Object.entries(e.fieldErrors))
-          if (k in schema.shape) setFieldError(k as keyof Values, { message: m });
+          if (k in base.shape) setFieldError(k as keyof Values, { message: m });
         setError('Please check the highlighted fields.');
       } else setError(errorMessage(e));
     }
@@ -104,12 +114,18 @@ export function CreateUserPage() {
               name="employee_type"
               value={watch('employee_type')}
               onChange={(v) => setValue('employee_type', v, { shouldValidate: true })}
-              options={[
-                { value: 'intern', label: 'Intern' },
-                { value: 'employee', label: 'Employee' },
-              ]}
+              options={EMPLOYEE_TYPE_OPTIONS}
               error={errors.employee_type?.message}
             />
+            {watch('employee_type') === 'other' && (
+              <Input
+                label="Please specify"
+                hint="For example: National service, Volunteer, Consultant."
+                maxLength={EMPLOYEE_TYPE_OTHER_MAX}
+                error={errors.employee_type_other?.message}
+                {...register('employee_type_other')}
+              />
+            )}
             <Input
               label="Job title"
               hint="As written on the appointment letter."
