@@ -1,0 +1,24 @@
+// J8: after 00:00 + attendance:auto-checkout, employee who forgot to check out sees the new day and the "check-out forgotten" history.
+import * as k from './h34.mjs';
+const email = process.argv[2];
+const b = await k.h.launch();
+const c = await k.ctx(b, 'iphone');
+const p = await c.newPage();
+await k.signIn(p, email);
+await p.goto(k.BASE + '/app');
+await k.sleep(1500);
+k.out('today', (await k.mainText(p)).slice(0, 300));
+await p.goto(k.BASE + '/app/attendance/history');
+await k.sleep(1500);
+await k.shot(p, 'j8-forgotten-history');
+k.out('history', (await k.mainText(p)).slice(0, 500));
+const ac = await b.newContext({ ...k.h.DEV.desktop });
+const ap = await ac.newPage();
+await k.bossSignIn(ap);
+await ap.goto(k.BASE + '/app/admin/attendance');
+await k.sleep(1000);
+await ap.getByLabel('Date').fill(process.argv[3]);
+await k.sleep(1500);
+await k.shot(ap, 'j8-admin-yesterday');
+k.out('admin yesterday', (await k.mainText(ap)).slice(0, 400));
+await b.close();

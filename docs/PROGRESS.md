@@ -1,0 +1,164 @@
+# Progress – Frontend (v2)
+
+Updated by the agents at the end of every work session.
+
+## Current phase
+**Phase 6 – Dashboards and logs: complete on the frontend** (2026-11-13). UI signed off (r2), UX re-test passed; polish UI6-13..15 and UX6-10 fixed. UX6-08 (denominator) and the readable CSV Device column are backend items. Phase 5 re-checks remain as listed below.
+
+### Floating phone navigation (owner decision, 2026-11-13) – ready for frontend-ui-designer, then frontend-ux-tester
+- Phones: hamburger button and its sheet menu removed; top bar = logo + avatar (link "Open profile").
+- Bottom nav replaced by a floating glass pill (inset 16 px, 64 px high, safe-area aware, blur with solid fallback, entrance animation off under reduced motion). Active item primary token + semibold, inactive ink-600, no top indicator; unread dot kept.
+- Items: employee Today · My work · Notifications · Sign out; admin Home · Notifications · Admin · Sign out (max 4 links, then Sign out). Profile tab removed (avatar instead). Sign out asks "Sign out of this device?" (Confirm/Cancel); Profile page keeps its Sign out.
+- Main content and toasts lifted above the bar. Tests: `src/app/navFor.test.ts`, e2e `auth.spec.ts` (confirmation, 360 px fit) and `admin.spec.ts` (phone bar).
+
+### Settings split in three parts (owner decision, 2026-11-13) – ready for frontend-ui-designer, then frontend-ux-tester
+- Settings page split into Attendance / Reports / Security (`/app/admin/settings/<part>`, underline tabs, scrollable on phones); only parts allowed by `manage_settings_attendance|reports|security` (super admin: all). `/app/admin/settings` opens the first allowed part; forbidden or unknown parts show the no-access page. Menu/hub "Settings" entry for super admins and admins with at least one tier.
+- Uses `section` per setting (fallback from group, system → security), `sections` from the API for editability, `super_admin_only` settings read-only for admins ("Only a super admin can change this."). History filtered by part (`section` query + client filter by keys). PUT 403: clear message, draft discarded, settings and profile refetched, session kept.
+- Permission editor shows a short description under each tier (API `description`, fallback text for the three settings tiers).
+- Time (owner decision 2026-11-13): the whole app uses the 12-hour format (8:10 AM, 5:00 PM). `HOUR_CYCLE='h12'` in `src/lib/format.ts`; all displayed times (clock, check-in/out, history, reports, dashboards, activity log, date-times, settings defaults/history, end-of-day hints) go through `TIME_OPTIONS`/`formatHhmm`. Settings time fields are a text input accepting "8:10 am", "8.10pm", "8 pm", "17:00"; shown normalised as "8:10 AM"; sent as HH:MM (24-hour) on the wire. Internal comparisons and file names keep 24-hour. Owner also approved the settings sections mapping.
+- Tests: unit (sections, fallback, normalisation, no AM/PM) + e2e `e2e/settings-parts.spec.ts` (super admin 3 parts + 24h edit, one-tier admin, no-tier admin, 403). Vitest 136/136, Playwright 111 passed, lint/typecheck/build green.
+
+### Phase 6 – what was delivered (frontend)
+- Employee home (`/app`): Today's status and main action unchanged on top; below, from `GET /me/dashboard`: Today (tasks done of planned, clients, once checked in, link to My work), This week (days present of expected so far, late arrivals, tasks, clients, weekly report status with "Send my weekly report" / "See my weekly report" link), This month (26 → 25 period: days present, late, clients). Figures only, no charts; every value from the server.
+- Admin / super admin home from `GET /admin/dashboard`: Waiting for you (sign-up requests, Face ID devices, mission check-ins as links), Today (checked in of expected, not checked in yet, late, leave, remote, day off, missions to approve, refused check-ins as links), Weekly reports N of M with close time, This month (late, clients, top services table). A section or field absent from the API is not shown (never a 0). Replaces the client-side counting tile and the three pending-count requests (UI34-09).
+- Activity log: "Export CSV" (super admins only) with the current filters; shows the row cap from `log_export_max_rows` and warns when more entries match; 429 → "hourly limit of CSV exports, try again in N minutes"; file name from `Content-Disposition`.
+- UX5-11: "Back to daily/weekly reports" keeps the day/week (`back=` parameter, validated ISO date), also from a weekly submission.
+- Tests: 125 unit tests, 101 mocked e2e passing (1 real-API skipped), lint 0 errors, typecheck and build green (no source maps).
+
+**Phase 5 – Tasks, clients and reports: UI5-01..12 and UX5-01, 03..07 fixed – ready for frontend-ui-designer and frontend-ux-tester re-check** (2026-11-13).
+
+### Phase 5 – review fixes (frontend)
+- Re-review 2 polish: UI5-13 (missing employees listed once, week summary link in "Not received"), UI5-14 (empty state for a week without day rows), UI5-15 (per-employee weekly matches the contract; e2e mock path fixed, filled state tested) – fixed.
+- UX5-01: global safe wrap (`overflow-wrap:anywhere` on body, `wrap-anywhere` instead of `break-words`/`break-all`, `min-width:0` on main/li/td/th); e2e at 360 px checks `scrollWidth <= innerWidth` on My work, daily and weekly.
+- UI5-01: rows use one quiet "Options" button (sheet with Edit / Delete) below `sm`; inline Edit + neutral Delete (red on hover/focus) from `sm`.
+- UI5-02..12 done (outline Replace once sent, "Link not available" without `file_url`, admin daily row on two lines at 360, `max-w-3xl` detail pages and 4-column figures, day without year, no repeated late line, file name wrap, shorter placeholder, no seconds above 10 min, singular "employee", aligned links).
+- UX5-03: missing list from `missing: EmployeeSummary[]` (backend d580c7d; falls back to the rows), one per line with job title/email, collapsed after 10.
+- UX5-04: upload fails at once offline (`networkMode: 'always'`), clear message, automatic resend on `online`, success toast with the version. A lost connection while online asks to check versions (no blind resend, avoids duplicate versions).
+- UX5-05/06: client check (min 1, whole number); server field messages shown per field in plain English; the max learned from the server message (the API does not expose `client_quantity_max` to employees – optional backend request).
+- UX5-07: back link depends on origin (`?from=daily` → "Back to daily reports"); daily details now link to the week summary.
+- UX5-02 (server) and UX5-08 (owner question) are outside the frontend.
+ Wired to backend contract 0.5 (9d619bb). Phases 3–4: UI34/UX34 fixes delivered (ba78ffa), re-check pending as before.
+
+### Phase 5 – what was delivered (frontend)
+- **My work** (`/app/work`, employees; nav "My work", on phones in the bottom bar instead of History, which stays linked from Today): tasks for today (plan, "Add as done", tick/untick with optimistic tick, edit, delete with confirmation; "Done at" from the server's `completed_at`), clients (name, free-text service with suggestions from `GET /clients/services` rendered as plain text buttons, quantity), end-of-day client list with services totals. Before the check-in (from `/attendance/today`) a notice explains why writes are disabled; the global 403 `checkin_required` gate still applies. Nothing time-related is sent.
+- **Daily report** (`/app/reports/daily?date=`): figures, tasks with done/not done, clients table, services, "generated at" note.
+- **Weekly report** (`/app/reports/weekly`, notification path of `weekly_report_reminder`): weekly PDF card driven only by `GET /me/reports/weekly/submission` and the server clock (not open yet + countdown, due + "closes in" countdown, absent-Friday grace with the personal deadline, deadline passed / will be marked late, previous week missing, not expected, sent + late flag); file picker with client-side hints (empty, size > `max_size_mb`, not a PDF); clear message for every server code (`invalid_pdf`, `pdf_encrypted` and `pdf_active_content` shown as-is, `window_not_open` with `opens_at`, `too_many_versions`, `checkin_required`, `invalid_characters`, 413); versions with temporary "Open PDF" links (status refreshed every 4 min), replace = new version. Week summary Monday → Friday (days table, services, clients recap when returned).
+- **Admin** (nav "Reports", `view_reports` or `receive_weekly_reports`): daily reports per employee with expandable details (tasks only when returned – `view_tasks`; client names only when returned – `view_clients`); weekly "N of M received", "Not received" names, Received/Late/Missing/Not expected badges, submission page (versions with temporary links, services, client names only when `week.clients` is returned), per-employee weekly summary (`view_reports` only). A `receive_weekly_reports`-only admin is sent to the weekly tab.
+- Tests: Vitest +10 (window phase, countdown, file hints, every upload code, submission states incl. grace, client names as plain text, work page journey with exact request bodies, locked before check-in, oversize/refusal/upload versions) – 113 total. Playwright `e2e/reports.spec.ts` 5 journeys × iPhone 13 + desktop (employee tasks/clients/daily report; locked before check-in; weekly PDF refusal then upload; super admin daily → weekly N of M → submission with clients; weekly-recipient admin without daily tab and without client names). Full e2e 85 passed, 1 phone-only skip. Lint 0 errors, typecheck and build green (no source maps).
+- Known limits: the "Add as done"/tick state between tap and server answer is optimistic and rolled back on error; suggestions are shown while the Service field has focus (max 5).
+
+### Phases 3–4 – what was delivered (frontend)
+- **Today screen (employees, home `/app`)**: clock synchronised with `server_timestamp_ms` (half round-trip correction), day status (office/remote/day off/holiday/leave), "not expected today" note, check-in flow with a 3-step progress (Location → Face ID → Confirmed): GPS with `watchPosition`, accuracy target from `rules.max_accuracy_m`, visible readings and accuracy bar, automatic re-reading on API `low_accuracy` (up to 3 times); intent → `navigator.credentials.get` → confirm (retried, idempotent). Clear English message for: GPS off/unavailable, permission denied (iPhone/Android steps), timeout, low accuracy (values from the API), out of perimeter (distance + radius, mission suggested), offline (time comes from the server), Face ID cancelled/unsupported/failed, intent expired, 429, not a remote day. Nothing time/date-related is sent.
+- **Mission check-in** (reason, then Face ID; "waiting for approval" badge), **remote check-in in one tap** on remote days, **check-out** from anywhere (best-effort position, distance shown after: "At the office" / "3.2 km from the office" / "Position not available"), reason asked before `end_of_day` (display hint from the server clock; the server's 422 `reason_required` is authoritative), "check-out forgotten" in history.
+- **Check-in gate**: 403 `checkin_required` from any request sends the employee to the Today screen with one message (`onCheckInRequired` in the API client). Profile/notifications stay reachable (server never gates them).
+- **Work schedule**: one-time choice (Office/Remote/Day off per working day, limits from the API, confirmation, applies from tomorrow), then read-only; own leave and public holidays.
+- **History** (own; admins per employee): date filters, badges (lateness only when `is_late` is returned), reasons as plain text.
+- **Admin** (all gated by tiers, display only): daily list with figures (expected/checked in/not checked in/late only with `view_lateness`), per-employee history + working week (edit with effective date for `manage_work_schedules`) + leave (`manage_leaves`), refused check-ins (`view_lateness`), mission approvals with note (`approve_mission_checkins`, 409 already reviewed handled), check-in on behalf with reason (`checkin_for_employee`), leave and holidays page. Staff dashboard tiles: missions and Face ID devices waiting.
+- **Face ID**: registration at first sign-in (new onboarding step `/welcome/faceid` for employees, skippable), on Today and in Profile; states ready / not registered / pending approval / other device; JSON helpers with a fallback for Safari without `parse…FromJSON`/`toJSON`. Admin page `/app/admin/faceid-devices` (pending/approved/revoked, device details: system, browser, registered, first seen, IP, user agent; approve/reject; super admin revoke with confirmation).
+- **PWA**: install guide `/app/install` (iPhone Safari Add to Home Screen, Android install + native prompt when available), dismissible install card on Today; **Web Push**: prompt only in the installed app with an explanation, permission asked on tap, subscribe (`device_id` sent), 409 `push_endpoint_conflict` message, unsubscribe in Profile, re-subscribe after sign-in; service worker `public/push-sw.js` (imported by the generated SW): shows `{title, body, tag}`, opens in-app paths only on click. API responses still never cached.
+- **In-app browser** detection (WhatsApp, Facebook, Instagram, Android WebView): notice with "Open in Safari/Chrome" and copy-link button on sign-in, Today, onboarding and install pages.
+
+### Phases 3–4 – tests (2026-11-12)
+- Vitest: 81 tests (new: check-in error mapping, distances/check-out place, end-of-day hint, GPS accuracy loop with fake geolocation, clock sync, Today screen states, in-app detection, base64url/WebAuthn options, UX2-21..24).
+- Playwright (mocked API, iPhone 13 + desktop): 75 passed, 1 phone-only skip. New journeys with a **virtual WebAuthn authenticator (CDP)** and **geolocation emulation**: Face ID registration then GPS check-in with low-accuracy retry; out of perimeter then mission; remote one-tap then early check-out with server-required reason; location blocked / offline / pending device; schedule once then read-only; history (forgotten check-out); 403 checkin_required; WhatsApp in-app notice; install guide; staff without Today; admin daily list + on-behalf; mission approval (plain text); Face ID approve + revoke; limited Face ID admin; leave and holidays.
+- Lint 0 errors, format, typecheck, build green.
+
+### Phases 3–4 – known limits / questions
+- The early check-out reason field is shown up front by comparing the server-synchronised clock with `rules.end_of_day` (display only); the server decides with 422.
+- Admin "per employee" page title comes from the list (navigation state); a direct link shows "Employee" (no attendance-tier endpoint returns a name).
+- Push delivery and real Face ID must be validated on real iPhones/Android at the office (phase 4 validation; needs the test deployment with HTTPS and the final RP ID).
+
+Phase 2 – Frontend foundations: **UI signed off (re-review 1; UI2-12, 15-19 fixed), UX findings UX2-01..20 fixed on the frontend (UX2-17 backend) – ready for frontend-ux-tester re-test** (2026-11-12). Report files expected: `docs/reports/phase-2-ui.md`, `docs/reports/phase-2-ux.md`.
+
+### Phase 2 – what was delivered
+- **Design system** (`src/ui`): Button (variants, loading), Field/Input/Select/Textarea/Segmented, Switch, Card/StatTile, Badge, Table, Modal (bottom sheet on phones, focus trap, Escape), Toast, Skeleton, EmptyState, PageHeader, Stepper, Alert, Pagination, Avatar, Spinner. Motion: staggered reveals, step slides, page transitions, animated errors; `MotionConfig reducedMotion="user"` + CSS reduced-motion. Icons only in the navigation (Lucide, 1.5 stroke). Colors only via theme tokens (lint rule).
+- **Auth** (`src/features/auth`): sign-in (email + code/password, generic messages, lockout countdown for `login_blocked`/`ip_limited`, locked/blocked messages), two-step sign-up → "request sent, wait for approval", super admin sign-in (email → one-time code, sends `device_id`), recovery page (`/recover?token=`, token removed from the URL), email confirmation page (`/confirm-email?token=`), `/login` alias (backend emails link there), forced code change (`/welcome/code`) then optional profile completion (`/welcome/profile`). 401 `reauth_limit` → signed out with a clear reason on the sign-in page; 429 on password/email change shows remaining time.
+- **Session**: Bearer token per device, in memory + IndexedDB (see storage choice below); random `device_id` (48 hex chars) in localStorage; logout calls `/auth/logout` and always clears locally; only a 401 with a token ends the session; network/5xx never sign out (retry screen keeps the session); 403 `password_change_required` sends the user to the code change.
+- **Profile**: personal details, photo upload with preview (resized to 1024 px JPEG on the device, EXIF dropped), photo removal, email change (generic confirmation), password change.
+- **Admin**: sign-up requests (approve/reject), users list (search, status/role/type filters in the URL, pagination; table on desktop, list on phones), user detail (approve, reject, block/unblock, unlock with optional new code, new code, delete, role change, permissions editor from `/admin/permissions`), create user (role + permissions for super admins). Everything gated by `role`/`permissions` for display only; the server stays the authority.
+- **Settings** (super admin): all `GET /admin/settings` items grouped (attendance, reports, security, system), typed controls (switch, number, time, list), default and scheduled values, sticky save bar with optional effective date, history tab with filter and pagination.
+- **Notifications**: list (all/unread), unread count badge in the menu, mark one / all read, link to `data.path`.
+- **Activity log** (super admin / `view_logs`): filters user, type, level, from/to dates, event prefix (in the URL), pagination, expandable details (context, IP, device, browser).
+- **Client error reporting**: an error boundary posts to `/client-errors` (no secrets).
+- **Dashboard**: sober placeholder (greeting with server-corrected time, unread count, pending requests for approvers). Real dashboards in phase 6.
+
+### Session storage choice (security.md 4, FIABILITE B3)
+The API uses Bearer device tokens only (no cookies), so an HttpOnly cookie is not available. The token is kept **in memory** for requests and persisted in **IndexedDB** (not localStorage, never in URLs, cookies or logs) so the installed PWA stays signed in across launches; it is loaded once before the first render. No browser storage is fully out of reach of an XSS, so the real protections are: no third-party scripts, no HTML injection (React escaping, no `dangerouslySetInnerHTML`), a strict CSP at deployment (to configure with `attendance-deploy`), and server-side revocation (logout, 401, admin actions, idle expiry). Requests use `credentials: 'omit'` and `cache: 'no-store'`.
+
+### Tests (2026-11-12)
+- Vitest: 42 tests (after UI fixes; was 33) (api client, session/IndexedDB store, permissions, settings parsing, image sizing, countdown, login error mapping, sign-in and sign-up components, design-system components).
+- Playwright (mocked API by route interception, iPhone 13 + desktop): 30 passing – shell, sign-up, first sign-in → forced change → profile completion, session persistence / 5xx does not sign out / logout, 401 reauth_limit, lockout, super admin code sign-in + recovery link, profile (details, photo, email), approve request, users (search, block, permissions), limited admin gating, create admin, settings with effective date + history, notifications, activity log.
+- Real backend: `e2e/signup-approval.real.spec.ts` (run with `E2E_REAL_API=1`, backend on :8000 with `MAIL_MAILER=log`, `QUEUE_CONNECTION=sync`, `CORS_ALLOWED_ORIGINS=http://localhost:4173`, super admin `boss@e2e.test`; codes read from the mail log): sign-up → super admin one-time code sign-in → approve → employee first sign-in with the emailed code → password change → profile: **passed**.
+- Lint (0 errors, 7 fast-refresh warnings), format, typecheck, build green; no source maps, no console calls in the bundle.
+
+### Phase 2 – known limits / accepted for now
+- Route-level code splitting done: main chunk 397 kB minified (124 kB gzip), pages load on demand (one retry on a failed chunk download).
+- Logo: interim assets generated from `public/logo.png` by `scripts/make-logo.py` (rerun it when the official file arrives); official SVG/transparent PNG requested from the owner.
+- Backend emails link to `http://localhost:5173/login`; the PWA maps `/login` to `/sign-in`. `FRONTEND_URL` must point to the PWA in each environment.
+- The recovery/email-confirmation token reader now survives a discarded render (lazy routes): the flaky recovery e2e failed consistently with lazy routes before the fix and passes since.
+
+## Phases
+
+| Phase | Status | Security / UI / UX reports | Notes |
+|---|---|---|---|
+| 0 – Preparation | Frontend skeleton done | – | Legacy v1 kept on `main` at `5f4de51a854ca91bf31c72e282b0f3519d2d3b4f` (tag `legacy-v1` not pushed: tag push not allowed from this session) |
+| 1 – Backend foundations | Not started | – | |
+| 2 – Frontend foundations | Ready for UX re-test | UI: `docs/reports/phase-2-ui.md` (signed off, 20 fixed), UX: `docs/reports/phase-2-ux.md` (19 fixed, UX2-17 backend) | See "Phase 2 – what was delivered" |
+| 3 – Attendance (manual) | UI/UX findings fixed, ready for UI/UX re-check | – | See "Phases 3–4 – what was delivered" |
+| 4 – PWA, Face ID, notifications | Frontend ready for frontend-ui-designer | – | Real-device validation pending (test deployment) |
+| 5 – Tasks, clients, reports | Not started | – | |
+| 6 – Dashboards and logs | Done (frontend) – no open UI/UX finding | – | See "Phase 6 – what was delivered" |
+| 7 – Quality and pilot | Not started | – | |
+| 8 – Production deployment | Not started | – | Requires the owner's written approval below |
+
+## Deployment (attendance-deploy, 2026-11-12)
+- CI backend (`backend-ci`): job `test` (Pint, Larastan, Pest on Postgres 16, reversible migrations) green; new job `docker-build` builds the production image (no push) and smoke-tests `/api/health` + absence of `Server`/`X-Powered-By` headers. Run 43202465378 (commit adcbe30): both jobs green; the image builds, `/api/health` returns 200, no `Server`/`X-Powered-By` header.
+- CI frontend (`frontend-ci`): green (lint, format, typecheck, unit tests, build).
+- Supabase `ynspiijfjpumatmszmhx` (Attendance_Manager, eu-west-1, Postgres 17): ACTIVE_HEALTHY, security advisors: no findings. No migration applied (phase 1). Note: CI uses Postgres 16, Supabase runs 17 – align CI to 17 in phase 1.
+- Vercel: **blocked** – the Vercel connection used by the agents has no access to the account scope `benediction-ahouanse-s-projects` (403). No project created.
+- Backend test host: Render approved by the owner (account to create); Render procedure ready in `docs/DEPLOYMENT.md` (backend repo).
+
+## Requests to the backend (frontend already handles them when present)
+- `GET /admin/settings`: add `min` / `max` per setting (client-side validation, UX2-05).
+- `GET /me`: add `password_min_length` (password rule shown up front, UX2-13).
+- `invalid_credentials`: add `remaining_attempts` ("1 attempt left", UX2-20).
+- 401 after a block: optional `code: account_blocked` (precise banner, UX2-03; a generic explanation is shown meanwhile).
+
+## Blocked / questions for the owner
+- ~~Time format~~ – resolved 2026-11-13: 12-hour (AM/PM) everywhere; settings sections mapping approved.
+- **Logo (owner action)**: please provide the official Assistance Ghana logo as **SVG** (preferred) or a **transparent PNG** at least 2000 px wide with no margins, ideally also a square version of the mark for the home-screen icon. The current file is a JPEG with a white background; the app uses a best-effort cropped/transparent version until then (`scripts/make-logo.py`).
+- **Vercel (owner action, still blocked 2026-11-12)**: after the connector re-authorization the Vercel API still returns `403 forbidden: Not authorized: Trying to access resource under scope "benediction-ahouanse-s-projects" (team_7rhgiQNsRJIXGdFxd45Eihlj)`; the connection lists no team. The re-authorization did not grant that scope. Either (a) re-authorize the Vercel connector in claude.ai Settings > Connectors and explicitly tick the scope "benediction-ahouanse-s-projects" in the Vercel consent screen, then ask the deploy agent to retry; or (b) create it yourself: Add New > Project > import `Benediction-aho/frontend_Attendance` (install the Vercel GitHub app on that repo if asked), framework Vite, build `npm run build`, output `dist`, env `VITE_API_URL=https://api.example.invalid/api` (Preview + Production). Preview deployments of `claude/upbeat-noether-f7defe` are then automatic.
+- **Backend test host: Render approved by the owner.** Next step (owner): create the Render account (sign in with GitHub, give Render access to `Benediction-aho/backend_Attendance`), then tell us. Prepare, to be entered **only in Render secrets** (Environment tab of the service, never in chat or in the repository): the Supabase database password (Supabase dashboard > Project Settings > Database; reset it there if unknown), and later the Resend API key, Sentry DSN and VAPID keys. The deploy agent then creates the Docker web service, worker and cron following `docs/DEPLOYMENT.md` section 3.
+- Accounts to provide (see `PLAN_DEVELOPPEMENT.md` section 8): Supabase, Resend + sending domain, Vercel, backend test host.
+
+- Tag `legacy-v1`: could not be pushed from the agent session; please tag `5f4de51a854ca91bf31c72e282b0f3519d2d3b4f` as `legacy-v1` on GitHub.
+
+## How to run (frontend v2)
+- `npm ci`, then copy `.env.example` to `.env` and set `VITE_API_URL` (API is called directly, no proxy).
+- `npm run dev` – dev server; `/` = placeholder landing, `/app` = placeholder authenticated layout (link shown in dev only).
+- `npm run lint`, `npm run format:check`, `npm run typecheck`, `npm test` (Vitest), `npm run build`.
+- `npm run e2e` – Playwright (builds with `VITE_API_URL=http://localhost:8000/api`, serves on :4173, API mocked by route interception; uses Chromium at `/opt/pw-browsers/chromium`, override with `PW_CHROMIUM_PATH`). `E2E_REAL_API=1 npm run e2e -- e2e/signup-approval.real.spec.ts --project=desktop` runs the journey against a local backend.
+- CI: `.github/workflows/frontend-ci.yml` (lint, format, typecheck, unit tests, build).
+
+## Security headers (REL-04) – API host dependency
+`vercel.json` sends a strict CSP and security headers on every route. The CSP allows the API only at `https://attendance-api-1xgl.onrender.com` (`connect-src` and `img-src`, for signed file URLs). **If `VITE_API_URL` changes (custom API domain for production), update both directives in `vercel.json` (and `PROD_API_ORIGIN` in `vite.config.ts`) in the same change, or every API call is blocked.** `vite preview` applies the same headers (API origin swapped for `VITE_API_URL`), so the Playwright suite runs under the CSP. REL-23: presigned file URLs point to Supabase Storage, so `img-src` and `connect-src` also allow the **test project's** storage origins `https://ynspiijfjpumatmszmhx.supabase.co` and `https://ynspiijfjpumatmszmhx.storage.supabase.co`; **production must replace these (and the API origin) with its own storage/API origins.** Weekly PDFs open through a `target="_blank"` link (top-level navigation, not framed), so `frame-src 'none'` does not affect them; `e2e/security-headers.spec.ts` asserts the headers and no CSP violation.
+
+## Owner approval for production
+_Not given yet._
+
+## Log
+- 2026-11-13 – REL-23: Supabase Storage origins of the test project added to CSP `img-src`/`connect-src` (presigned URLs); PDFs open in a new tab, no frame needed.
+- 2026-11-13 – Release security REL-04 and REL-12: security headers in `vercel.json` (CSP without inline/eval scripts, frame-ancestors none, X-Frame-Options DENY, nosniff, Referrer-Policy, Permissions-Policy with geolocation and publickey-credentials for self, HSTS), same headers on `vite preview` + e2e check; Tailwind banner comment stripped from built CSS.
+- 2026-11-13 – Owner requests: check-in shows the server's `low_accuracy`, `already_checked_in` and new `checkin_not_open` messages; Today shows "Check-in opens at 6:00 AM" instead of the button before `rules.checkin_opens_at`, and "See you tomorrow – check-in opens at 6:00 AM" after check-out; Settings – Attendance keeps the GPS uncertainty setting next to the perimeter radius with a helper text.
+- 2026-11-13 – Phase 6 frontend: employee and admin dashboards from server figures, activity log CSV export (super admin, 429 and cap), UX5-11 back links. Ready for frontend-ui-designer.
+- 2026-11-13 – Phase 6 review fixes: dashboards refreshed after every write, Today hierarchy, nowrap figures, pending rows, day_off/holiday/checked_in_not_expected, week_end, CSV header button, 429 warning with retry time, server file name; e2e recovery URL relative.
+- 2026-11-13 – Phase 6 polish: Today figures in 2 columns on phones (UI6-13), en-GB thousands separators on all dashboard numbers (UI6-14), only the hourly-limit warning while export is blocked (UI6-15), space before "Change dates" (UX6-10). Phase 6 frontend complete.
+- 2026-11-13 – Phases 3–4 UI/UX fixes: mission check-in as single primary action out of perimeter, secondary install/push cards after the main action, platform location steps, 30 s GPS budget with elapsed time and early hint, edge-of-perimeter hint, Face ID re-registration after 2 failures (admin check-in mentioned), confirmed attendance rendered at once, rest-day card, onboarding success moment, stacked refused attempts, employee name/job/email disambiguation, history first on phones, en-GB date fields, super admin attendance figures, compact tiles with counts, `/admin/*` redirect, 422 messages (e.g. `pdf_encrypted`) shown as sent. 97 unit tests, 75 mocked e2e (1 skipped real), lint 0 errors, typecheck and build green.
+- Specifications, agents and workflow added to the repository.
+- Switched from native app (Capacitor) to PWA; automatic check-in now based on office Wi-Fi detection.
+- Wi-Fi detection and automatic check-in removed; check-in = GPS perimeter + Face ID (passkey); fixed-time reminder at 08:05.
+- Phase 0 frontend: legacy v1 removed; new React + TypeScript + Vite skeleton (Tailwind v4 theme tokens, Motion, React Router, TanStack Query, RHF + Zod, lucide in the menu only), API client with backoff and 401-only sign-out, server-time helper stub, PWA (manifest, prompt-to-update service worker, app shell only, no API caching), production build without source maps/console/library names, ESLint + Prettier, Vitest (11 tests), Playwright smoke (iPhone + desktop), CI workflow, vercel.json SPA rewrites.
+- Phase 2 frontend: design system, sign-in/sign-up/super admin/recovery/email confirmation, forced code change and profile completion, device session (memory + IndexedDB), profile, admin accounts and permissions, settings with effective date and history, notifications, activity log; 33 unit tests, 30 mocked e2e + 1 real-API e2e passing. Ready for frontend-ui-designer.
+- Phase 2 UI review fixes (UI2-01..14): interim logo + icons, danger-ghost button and danger zone, onboarding timeline, phone filter sheet, dashboard next action, no repeated code at first sign-in + strength hint, bottom bar up to lg, phone menu button, consistent badges, en-GB dates, styled selects, text back links, route code splitting. 42 unit tests, 35 mocked e2e passing (+1 phone-only skipped on desktop). Ready for UI re-review.
+- Phases 3–4 frontend: Today/check-in (GPS accuracy retries, Face ID assertion, mission, remote, check-out), schedule, history, admin attendance/missions/attempts/leave/holidays, Face ID registration and device approval, install guide, Web Push, in-app browser notice; UX2-21..24 fixed, UX2-20 accepted. 81 unit tests, 75 mocked e2e. Ready for frontend-ui-designer.
+- Phase 2 UX fixes (UX2-01..20 front parts) and UI re-review fixes (UI2-12, 15-19): 56 unit tests, 45 mocked e2e passing (+1 skipped), lint/typecheck/build green. Ready for frontend-ux-tester re-test.
