@@ -139,7 +139,9 @@ describe('report helpers', () => {
         new Date('2026-11-13T17:30:00Z'),
       ).title,
     ).toMatch(/absent/);
-    expect(submissionState(status({ expected: false }), before).title).toBe('No report expected');
+    expect(submissionState(status({ expected: false }), before).title).toBe(
+      'Not expected this week',
+    );
   });
 });
 

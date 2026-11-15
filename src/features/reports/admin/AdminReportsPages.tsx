@@ -74,7 +74,10 @@ export function AdminDailyReportsPage() {
   const q = useAdminDaily(date === today ? undefined : date, allowed);
   if (me && !allowed) return <Navigate to="/app/admin/reports/weekly" replace />;
   const rows = q.data?.data ?? [];
-  const withData = rows.filter((r) => r.tasks_planned > 0 || r.clients_count > 0).length;
+  const totals = q.data?.totals;
+  const withData =
+    totals?.with_report ?? rows.filter((r) => r.tasks_planned > 0 || r.clients_count > 0).length;
+  const people = totals?.people ?? rows.length;
   return (
     <div>
       <PageHeader title="Reports" description="Daily work of each person." />
@@ -94,8 +97,8 @@ export function AdminDailyReportsPage() {
           className="flex flex-col gap-3"
         >
           <motion.p variants={fadeUp} className="text-sm text-ink-600">
-            {withData} of {rows.length} {rows.length === 1 ? 'employee' : 'employees'} recorded work
-            on {formatDayEnGb(date)}.
+            {withData} of {people} {people === 1 ? 'person' : 'people'} recorded work on{' '}
+            {formatDayEnGb(date)}.
           </motion.p>
           {rows.map((r) => (
             <motion.div key={r.user.id} variants={fadeUp}>
@@ -125,7 +128,7 @@ function DailyRowCard({ row, date }: { row: AdminDailyRow; date: string }) {
           <div>
             <dt className="text-xs text-ink-500">Tasks done</dt>
             <dd className="font-semibold tabular-nums">
-              {row.tasks_done} / {row.tasks_planned}
+              {row.tasks_done} of {row.tasks_planned}
             </dd>
           </div>
           <div>

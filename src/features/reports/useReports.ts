@@ -173,7 +173,11 @@ export function useAdminDaily(date: string | undefined, enabled = true) {
   return useQuery({
     queryKey: ['admin', 'reports', 'daily', date ?? 'today'],
     queryFn: () =>
-      api.get<{ work_date: string; data: AdminDailyRow[] }>(`/admin/reports/daily${qs({ date })}`),
+      api.get<{
+        work_date: string;
+        data: AdminDailyRow[];
+        totals?: { people: number; employees: number; admins: number; with_report: number };
+      }>(`/admin/reports/daily${qs({ date })}`),
     enabled,
   });
 }

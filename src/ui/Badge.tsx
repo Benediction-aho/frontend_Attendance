@@ -55,7 +55,7 @@ export function AdminBadge({
     <span
       data-testid="admin-badge"
       className={cx(
-        'ml-2 inline-flex items-center rounded-full border border-ink-200 px-1.5 align-middle text-[11px] leading-4 font-medium whitespace-nowrap text-ink-600',
+        'ml-2 inline-flex items-center rounded-full bg-primary-50 px-2 align-middle text-[11px] leading-4 font-semibold whitespace-nowrap text-primary-700',
         className,
       )}
     >

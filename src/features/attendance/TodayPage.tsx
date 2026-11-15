@@ -226,7 +226,7 @@ function CheckInPanel({ today }: { today: Today }) {
                 ? 'Today is one of your remote days: check in remotely in one tap.'
                 : 'At the office, tap the button: we check your location, then Face ID.'}
               {today.rules.late_after
-                ? ` Check-ins after ${today.rules.late_after} count as late.`
+                ? ` Check-ins after ${formatHhmm(today.rules.late_after)} count as late.`
                 : ''}
             </p>
             <AnimatePresence initial={false}>

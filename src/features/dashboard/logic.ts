@@ -51,6 +51,12 @@ export function weeklyReportText(r: WR): {
         action: 'See my weekly report',
         attention: false,
       };
+    case 'not_expected':
+      return {
+        label: 'Not expected this week',
+        hint: 'No weekly report is due from you.',
+        attention: false,
+      };
     default:
       return { label: 'Not required', hint: 'No weekly report this week.', attention: false };
   }

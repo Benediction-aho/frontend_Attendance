@@ -181,7 +181,7 @@ export function AppLayout() {
   const reduce = useReducedMotion();
   // Five buttons (admin who checks in): each takes the room its label needs, so the longest
   // one ("Notifications") is never cut on small phones. Four or fewer: equal slots.
-  const slot = nav.mobile.length >= 4 ? 'flex-auto' : 'flex-1';
+  const slot = 'flex-auto px-0.5';
 
   return (
     <div className="min-h-dvh lg:flex">
@@ -281,7 +281,7 @@ export function AppLayout() {
         initial={reduce ? false : { opacity: 0, y: 24 }}
         animate={{ opacity: 1, y: 0 }}
         transition={{ duration: duration.slow, ease: easing.standard }}
-        className="glass-pill fixed inset-x-4 bottom-[calc(env(safe-area-inset-bottom)+8px)] z-30 mx-auto flex h-16 max-w-md items-stretch rounded-full border border-white/60 px-1.5 shadow-[0_8px_24px_-8px_rgb(15_23_42/0.18)] ring-1 ring-ink-900/5 lg:hidden"
+        className="glass-pill fixed inset-x-3 bottom-[calc(env(safe-area-inset-bottom)+8px)] z-30 mx-auto flex h-16 max-w-md items-stretch rounded-full border border-white/60 px-1 shadow-[0_8px_24px_-8px_rgb(15_23_42/0.18)] ring-1 ring-ink-900/5 lg:hidden"
       >
         {nav.mobile.map((item) => {
           const { to, label, icon: Icon, end, badge } = item;
@@ -308,7 +308,7 @@ export function AppLayout() {
                   </span>
                 ) : null}
               </span>
-              <span className="max-w-full truncate px-0.5">{label}</span>
+              <span className="whitespace-nowrap">{label}</span>
             </NavLink>
           );
         })}
@@ -321,7 +321,7 @@ export function AppLayout() {
           )}
         >
           <LogOut aria-hidden size={22} strokeWidth={1.75} />
-          <span className="max-w-full truncate px-0.5">Sign out</span>
+          <span className="whitespace-nowrap">Sign out</span>
         </button>
       </motion.nav>
     </div>

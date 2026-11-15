@@ -88,6 +88,7 @@ export function defaultMyDashboard(o: Record<string, unknown> = {}) {
       week_end: '2026-11-15',
       presence_days: 4,
       expected_days_so_far: 5,
+      extra_days: 0,
       late_count: 1,
       tasks_planned: 20,
       tasks_done: 15,

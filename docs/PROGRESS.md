@@ -271,3 +271,13 @@ Tests: `tests/Feature/Reports/ActivityReportTest.php` (36 tests: sending, valida
 - **UXC-07 fixed (API change)**: `/me/dashboard` `week.presence_days` counts expected days only (never above `expected_days_so_far`); new `week.extra_days` = check-ins on non-expected days. Frontend: show "1 extra day" instead of "1 of 0".
 - OpenAPI 0.7.1. Tests `tests/Feature/Ux/ChangeUxFixesTest.php`.
 
+
+### 2026-11-15 – Review fixes (change 2026-11-14) – attendance-frontend
+- UI-1 / UXC-02: late threshold in 12-hour format ("after 8:10 AM"); unit test updated.
+- UI-2 / UXC-03: tab rows (My work, admin Reports) wrap instead of scrolling, so every tab is visible at 320 px. Bottom bar: content-sized slots, tighter padding, no truncation; "Notifications" shown in full at 320 px (employee and admin bars), glass pill, Sign out last, 44 px targets kept (e2e at 320/360/390).
+- UI-3: "Upload a report" is an outline button on Daily and Weekly (one filled primary per screen).
+- UI-4: upload file shown as one bordered row (name, size, Change) with a reserved progress slot (no layout jump).
+- UI-5: neutral text with one underlined link "See sent reports". UI-6: "N of M" everywhere. UI-7: Admin badge soft brand-blue, links keep 44 px. UI-8: the sheet already uses the shared motion tokens and drops the slide under reduced motion (no change).
+- UXC-05: "people" (from `totals.people` / `with_report`, API 0.7.1, fallback to rows). UXC-06: "See Face ID devices". UXC-08: at the daily limit "Upload a report" is disabled with the quota line beside it.
+- API 0.7.1: weekly status `not_expected` → "Not expected this week" (dashboard and weekly page, no "To send"); `week.extra_days` → "1 extra day" instead of "1 of 0".
+- Screenshots refreshed in `/home/user/apercu/admin-checkin/` (320, 360, 390 px).

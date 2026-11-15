@@ -36,7 +36,7 @@ function adminState(o: Record<string, unknown> = {}): MockState {
 
 async function shot(page: Page, name: string, enabled: boolean) {
   if (!enabled) return;
-  for (const w of [390, 360]) {
+  for (const w of [390, 360, 320]) {
     await page.setViewportSize({ width: w, height: 844 });
     await page.waitForTimeout(400);
     await page.screenshot({ path: `${SHOTS}/${w}-${name}.png` });
@@ -165,13 +165,13 @@ test('activity report: upload with field errors, list, delete with confirmation'
     mimeType: 'application/pdf',
     buffer: Buffer.from('%PDF-1.4 test'),
   });
-  await expect(dlg.getByText('up to 10 MB')).toBeVisible();
+  await expect(dlg.getByText(/up to 10 MB/)).toBeVisible();
   if (phone) await shot(page, 'upload-form', true);
   await dlg.getByRole('button', { name: 'Send report' }).click();
   await expect(dlg.getByTestId('activity-file-error')).toContainText('Password-protected');
   await dlg.getByRole('button', { name: 'Send report' }).click();
   await expect(dlg).toBeHidden();
-  await page.getByRole('link', { name: /Activity reports sent/ }).click();
+  await page.getByRole('link', { name: 'See sent reports' }).click();
   await expect(page.getByTestId('activity-reports')).toContainText('Visit to the bank');
   await expect(page.getByTestId('activity-quota')).toContainText('1 of 5 sent today · 4 left');
   await expect(page.getByTestId('delete-until')).toBeVisible();
@@ -263,4 +263,30 @@ test('settings: admins start date can be set and emptied', async ({ page }) => {
   await expect
     .poll(() => state.calls.find((c) => c.method === 'PUT' && c.path === '/admin/settings')?.body)
     .toEqual({ values: { admin_attendance_starts_on: null } });
+});
+
+test('320 px: employee bar shows "Notifications" in full; My work tabs all visible', async ({
+  page,
+}, testInfo) => {
+  test.skip(testInfo.project.name !== 'iphone', 'Phone layout only');
+  await page.setViewportSize({ width: 320, height: 700 });
+  const state = newState();
+  await mockApi(page, state);
+  await signInUi(page);
+  const bar = page.getByRole('navigation', { name: 'Bottom menu' });
+  const label = bar.getByRole('link', { name: 'Notifications' }).locator('span').last();
+  expect(
+    await label.evaluate(
+      (el: { scrollWidth: number; clientWidth: number }) => el.scrollWidth <= el.clientWidth + 1,
+    ),
+  ).toBe(true);
+  await page.goto('/app/work');
+  const tabs = page.getByRole('navigation', { name: 'My work sections' }).getByRole('link');
+  await expect(tabs).toHaveCount(4);
+  for (let i = 0; i < 4; i++) {
+    const b = (await tabs.nth(i).boundingBox())!;
+    expect(b.x).toBeGreaterThanOrEqual(0);
+    expect(b.x + b.width).toBeLessThanOrEqual(320);
+  }
+  await page.screenshot({ path: `${SHOTS}/320-employee-my-work-tabs.png` });
 });

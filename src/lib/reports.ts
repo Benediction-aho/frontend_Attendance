@@ -88,6 +88,8 @@ export interface WeeklySubmission {
 
 export interface SubmissionStatus {
   can_submit: boolean;
+  /** 0.7.1: `not_expected` when no report is due this week (upload refused). */
+  status?: string;
   week_start: string;
   window_date: string;
   opens_at: string;
@@ -131,7 +133,7 @@ export interface AdminWeeklyList {
   expected_count: number;
   received_count: number;
   data: { user: EmployeeSummary; expected: boolean; submission: WeeklySubmission | null }[];
-  /** Expected employees without a report (server list). */
+  /** Expected people without a report (server list). */
   missing?: EmployeeSummary[];
 }
 

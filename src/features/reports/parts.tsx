@@ -150,7 +150,7 @@ export function WeeklySummaryView({ week }: { week: WeeklySummary }) {
           <CardBody>
             <dl className="grid grid-cols-2 gap-3 sm:grid-cols-4">
               <Figure label="Clients" value={week.clients_count} />
-              <Figure label="Tasks done" value={`${week.tasks_done} / ${week.tasks_planned}`} />
+              <Figure label="Tasks done" value={`${week.tasks_done} of ${week.tasks_planned}`} />
             </dl>
           </CardBody>
           {week.days.length === 0 ? (
@@ -177,7 +177,7 @@ export function WeeklySummaryView({ week }: { week: WeeklySummary }) {
                       <span className="text-ink-500">{dayMonth(d.work_date)}</span>
                     </TD>
                     <TD className="text-right tabular-nums">
-                      {d.tasks_done} / {d.tasks_planned}
+                      {d.tasks_done} of {d.tasks_planned}
                     </TD>
                     <TD className="text-right tabular-nums">{d.clients_count}</TD>
                   </TR>
@@ -258,17 +258,13 @@ export function TabLinks({
   tabs: { to: string; label: string }[];
 }) {
   return (
-    <nav aria-label={label} className="-mx-1 mb-5 flex gap-1 overflow-x-auto px-1">
+    // Tabs wrap onto a second line on small phones: every tab stays visible (UXC-03).
+    <nav aria-label={label} className="-mx-1 mb-5 flex flex-wrap gap-1 px-1">
       {tabs.map((t) => (
         <NavLink
           key={t.to}
           to={t.to}
           end
-          // The current tab is brought into view when the row scrolls (phones).
-          ref={(el) => {
-            if (el?.getAttribute('aria-current') === 'page' && el.scrollIntoView)
-              el.scrollIntoView({ block: 'nearest', inline: 'nearest' });
-          }}
           className={({ isActive }) =>
             cx(
               'relative inline-flex min-h-11 shrink-0 items-center rounded-control px-3.5 text-sm font-medium transition-colors',

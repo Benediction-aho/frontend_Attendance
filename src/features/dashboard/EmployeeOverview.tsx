@@ -53,8 +53,17 @@ export function EmployeeOverview() {
             items={[
               {
                 label: 'Days present',
-                value: ratio(week.presence_days, week.expected_days_so_far),
-                hint: 'Of expected days so far',
+                // Never "1 of 0": with no expected day yet, only the extra days are shown.
+                value:
+                  week.expected_days_so_far === 0 && (week.extra_days ?? 0) > 0
+                    ? `${week.extra_days} extra day${week.extra_days === 1 ? '' : 's'}`
+                    : ratio(week.presence_days, week.expected_days_so_far),
+                hint:
+                  week.expected_days_so_far === 0
+                    ? 'No expected day so far'
+                    : (week.extra_days ?? 0) > 0
+                      ? `Of expected days so far, plus ${week.extra_days} extra day${week.extra_days === 1 ? '' : 's'}`
+                      : 'Of expected days so far',
               },
               { label: 'Late arrivals', value: week.late_count, attention: week.late_count > 0 },
               { label: 'Tasks done', value: ratio(week.tasks_done, week.tasks_planned) },

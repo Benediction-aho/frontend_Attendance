@@ -159,34 +159,60 @@ function ActivityReportForm({
           onChange={pick}
           data-testid="activity-pdf-input"
         />
-        <AnimatePresence initial={false}>
-          {file && (
-            <motion.div
-              initial={{ opacity: 0, height: 0 }}
-              animate={{ opacity: 1, height: 'auto' }}
-              exit={{ opacity: 0, height: 0 }}
-              transition={{ duration: duration.base, ease: easing.standard }}
-              className="overflow-hidden"
+        {/* One bordered row: file (or prompt), Change, and a reserved progress slot (UI-4). */}
+        <div className="rounded-control border border-ink-200 bg-surface-muted px-4 py-2.5">
+          <div className="flex items-center justify-between gap-3">
+            <div className="min-w-0 text-sm">
+              {file ? (
+                <>
+                  <p className="font-medium wrap-anywhere text-ink-900">{file.name}</p>
+                  <p className="text-ink-500">{formatSize(file.size)}</p>
+                </>
+              ) : (
+                <p className="text-ink-500">No file chosen</p>
+              )}
+            </div>
+            <Button
+              variant={file ? 'ghost' : 'outline'}
+              size="sm"
+              className="shrink-0"
+              aria-describedby="activity-file-hint"
+              disabled={send.isPending}
+              onClick={() => input.current?.click()}
             >
-              <div className="rounded-control border border-ink-100 bg-surface-muted px-4 py-3 text-sm">
-                <p className="font-medium wrap-anywhere text-ink-900">{file.name}</p>
-                <p className="text-ink-500">{formatSize(file.size)}</p>
+              {file ? 'Change' : 'Choose the PDF'}
+            </Button>
+          </div>
+          <div className="mt-2 min-h-8" aria-live="polite">
+            {send.isPending ? (
+              <div data-testid="upload-progress">
+                <div className="flex items-center justify-between text-xs text-ink-700">
+                  <span>{percent >= 100 ? 'Checking the PDF…' : 'Sending your report…'}</span>
+                  <span className="tabular-nums">{percent} %</span>
+                </div>
+                <div
+                  className="mt-1 h-1.5 overflow-hidden rounded-full bg-ink-100"
+                  role="progressbar"
+                  aria-label="Upload progress"
+                  aria-valuemin={0}
+                  aria-valuemax={100}
+                  aria-valuenow={percent}
+                >
+                  <motion.div
+                    className="h-full rounded-full bg-primary-600"
+                    initial={false}
+                    animate={{ width: `${Math.max(4, percent)}%` }}
+                    transition={{ duration: duration.fast, ease: easing.standard }}
+                  />
+                </div>
               </div>
-            </motion.div>
-          )}
-        </AnimatePresence>
-        <Button
-          variant="outline"
-          className="self-start"
-          aria-describedby="activity-file-hint"
-          disabled={send.isPending}
-          onClick={() => input.current?.click()}
-        >
-          {file ? 'Choose another file' : 'Choose the PDF'}
-        </Button>
-        <p id="activity-file-hint" className="text-xs text-ink-500">
-          One PDF{maxMb > 0 ? `, up to ${maxMb} MB` : ''}. No password, no embedded files.
-        </p>
+            ) : (
+              <p id="activity-file-hint" className="text-xs text-ink-500">
+                One PDF{maxMb > 0 ? `, up to ${maxMb} MB` : ''}. No password, no embedded files.
+              </p>
+            )}
+          </div>
+        </div>
         {fileWarn && !errors.file && <p className="text-sm text-secondary-800">{fileWarn}</p>}
         {errors.file && (
           <p role="alert" className="text-sm text-danger-700" data-testid="activity-file-error">
@@ -194,29 +220,6 @@ function ActivityReportForm({
           </p>
         )}
       </div>
-      {send.isPending && (
-        <div data-testid="upload-progress">
-          <div className="flex items-center justify-between text-sm text-ink-700">
-            <span>{percent >= 100 ? 'Checking the PDF…' : 'Sending your report…'}</span>
-            <span className="tabular-nums">{percent} %</span>
-          </div>
-          <div
-            className="mt-1.5 h-1.5 overflow-hidden rounded-full bg-ink-100"
-            role="progressbar"
-            aria-label="Upload progress"
-            aria-valuemin={0}
-            aria-valuemax={100}
-            aria-valuenow={percent}
-          >
-            <motion.div
-              className="h-full rounded-full bg-primary-600"
-              initial={false}
-              animate={{ width: `${Math.max(4, percent)}%` }}
-              transition={{ duration: duration.base, ease: easing.standard }}
-            />
-          </div>
-        </div>
-      )}
       {errors.form && <Alert tone="danger">{errors.form}</Alert>}
       <div className="grid grid-cols-2 gap-2">
         <Button variant="outline" disabled={send.isPending} onClick={onDone}>
@@ -241,9 +244,16 @@ export function UploadReportButton({
   const [open, setOpen] = useState(false);
   const [busy, setBusy] = useState(false);
   const locked = useLockedByCheckIn();
+  const full = limits ? limits.remaining_today <= 0 : false;
   return (
     <>
-      <Button variant={variant} aria-haspopup="dialog" onClick={() => setOpen(true)}>
+      {/* At the daily limit the button is unavailable (UXC-08); the quota line says why. */}
+      <Button
+        variant={full ? 'outline' : variant}
+        disabled={full}
+        aria-haspopup="dialog"
+        onClick={() => setOpen(true)}
+      >
         Upload a report
       </Button>
       <Modal
@@ -282,12 +292,19 @@ export function ActivityReportCallout({ variant }: { variant?: 'primary' | 'outl
             Something to report now? Send a PDF about an activity at any time. This is not the
             Friday weekly report.
           </p>
-          <Link
-            to="/app/reports/activity"
-            className="mt-1 inline-flex min-h-11 items-center text-sm font-semibold text-primary-700 hover:underline"
-          >
-            Activity reports sent{limits ? ` · ${limits.sent_today} today` : ''}
-          </Link>
+          <p className="mt-1 text-sm text-ink-600">
+            {limits
+              ? limits.remaining_today <= 0
+                ? `${quotaLine(limits)} `
+                : `${limits.sent_today} sent today. `
+              : ''}
+            <Link
+              to="/app/reports/activity"
+              className="inline-flex min-h-11 items-center text-ink-700 underline underline-offset-2 hover:text-primary-700"
+            >
+              See sent reports
+            </Link>
+          </p>
         </div>
         <div className="shrink-0 [&>button]:w-full sm:[&>button]:w-auto">
           <UploadReportButton variant={variant} limits={limits} />

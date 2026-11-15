@@ -148,3 +148,12 @@ describe('Activity reports page', () => {
     expect(await screen.findByText('No activity report sent yet.')).toBeInTheDocument();
   });
 });
+
+describe('0.7.1 statuses', () => {
+  it('weekly not_expected shows no "To send"', async () => {
+    const { weeklyReportText } = await import('../dashboard/logic');
+    expect(weeklyReportText({ status: 'not_expected' } as never).label).toBe(
+      'Not expected this week',
+    );
+  });
+});

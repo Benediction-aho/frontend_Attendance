@@ -77,7 +77,7 @@ export function DailyReportPage() {
       />
       <WorkTabs />
       <div className="mb-5">
-        <ActivityReportCallout />
+        <ActivityReportCallout variant="outline" />
       </div>
       <DateNav label="Day" value={date} today={today} onChange={setDate} />
       {q.isPending ? (
@@ -106,7 +106,10 @@ export function DailyReportView({ report }: { report: DailyReport }) {
           />
           <CardBody>
             <dl className="grid grid-cols-2 gap-3">
-              <Figure label="Tasks done" value={`${report.tasks_done} / ${report.tasks_planned}`} />
+              <Figure
+                label="Tasks done"
+                value={`${report.tasks_done} of ${report.tasks_planned}`}
+              />
               <Figure label="Clients" value={report.clients_count} />
             </dl>
           </CardBody>
@@ -207,10 +210,10 @@ export function WeeklyReportPage() {
 /** What the employee should do now about the weekly PDF (all times from the API). */
 export function submissionState(s: SubmissionStatus, now: Date) {
   const phase = windowPhase(s, now);
-  if (!s.expected && !s.current)
+  if ((!s.expected || s.status === 'not_expected') && !s.current)
     return {
       tone: 'info' as const,
-      title: 'No report expected',
+      title: 'Not expected this week',
       text: 'No weekly report is expected from you for this week.',
     };
   if (s.current)

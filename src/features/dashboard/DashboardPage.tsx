@@ -192,7 +192,7 @@ function PendingSection({ p }: { p: NonNullable<AdminDashboard['pending']> }) {
             to={first.to}
             className="inline-flex min-h-11 items-center text-sm text-primary-700 hover:underline"
           >
-            See {first.label.toLowerCase()}
+            See {first.label === 'Face ID devices' ? first.label : first.label.toLowerCase()}
           </Link>
         </div>
       </Section>

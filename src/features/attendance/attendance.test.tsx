@@ -230,7 +230,7 @@ describe('Today screen', () => {
     expect(await screen.findByRole('button', { name: 'Check in remotely' })).toBeInTheDocument();
     expect(screen.getByRole('button', { name: 'Check in at the office' })).toBeInTheDocument();
     expect(screen.getByRole('button', { name: /Mission check-in/ })).toBeInTheDocument();
-    expect(screen.getByText(/after 08:10 count as late/)).toBeInTheDocument();
+    expect(screen.getByText(/after 8:10 AM count as late/)).toBeInTheDocument();
   });
 
   it('shows when check-in opens instead of the button before opening time', async () => {
