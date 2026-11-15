@@ -193,7 +193,16 @@ _Not given yet._
 
 ## 2026-11-14 – Admins track attendance (owner decision)
 
-**Status: backend done on its development branch (committed locally, not pushed: a backend push deploys to production). Frontend: to do by attendance-frontend from the contract below. This section mirrors `backend_Attendance/docs/PROGRESS.md`.**
+**Status: backend done on its development branch (committed locally, not pushed: a backend push deploys to production). Frontend: done (2026-11-15) – ready for frontend-ui-designer, then frontend-ux-tester. This section mirrors `backend_Attendance/docs/PROGRESS.md`.**
+
+Frontend (attendance-frontend):
+- Everything is driven by `tracks_attendance` from `GET /me` (`tracksAttendance()` in `src/lib/permissions.ts`; fallback to role = employee for older API versions), never by the role alone: Today with check-in, Face ID onboarding step and Profile card, working week, history, My work, daily/weekly/activity reports, employee dashboard figures.
+- Landing: an admin who checks in lands on **Today** (check-in first, like employees). The team dashboard ("Waiting for you", team figures) is the landing of the **Admin** tab (`/app/admin`, title "Administration"), followed on phones/tablets by the section cards; desktop sidebar adds an "Administration › Dashboard" entry. Admins who do not track attendance and super admins: unchanged (Home = dashboard). Deep links unchanged.
+- Phone bar (owner's glass pill kept): Today · My work · Notifications · Admin · Sign out (last, with confirmation). With five items the slots size to their labels (`flex-auto`), so "Notifications" is never cut; e2e checks 320/360/390 px: 5 items, each ≥ 44×44 px, no truncated label, no horizontal scroll. My work stays active on its report tabs. Attendance in the sidebar uses a calendar icon for admins who check in (Today keeps the clock).
+- Admin pages are never blocked by the check-in; own task/client/report/activity writes keep the "Check in first" behaviour (403 `checkin_required`).
+- Discreet "Admin" badge (`AdminBadge`, `src/ui/Badge.tsx`) on admin rows: attendance day, missions, refused check-ins, Face ID devices, leave, daily/weekly reports, activity reports. 403/404 on one admin's report shows "Not available" instead of an error. `POST /admin/users/{id}/check-in` 422 `attendance_not_tracked` and 403 have clear messages.
+- Settings: type `date` + `nullable` (`admin_attendance_starts_on`, label "Admins check in from", explanation, "Clear the date" → sent as `null`, "No date: admins do not check in"), existing history / "Schedule for later" UI. Super-admin-only setting, so admins never receive it.
+- Tests: `src/features/reports/activity.test.tsx`, e2e `e2e/admin-checkin.spec.ts` (iPhone + desktop).
 
 Rules (SPECS section 2 "Pointage des admins", both repositories):
 1. A simple admin does everything an employee does, under the same rules: check-in / check-out (GPS + Face ID, mission, remote days, once per day, lateness, early check-out reason, auto check-out), working week, tasks, clients, automatic daily report, weekly PDF report with its reminders and its "who must send it" list. Admins appear in attendance lists, dashboard totals, check-in reminders and the monthly report. Their own task/client/report writes need today's check-in. No working week yet = same rule as an employee without one. First phone approved automatically like an employee's.
@@ -222,7 +231,15 @@ Tests: `tests/Feature/Attendance/AdminsTrackAttendanceTest.php` (30 tests: setti
 
 ## 2026-11-14 – Activity reports sent at any time (owner request)
 
-**Status: backend done on its development branch (committed locally, not pushed). Frontend: to do by attendance-frontend from the API below. This section mirrors `backend_Attendance/docs/PROGRESS.md`.**
+**Status: backend done on its development branch (committed locally, not pushed). Frontend: done (2026-11-15) – ready for frontend-ui-designer, then frontend-ux-tester. This section mirrors `backend_Attendance/docs/PROGRESS.md`.**
+
+Frontend (attendance-frontend):
+- My work gets a fourth tab **Activity reports** (`/app/reports/activity`); the Daily report and Weekly report tabs show an "Activity report" card ("Something to report now? … This is not the Friday weekly report.") with an **Upload a report** button (outline on Weekly so the weekly PDF keeps the main button).
+- Upload sheet: title (required, 150), note (optional, 1000 with counter), one PDF (size limit from `limits.max_size_mb`), real upload progress (`api.upload`, XMLHttpRequest, never retried), server errors on the right field (`invalid_pdf`, `pdf_encrypted`, `pdf_active_content`, 413 → file; title/note validation → field; `too_many_activity_reports`, `checkin_required`, offline/connection lost → form). The sheet cannot be closed while sending.
+- "Activity reports sent": newest first, paginated, Open PDF, quota line ("2 of 5 sent today · 3 left"), Delete only while `can_delete` and before `delete_until` (server time), with confirmation showing until when; 422 `delete_window_closed` explained.
+- Admin: Reports gets a third tab **Activity reports** (`/app/admin/reports/activity`): filter "Sent by" (people from the weekly list and the authors shown) plus From/To dates (sheet on phones), author with Admin badge, title, note, date, Open PDF, Details. `/app/admin/reports/activity/:id` (notification target) loads a fresh `file_url`; 403/404 → "This report is not available". Visible with `view_reports` or `receive_weekly_reports` (super admins always).
+- Settings (reports part): `activity_reports_per_day`, `activity_report_delete_minutes`, `activity_report_email` with short labels and hints.
+- Checks (2026-11-15): typecheck OK, lint 0 errors (16 existing warnings), format OK, Vitest 152/152, build OK, Playwright 124 passed / 2 skipped (126). Screenshots for the owner: `/home/user/apercu/admin-checkin/` (390 and 360 px).
 
 - A PDF with a title (and an optional note) sent whenever needed. It never replaces nor counts as the weekly Friday report (not in "received/missing", not in the monthly report).
 - Table `activity_reports` (migration `2026_11_24_100000_create_activity_reports_table`, new table only, reversible; soft delete: the row is kept for the daily limit and the audit trail, the file is removed). Files on the private disk under `activity-reports/<user>/<date>/<uuid>.pdf`, served through `FileUrls` (temporary links, attachment).
@@ -240,4 +257,11 @@ Tests: `tests/Feature/Attendance/AdminsTrackAttendanceTest.php` (30 tests: setti
 - Notification (in-app, push copy as usual): `kind: activity_report`, `title: "Activity report from <First Last>"`, `body`, `path: /admin/reports/activity/{id}`, `activity_report_id`, `user_id`.
 
 Tests: `tests/Feature/Reports/ActivityReportTest.php` (36 tests: sending, validation, check-in gate, daily limit, own list, deletion window, reader tiers and filters, authorization negatives – employee on someone else's, admin without the tier, admin on another admin's and on their own in the admin pages –, settings).
+
+## 2026-11-15 – Security re-check of the 2026-11-14 changes (`backend_Attendance/docs/reports/change-2026-11-14-security.md`)
+- **CHG-01 (Medium) – accepted risk, owner decision 2026-11-15**: admins holding "Settings – Attendance" keep access to the attendance settings (Face ID requirement, office position, lateness hour…) even though those settings also judge their own check-in. Mitigation kept: every change by an admin alerts all super admins (in-app + e-mail, `settings_changed`) and is logged (`settings.updated`).
+- **CHG-02 (Low) – fixed**: adding or removing a public holiday by an admin (not a super admin) now alerts every active super admin, in-app + e-mail (`kind: holiday_changed`, path `/admin/settings`), in addition to the `holiday.created` / `holiday.deleted` log entries. (There is no "edit holiday" route: a change is remove + add.)
+- **CHG-04 (Info) – fixed (safest choice)**: an admin who already checked in on a day keeps tracking attendance for that day even if `admin_attendance_starts_on` is emptied or moved later during it: check-out, `/attendance/today`, own history and own activity reports keep working; the next day the new value applies.
+- **CHG-06 (Info) – fixed**: the three stale assertions of `tests/security/Phase5SecurityTest.php` updated (admins tracking attendance may read service suggestions; clean PDF for the signed-URL test; monthly fixture date inside the 26→25 period).
+- CHG-03, CHG-05: informational, unchanged.
 

@@ -1,6 +1,9 @@
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
 import { api, qs } from '../../lib/api';
+import type { PageMeta } from '../../lib/types';
 import type {
+  ActivityLimits,
+  ActivityReport,
   AdminDailyRow,
   AdminSubmissionDetail,
   AdminWeeklyList,
@@ -203,5 +206,86 @@ export function useAdminUserWeekly(id: string | undefined, date: string | undefi
         `/admin/users/${id}/reports/weekly${qs({ date })}`,
       ),
     enabled: Boolean(id),
+  });
+}
+
+/* Activity reports (a PDF with a title, sent at any time) */
+
+export const ACTIVITY_KEY = ['me', 'reports', 'activity'] as const;
+
+export interface MyActivityReports {
+  data: ActivityReport[];
+  meta: PageMeta;
+  limits: ActivityLimits;
+}
+
+export function useMyActivityReports(page = 1) {
+  return useQuery({
+    queryKey: [...ACTIVITY_KEY, page],
+    queryFn: () => api.get<MyActivityReports>(`/me/reports/activity${qs({ page })}`),
+    placeholderData: (p) => p,
+    refetchInterval: LINK_REFRESH_MS,
+  });
+}
+
+export interface ActivityInput {
+  title: string;
+  note: string;
+  file: File;
+  onProgress?: (fraction: number) => void;
+}
+
+export function useSendActivityReport() {
+  const qc = useQueryClient();
+  return useMutation({
+    mutationFn: ({ title, note, file, onProgress }: ActivityInput) => {
+      const fd = new FormData();
+      fd.append('title', title);
+      if (note) fd.append('note', note);
+      fd.append('file', file);
+      return api.upload<{ data: ActivityReport }>('/me/reports/activity', fd, onProgress);
+    },
+    // Fail at once when offline: the form explains, nothing is sent later behind the user's back.
+    networkMode: 'always',
+    onSettled: () => void qc.invalidateQueries({ queryKey: ACTIVITY_KEY }),
+  });
+}
+
+export function useDeleteActivityReport() {
+  const qc = useQueryClient();
+  return useMutation({
+    mutationFn: (id: number) => api.del(`/me/reports/activity/${id}`),
+    onSettled: () => void qc.invalidateQueries({ queryKey: ACTIVITY_KEY }),
+  });
+}
+
+export interface AdminActivityFilters {
+  from?: string;
+  to?: string;
+  user_id?: string;
+}
+
+export function useAdminActivityReports(f: AdminActivityFilters, page: number) {
+  return useQuery({
+    queryKey: ['admin', 'reports', 'activity', f, page],
+    queryFn: () =>
+      api.get<{ data: ActivityReport[]; meta: PageMeta }>(
+        `/admin/reports/activity${qs({ ...f, page })}`,
+      ),
+    placeholderData: (p) => p,
+    refetchInterval: LINK_REFRESH_MS,
+  });
+}
+
+/** One report with a fresh temporary link (target of the `activity_report` notification). */
+export function useAdminActivityReport(id: string | undefined) {
+  return useQuery({
+    queryKey: ['admin', 'reports', 'activity', 'one', id],
+    queryFn: () => api.get<{ data: ActivityReport }>(`/admin/reports/activity/${id}`),
+    enabled: Boolean(id),
+    select: (r) => r.data,
+    refetchInterval: LINK_REFRESH_MS,
+    // 403/404 are final answers (deleted, or not readable by this account).
+    retry: false,
   });
 }

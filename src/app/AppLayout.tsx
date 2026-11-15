@@ -1,5 +1,6 @@
 import {
   Bell,
+  CalendarCheck,
   CalendarDays,
   Clock3,
   ScanFace,
@@ -34,9 +35,9 @@ import {
   canSeeWeeklyPdfs,
   canViewAttendance,
   canViewLogs,
-  isEmployee,
   isSuperAdmin,
   canManageSettings,
+  tracksAttendance,
 } from '../lib/permissions';
 import type { User } from '../lib/types';
 
@@ -46,11 +47,17 @@ interface NavItem {
   icon: LucideIcon;
   end?: boolean;
   badge?: number;
+  /** Other path prefixes that belong to this entry (e.g. the report pages of My work). */
+  also?: string[];
 }
 
+const inArea = (item: NavItem, pathname: string) =>
+  (item.also ?? []).some((p) => pathname === p || pathname.startsWith(`${p}/`));
+
 export function navFor(user: User | undefined, unread = 0) {
-  const employee = isEmployee(user);
-  const home: NavItem = employee
+  // The server decides who gets the employee features (employees, and admins from their start date).
+  const tracks = tracksAttendance(user);
+  const home: NavItem = tracks
     ? { to: '/app', label: 'Today', icon: Clock3, end: true }
     : { to: '/app', label: 'Home', icon: LayoutDashboard, end: true };
   const history: NavItem = { to: '/app/attendance/history', label: 'History', icon: CalendarClock };
@@ -60,31 +67,46 @@ export function navFor(user: User | undefined, unread = 0) {
     icon: Bell,
     badge: unread,
   };
-  const work: NavItem = { to: '/app/work', label: 'My work', icon: ListChecks };
+  const work: NavItem = {
+    to: '/app/work',
+    label: 'My work',
+    icon: ListChecks,
+    also: ['/app/reports'],
+  };
   // The profile is reached from the avatar (top bar on phones, footer of the sidebar).
-  const main: NavItem[] = employee ? [home, work, history, alerts] : [home, alerts];
-  const admin: NavItem[] = [];
+  const main: NavItem[] = tracks ? [home, work, history, alerts] : [home, alerts];
+  const sections: NavItem[] = [];
   if (canViewAttendance(user))
-    admin.push({ to: '/app/admin/attendance', label: 'Attendance', icon: Clock3 });
+    sections.push({
+      to: '/app/admin/attendance',
+      label: 'Attendance',
+      // Today already uses the clock for a person who checks in.
+      icon: tracks ? CalendarCheck : Clock3,
+    });
   if (canSeeWeeklyPdfs(user))
-    admin.push({ to: '/app/admin/reports', label: 'Reports', icon: FileText });
+    sections.push({ to: '/app/admin/reports', label: 'Reports', icon: FileText });
   if (can(user, 'approve_faceid_devices'))
-    admin.push({ to: '/app/admin/faceid-devices', label: 'Face ID devices', icon: ScanFace });
+    sections.push({ to: '/app/admin/faceid-devices', label: 'Face ID devices', icon: ScanFace });
   if (isSuperAdmin(user) || can(user, 'manage_leaves'))
-    admin.push({ to: '/app/admin/leave', label: 'Leave and holidays', icon: CalendarDays });
+    sections.push({ to: '/app/admin/leave', label: 'Leave and holidays', icon: CalendarDays });
   if (can(user, 'approve_users'))
-    admin.push({ to: '/app/admin/requests', label: 'Sign-up requests', icon: ClipboardList });
+    sections.push({ to: '/app/admin/requests', label: 'Sign-up requests', icon: ClipboardList });
   if (canManageAccounts(user))
-    admin.push({ to: '/app/admin/users', label: 'Users', icon: UsersRound });
+    sections.push({ to: '/app/admin/users', label: 'Users', icon: UsersRound });
   if (canManageSettings(user))
-    admin.push({ to: '/app/admin/settings', label: 'Settings', icon: Settings2 });
+    sections.push({ to: '/app/admin/settings', label: 'Settings', icon: Settings2 });
   if (canViewLogs(user))
-    admin.push({ to: '/app/admin/logs', label: 'Activity log', icon: ScrollText });
+    sections.push({ to: '/app/admin/logs', label: 'Activity log', icon: ScrollText });
+  // An admin who checks in lands on Today: the team dashboard opens the administration group.
+  const admin: NavItem[] =
+    tracks && sections.length
+      ? [{ to: '/app/admin', label: 'Dashboard', icon: LayoutDashboard, end: true }, ...sections]
+      : sections;
   // Phones: at most four links (admin sections grouped behind "Admin"), then the
   // Sign out button rendered by the floating bar. History stays reachable from Today.
-  const mobile: NavItem[] = employee ? [home, work, alerts] : [home, alerts];
-  if (admin.length) mobile.push({ to: '/app/admin', label: 'Admin', icon: ShieldCheck });
-  return { main, admin, mobile };
+  const mobile: NavItem[] = tracks ? [home, work, alerts] : [home, alerts];
+  if (sections.length) mobile.push({ to: '/app/admin', label: 'Admin', icon: ShieldCheck });
+  return { main, admin, sections, mobile };
 }
 
 function Count({ n }: { n?: number }) {
@@ -100,6 +122,8 @@ function Count({ n }: { n?: number }) {
 
 function SideLink({ item, activeId = 'side-active' }: { item: NavItem; activeId?: string }) {
   const Icon = item.icon;
+  const { pathname } = useLocation();
+  const area = inArea(item, pathname);
   return (
     <NavLink
       to={item.to}
@@ -107,13 +131,13 @@ function SideLink({ item, activeId = 'side-active' }: { item: NavItem; activeId?
       className={({ isActive }) =>
         cx(
           'relative flex min-h-11 items-center gap-3 rounded-control px-3 text-sm font-medium transition-colors',
-          isActive ? 'text-primary-700' : 'text-ink-600 hover:bg-ink-50 hover:text-ink-800',
+          isActive || area ? 'text-primary-700' : 'text-ink-600 hover:bg-ink-50 hover:text-ink-800',
         )
       }
     >
       {({ isActive }) => (
         <>
-          {isActive && (
+          {(isActive || area) && (
             <motion.span
               layoutId={activeId}
               className="absolute inset-0 rounded-control bg-primary-50"
@@ -155,6 +179,9 @@ export function AppLayout() {
   // Signing out from the floating bar always asks first: no accidental logout.
   const [confirmOut, setConfirmOut] = useState(false);
   const reduce = useReducedMotion();
+  // Five buttons (admin who checks in): each takes the room its label needs, so the longest
+  // one ("Notifications") is never cut on small phones. Four or fewer: equal slots.
+  const slot = nav.mobile.length >= 4 ? 'flex-auto' : 'flex-1';
 
   return (
     <div className="min-h-dvh lg:flex">
@@ -256,33 +283,42 @@ export function AppLayout() {
         transition={{ duration: duration.slow, ease: easing.standard }}
         className="glass-pill fixed inset-x-4 bottom-[calc(env(safe-area-inset-bottom)+8px)] z-30 mx-auto flex h-16 max-w-md items-stretch rounded-full border border-white/60 px-1.5 shadow-[0_8px_24px_-8px_rgb(15_23_42/0.18)] ring-1 ring-ink-900/5 lg:hidden"
       >
-        {nav.mobile.map(({ to, label, icon: Icon, end, badge }) => (
-          <NavLink
-            key={to}
-            to={to}
-            end={end}
-            className={({ isActive }) =>
-              cx(
-                'flex min-h-11 min-w-11 flex-1 flex-col items-center justify-center gap-0.5 rounded-full text-[11px] leading-tight transition-colors',
-                isActive ? 'font-semibold text-primary-600' : 'font-medium text-ink-600',
-              )
-            }
-          >
-            <span className="relative">
-              <Icon aria-hidden size={22} strokeWidth={1.75} />
-              {badge ? (
-                <span className="absolute -top-1 -right-2 size-2.5 rounded-full bg-secondary-500 ring-2 ring-surface">
-                  <span className="sr-only">{badge} unread</span>
-                </span>
-              ) : null}
-            </span>
-            <span className="max-w-full truncate px-0.5">{label}</span>
-          </NavLink>
-        ))}
+        {nav.mobile.map((item) => {
+          const { to, label, icon: Icon, end, badge } = item;
+          return (
+            <NavLink
+              key={to}
+              to={to}
+              end={end}
+              className={({ isActive }) =>
+                cx(
+                  'flex min-h-11 min-w-11 flex-col items-center justify-center gap-0.5 rounded-full text-[11px] leading-tight transition-colors',
+                  slot,
+                  isActive || inArea(item, location.pathname)
+                    ? 'font-semibold text-primary-600'
+                    : 'font-medium text-ink-600',
+                )
+              }
+            >
+              <span className="relative">
+                <Icon aria-hidden size={22} strokeWidth={1.75} />
+                {badge ? (
+                  <span className="absolute -top-1 -right-2 size-2.5 rounded-full bg-secondary-500 ring-2 ring-surface">
+                    <span className="sr-only">{badge} unread</span>
+                  </span>
+                ) : null}
+              </span>
+              <span className="max-w-full truncate px-0.5">{label}</span>
+            </NavLink>
+          );
+        })}
         <button
           type="button"
           onClick={() => setConfirmOut(true)}
-          className="flex min-h-11 min-w-11 flex-1 flex-col items-center justify-center gap-0.5 rounded-full text-[11px] leading-tight font-medium text-ink-600"
+          className={cx(
+            'flex min-h-11 min-w-11 flex-col items-center justify-center gap-0.5 rounded-full text-[11px] leading-tight font-medium text-ink-600',
+            slot,
+          )}
         >
           <LogOut aria-hidden size={22} strokeWidth={1.75} />
           <span className="max-w-full truncate px-0.5">Sign out</span>

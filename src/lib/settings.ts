@@ -1,6 +1,6 @@
 import type { Setting, SettingGroup, SettingType } from './types';
 import { SETTINGS_SECTIONS, type SettingsSection } from './permissions';
-import { formatHhmm, parseTimeInput } from './format';
+import { formatDayEnGb, formatHhmm, parseTimeInput } from './format';
 
 export const isSettingsSection = (v: string | undefined): v is SettingsSection =>
   (SETTINGS_SECTIONS as readonly string[]).includes(v ?? '');
@@ -48,6 +48,7 @@ export function toInput(value: unknown, type: SettingType): string | boolean {
   if (type === 'bool') return Boolean(value);
   if (type === 'int_list') return Array.isArray(value) ? value.join(', ') : '';
   if (value === null || value === undefined) return '';
+  if (type === 'date' && typeof value === 'string') return value.slice(0, 10);
   if (type === 'time' && typeof value === 'string') return formatHhmm(value);
   return String(value);
 }
@@ -74,9 +75,9 @@ export function boundsHint(b: Bounds): string | null {
 export function parseInput(
   raw: string | boolean,
   type: SettingType,
-  bounds: Bounds = {},
+  bounds: Bounds & { nullable?: boolean } = {},
 ): { ok: true; value: unknown } | { ok: false; error: string } {
-  const r = parseType(raw, type);
+  const r = parseType(raw, type, bounds.nullable === true);
   if (!r.ok) return r;
   const min = bounds.min ?? null;
   const max = bounds.max ?? null;
@@ -115,9 +116,12 @@ export function friendlyServerMessage(message: string): string {
 function parseType(
   raw: string | boolean,
   type: SettingType,
+  nullable = false,
 ): { ok: true; value: unknown } | { ok: false; error: string } {
   if (type === 'bool') return { ok: true, value: Boolean(raw) };
   const s = String(raw).trim();
+  // An emptied nullable setting is sent as null (e.g. no start date).
+  if (s === '' && nullable && type !== 'int_list') return { ok: true, value: null };
   switch (type) {
     case 'int':
       return /^-?\d+$/.test(s)
@@ -133,6 +137,10 @@ function parseType(
         ? { ok: true, value: t }
         : { ok: false, error: 'Enter a time such as 8:10 AM or 5:00 PM.' };
     }
+    case 'date':
+      return /^\d{4}-\d{2}-\d{2}$/.test(s)
+        ? { ok: true, value: s }
+        : { ok: false, error: 'Choose a date.' };
     case 'int_list': {
       if (s === '') return { ok: true, value: [] };
       const parts = s.split(/[\s,;]+/).filter(Boolean);
@@ -155,6 +163,7 @@ export function displayValue(value: unknown): string {
   if (value === null || value === undefined || value === '') return '–';
   if (typeof value === 'string' && /^([01]\d|2[0-3]):[0-5]\d$/.test(value))
     return formatHhmm(value);
+  if (typeof value === 'string' && /^\d{4}-\d{2}-\d{2}$/.test(value)) return formatDayEnGb(value);
   return String(value);
 }
 
@@ -178,3 +187,23 @@ export function groupSettings(settings: Setting[]) {
     items: pairPerimeter(settings.filter((s) => s.group === g.key)),
   })).filter((g) => g.items.length);
 }
+
+/** Short explanation under settings whose label alone is not enough (display only). */
+export const SETTING_HINTS: Record<string, string> = {
+  admin_attendance_starts_on:
+    'From this date, admins check in, choose their working week and send their reports like employees. Leave it empty and admins do not check in at all. Past days keep the rule that applied then.',
+  activity_reports_per_day:
+    'Activity reports are PDFs sent at any time, outside the Friday weekly report. A deleted report still counts.',
+  activity_report_delete_minutes:
+    'How long the author may delete a report after sending it. 0 = never.',
+  activity_report_email:
+    'Readers always get an in-app notification. Turn this on to e-mail them as well.',
+};
+
+/** Shorter labels for the settings added on 2026-11-14 (the API label is kept as a fallback). */
+export const SETTING_LABELS: Record<string, string> = {
+  admin_attendance_starts_on: 'Admins check in from',
+  activity_reports_per_day: 'Activity reports per person per day',
+  activity_report_delete_minutes: 'Activity report deletion window (minutes)',
+  activity_report_email: 'E-mail readers about each activity report',
+};

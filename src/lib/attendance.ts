@@ -109,6 +109,8 @@ export interface EmployeeSummary {
   first_name: string;
   last_name: string;
   job_title?: string | null;
+  /** Admin rows only reach super admins (an admin viewer never receives them). */
+  role?: 'employee' | 'admin';
   employee_type?: string | null;
   email?: string | null;
 }

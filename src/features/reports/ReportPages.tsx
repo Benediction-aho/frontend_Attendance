@@ -26,6 +26,7 @@ import { Table, TBody, TD, TH, THead, TR } from '../../ui/Table';
 import { useToast } from '../../ui/Toast';
 import { useServerNow, useServerToday } from './useServerNow';
 import { duration, easing, fadeUp, stagger } from '../../ui/motion';
+import { ActivityReportCallout } from './ActivityReports';
 import { DateNav, Figure, ServicesList, VersionRow, WeeklySummaryView, WorkTabs } from './parts';
 import {
   useDailyReport,
@@ -75,6 +76,9 @@ export function DailyReportPage() {
         description="Built by the server from your tasks and clients."
       />
       <WorkTabs />
+      <div className="mb-5">
+        <ActivityReportCallout />
+      </div>
       <DateNav label="Day" value={date} today={today} onChange={setDate} />
       {q.isPending ? (
         <SkeletonRows rows={4} />
@@ -175,6 +179,10 @@ export function WeeklyReportPage() {
       <PageHeader title="Weekly report" description="Monday to Friday, and your PDF report." />
       <WorkTabs />
       <SubmissionCard />
+      <div className="mt-4">
+        {/* Outline: the weekly PDF above keeps the one main button of this page. */}
+        <ActivityReportCallout variant="outline" />
+      </div>
       <div className="mt-6">
         <DateNav
           label="Week of"

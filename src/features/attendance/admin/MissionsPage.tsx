@@ -14,7 +14,7 @@ import { formatDate, isoDay } from '../../../lib/format';
 import type { PageMeta } from '../../../lib/types';
 import { serverNow } from '../../../lib/serverTime';
 import { Alert } from '../../../ui/Alert';
-import { Badge } from '../../../ui/Badge';
+import { AdminBadge, Badge } from '../../../ui/Badge';
 import { Button } from '../../../ui/Button';
 import { Card, CardBody } from '../../../ui/Card';
 import { EmptyState } from '../../../ui/EmptyState';
@@ -64,7 +64,10 @@ function MissionCard({ m, pending }: { m: Mission; pending: boolean }) {
       <CardBody>
         <div className="flex flex-wrap items-start justify-between gap-2">
           <div>
-            <p className="font-semibold text-ink-900">{m.user ? fullName(m.user) : 'Employee'}</p>
+            <p className="font-semibold text-ink-900">
+              {m.user ? fullName(m.user) : 'Employee'}
+              <AdminBadge user={m.user} />
+            </p>
             {employeeDetail(m.user) && (
               <p className="text-xs text-ink-500">{employeeDetail(m.user)}</p>
             )}
@@ -213,7 +216,10 @@ export function AttemptsPage() {
                   <CardBody className="flex flex-col gap-1">
                     <div className="flex items-start justify-between gap-2">
                       <div className="min-w-0">
-                        <p className="font-semibold text-ink-900">{attemptName(a)}</p>
+                        <p className="font-semibold text-ink-900">
+                          {attemptName(a)}
+                          <AdminBadge user={a.user} />
+                        </p>
                         {employeeDetail(a.user) && (
                           <p className="truncate text-xs text-ink-500">{employeeDetail(a.user)}</p>
                         )}
@@ -248,6 +254,7 @@ export function AttemptsPage() {
                   <TR key={a.id}>
                     <TD>
                       {attemptName(a)}
+                      <AdminBadge user={a.user} />
                       {employeeDetail(a.user) && (
                         <span className="block text-xs text-ink-500">{employeeDetail(a.user)}</span>
                       )}

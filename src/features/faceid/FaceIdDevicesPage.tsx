@@ -8,7 +8,7 @@ import { formatDateTime } from '../../lib/format';
 import { can, isSuperAdmin } from '../../lib/permissions';
 import type { PageMeta } from '../../lib/types';
 import { Alert } from '../../ui/Alert';
-import { Badge } from '../../ui/Badge';
+import { AdminBadge, Badge } from '../../ui/Badge';
 import { Button } from '../../ui/Button';
 import { Card, CardBody } from '../../ui/Card';
 import { EmptyState } from '../../ui/EmptyState';
@@ -69,7 +69,10 @@ function DeviceCard({ c, onRevoke }: { c: FaceIdCredential; onRevoke?: () => voi
       <CardBody>
         <div className="flex flex-wrap items-start justify-between gap-2">
           <div>
-            <p className="font-semibold text-ink-900">{name}</p>
+            <p className="font-semibold text-ink-900">
+              {name}
+              <AdminBadge user={c.user} />
+            </p>
             {employeeDetail(c.user) && (
               <p className="text-xs text-ink-500">{employeeDetail(c.user)}</p>
             )}

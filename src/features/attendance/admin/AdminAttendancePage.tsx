@@ -11,6 +11,7 @@ import { isoDay } from '../../../lib/format';
 import { can } from '../../../lib/permissions';
 import { serverNow } from '../../../lib/serverTime';
 import { Alert } from '../../../ui/Alert';
+import { AdminBadge } from '../../../ui/Badge';
 import { Button } from '../../../ui/Button';
 import { Card, CardBody, StatTile } from '../../../ui/Card';
 import { EmptyState } from '../../../ui/EmptyState';
@@ -80,7 +81,15 @@ function CheckInOnBehalf({ row, onClose }: { row: DayRow | null; onClose: () => 
           onChange={(e) => setReason(e.target.value)}
           error={error}
         />
-        {m.isError && <Alert tone="danger">{errorMessage(m.error)}</Alert>}
+        {m.isError && (
+          <Alert tone="danger">
+            {m.error instanceof ApiError && m.error.code === 'attendance_not_tracked'
+              ? 'This person does not track attendance at the moment, so there is nothing to check in. Admins check in from the date set in Settings, Attendance.'
+              : m.error instanceof ApiError && m.error.status === 403
+                ? 'You are not allowed to check in this person. Only a super admin can do it for an admin.'
+                : errorMessage(m.error)}
+          </Alert>
+        )}
       </div>
     </Modal>
   );
@@ -120,6 +129,7 @@ function Row({ row, onCheckIn }: { row: DayRow; onCheckIn?: () => void }) {
           >
             {fullName(row.user)}
           </Link>
+          <AdminBadge user={row.user} />
           <p className="truncate text-xs text-ink-500">{employeeDetail(row.user) || '–'}</p>
           <div className="mt-1.5 flex flex-wrap gap-1.5">
             <DayStatusBadge status={row.day_status} />

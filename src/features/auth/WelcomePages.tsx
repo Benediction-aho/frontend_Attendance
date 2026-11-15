@@ -13,13 +13,14 @@ import { forgetFirstCode, peekFirstCode } from './pendingCode';
 import { takeReturnTo } from './returnTo';
 import { useStayOnPage } from './useStayOnPage';
 import type { FaceIdState } from '../../lib/attendance';
+import { tracksAttendance } from '../../lib/permissions';
 import { FaceIdSetup } from '../faceid/FaceIdSetup';
 import { useMyFaceId } from '../faceid/useFaceId';
 import { InAppBrowserNotice } from '../pwa/InAppBrowserNotice';
 
 const BASE_STEPS = ['Sign in', 'Password', 'Profile'];
-/** Employees also set up Face ID (needed to check in). */
-const stepsFor = (role?: string) => (role === 'employee' ? [...BASE_STEPS, 'Face ID'] : BASE_STEPS);
+/** Everyone who checks in also sets up Face ID (needed to check in). */
+const stepsFor = (tracks: boolean) => (tracks ? [...BASE_STEPS, 'Face ID'] : BASE_STEPS);
 
 /** Forced replacement of the identification code after the first sign-in. */
 export function WelcomeCodePage() {
@@ -33,7 +34,7 @@ export function WelcomeCodePage() {
   return (
     <AuthLayout step={3}>
       <div className="mb-6">
-        <Stepper steps={stepsFor(me?.role)} current={1} />
+        <Stepper steps={stepsFor(tracksAttendance(me))} current={1} />
       </div>
       <AuthTitle
         title={me ? `Welcome, ${me.first_name}` : 'Welcome'}
@@ -76,13 +77,13 @@ export function WelcomeProfilePage() {
   const navigate = useNavigate();
   const { data: me } = useMe();
   const toast = useToast();
-  // Employees continue to Face ID; staff go to the deep link they opened, if any.
+  // People who check in continue to Face ID; other staff go to the deep link they opened, if any.
   const go = () =>
-    navigate(me?.role === 'employee' ? '/welcome/faceid' : takeReturnTo(), { replace: true });
+    navigate(tracksAttendance(me) ? '/welcome/faceid' : takeReturnTo(), { replace: true });
   return (
     <AuthLayout step={3}>
       <div className="mb-6">
-        <Stepper steps={stepsFor(me?.role)} current={2} />
+        <Stepper steps={stepsFor(tracksAttendance(me))} current={2} />
       </div>
       <AuthTitle
         title="Complete your profile"
@@ -109,12 +110,12 @@ export function WelcomeProfilePage() {
   );
 }
 
-/** Face ID registration right after the first sign-in (employees). */
+/** Face ID registration right after the first sign-in (accounts that check in). */
 export function WelcomeFaceIdPage() {
   useStayOnPage();
   const navigate = useNavigate();
   const { data: me } = useMe();
-  const faceid = useMyFaceId(me?.role === 'employee');
+  const faceid = useMyFaceId(tracksAttendance(me));
   const [state, setState] = useState<FaceIdState | null>(null);
   const [justDone, setJustDone] = useState(false);
   // Short success moment after registration, then on to the check-in.
@@ -123,13 +124,13 @@ export function WelcomeFaceIdPage() {
     const id = setTimeout(() => navigate('/app', { replace: true }), 1200);
     return () => clearTimeout(id);
   }, [justDone, navigate]);
-  if (me && me.role !== 'employee') return <Navigate to="/app" replace />;
+  if (me && !tracksAttendance(me)) return <Navigate to="/app" replace />;
   const current = state ?? faceid.data?.state ?? null;
   if (justDone)
     return (
       <AuthLayout step={3}>
         <div className="mb-6">
-          <Stepper steps={stepsFor('employee')} current={4} />
+          <Stepper steps={stepsFor(true)} current={4} />
         </div>
         <motion.div
           variants={fadeUp}
@@ -149,7 +150,7 @@ export function WelcomeFaceIdPage() {
   return (
     <AuthLayout step={3}>
       <div className="mb-6">
-        <Stepper steps={stepsFor('employee')} current={3} />
+        <Stepper steps={stepsFor(true)} current={3} />
       </div>
       <InAppBrowserNotice className="mb-4" />
       <AuthTitle

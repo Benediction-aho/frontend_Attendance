@@ -1,6 +1,7 @@
 import { useState } from 'react';
 import { Link, Navigate, useParams, useSearchParams } from 'react-router';
 import { AnimatePresence, motion } from 'motion/react';
+import { ApiError } from '../../../lib/api';
 import { useMe } from '../../auth/useSession';
 import { canViewReports } from '../../../lib/permissions';
 import { employeeDetail, formatTime } from '../../../lib/attendance';
@@ -8,7 +9,7 @@ import { formatDayEnGb } from '../../../lib/format';
 import type { AdminDailyRow, EmployeeSummary } from '../../../lib/reports';
 import { dayAndTime, fullName, weekLabel } from '../../../lib/reports';
 import { Alert } from '../../../ui/Alert';
-import { Badge } from '../../../ui/Badge';
+import { AdminBadge, Badge } from '../../../ui/Badge';
 import { Button } from '../../../ui/Button';
 import { Card, CardBody, CardHeader } from '../../../ui/Card';
 import { EmptyState } from '../../../ui/EmptyState';
@@ -34,15 +35,25 @@ import {
   useAdminWeekly,
 } from '../useReports';
 
-function AdminTabs() {
+export function AdminTabs() {
   const { data: me } = useMe();
   const tabs = [];
   if (canViewReports(me)) tabs.push({ to: '/app/admin/reports', label: 'Daily reports' });
   tabs.push({ to: '/app/admin/reports/weekly', label: 'Weekly reports' });
-  return tabs.length > 1 ? <TabLinks label="Report sections" tabs={tabs} /> : null;
+  tabs.push({ to: '/app/admin/reports/activity', label: 'Activity reports' });
+  return <TabLinks label="Report sections" tabs={tabs} />;
 }
 
-function Retry({ what, retry }: { what: string; retry: () => void }) {
+/** 403/404 on one person's report: an admin's report for an admin viewer, or a removed one. */
+const unavailable = (e: unknown) => e instanceof ApiError && (e.status === 403 || e.status === 404);
+
+function Retry({ what, retry, error }: { what: string; retry: () => void; error?: unknown }) {
+  if (unavailable(error))
+    return (
+      <Alert tone="info" title="Not available">
+        {what} cannot be opened with your account, or no longer exists.
+      </Alert>
+    );
   return (
     <Alert tone="danger">
       {what} could not be loaded.{' '}
@@ -66,7 +77,7 @@ export function AdminDailyReportsPage() {
   const withData = rows.filter((r) => r.tasks_planned > 0 || r.clients_count > 0).length;
   return (
     <div>
-      <PageHeader title="Reports" description="Daily work of each employee." />
+      <PageHeader title="Reports" description="Daily work of each person." />
       <AdminTabs />
       <DateNav label="Day" value={date} today={today} onChange={setDate} />
       {q.isPending ? (
@@ -104,7 +115,10 @@ function DailyRowCard({ row, date }: { row: AdminDailyRow; date: string }) {
     <Card data-testid="daily-row">
       <div className="grid grid-cols-[minmax(0,1fr)_auto] items-center gap-x-3 gap-y-1 px-5 py-3 sm:grid-cols-[minmax(0,1fr)_auto_auto]">
         <div className="min-w-0">
-          <p className="font-medium text-ink-900">{fullName(row.user)}</p>
+          <p className="font-medium text-ink-900">
+            {fullName(row.user)}
+            <AdminBadge user={row.user} />
+          </p>
           <p className="text-xs text-ink-500">{employeeDetail(row.user)}</p>
         </div>
         <dl className="order-3 col-span-2 flex gap-6 text-sm sm:order-2 sm:col-span-1">
@@ -270,6 +284,7 @@ export function AdminWeeklyReportsPage() {
                         <div className="min-w-0 flex-1">
                           <p className="font-medium wrap-anywhere text-ink-900">
                             {fullName(r.user)}
+                            <AdminBadge user={r.user} />
                           </p>
                           <p className="text-xs wrap-anywhere text-ink-500">
                             {s
@@ -337,7 +352,10 @@ export function MissingList({
         {shown.map((u) => (
           <li key={u.id} className="flex flex-wrap items-center gap-2 py-2">
             <div className="min-w-0 flex-1">
-              <p className="text-sm font-medium wrap-anywhere text-ink-900">{fullName(u)}</p>
+              <p className="text-sm font-medium wrap-anywhere text-ink-900">
+                {fullName(u)}
+                <AdminBadge user={u} />
+              </p>
               {employeeDetail(u) && (
                 <p className="text-xs wrap-anywhere text-ink-500">{employeeDetail(u)}</p>
               )}
@@ -378,7 +396,7 @@ export function AdminSubmissionPage() {
     return (
       <div>
         <PageHeader title="Weekly report" back={back} />
-        <Retry what="This report" retry={() => void q.refetch()} />
+        <Retry what="This report" retry={() => void q.refetch()} error={q.error} />
       </div>
     );
   const s = q.data;
@@ -386,7 +404,7 @@ export function AdminSubmissionPage() {
     <div>
       <PageHeader
         title={fullName(s.user)}
-        description={`Weekly report · ${weekLabel(s.week_start, s.window_date)}`}
+        description={`${s.user.role === 'admin' ? 'Admin · ' : ''}Weekly report · ${weekLabel(s.week_start, s.window_date)}`}
         back={back}
       />
       <motion.div
@@ -449,14 +467,20 @@ export function AdminUserWeeklyPage() {
     <div className="max-w-3xl">
       <PageHeader
         title={q.data ? fullName(q.data.user) : 'Weekly summary'}
-        description={q.data ? employeeDetail(q.data.user) || 'Weekly summary' : undefined}
+        description={
+          q.data
+            ? [q.data.user.role === 'admin' ? 'Admin' : null, employeeDetail(q.data.user)]
+                .filter(Boolean)
+                .join(' · ') || 'Weekly summary'
+            : undefined
+        }
         back={back}
       />
       <DateNav label="Week of" value={date} today={today} step={7} unit="week" onChange={setDate} />
       {q.isPending ? (
         <SkeletonRows rows={5} />
       ) : q.isError || !q.data ? (
-        <Retry what="This summary" retry={() => void q.refetch()} />
+        <Retry what="This summary" retry={() => void q.refetch()} error={q.error} />
       ) : (
         <WeeklySummaryView week={q.data.data} />
       )}

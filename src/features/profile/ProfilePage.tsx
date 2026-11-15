@@ -8,6 +8,7 @@ import { useToast } from '../../ui/Toast';
 import { fadeUp, stagger } from '../../ui/motion';
 import { employeeTypeLabel } from '../../lib/employeeType';
 import { ROLE_LABEL } from '../../lib/format';
+import { tracksAttendance } from '../../lib/permissions';
 import { signOut, useMe } from '../auth/useSession';
 import { EmailForm } from './EmailForm';
 import { PasswordForm } from './PasswordForm';
@@ -100,7 +101,7 @@ export function ProfilePage() {
               </Card>
             </motion.div>
           )}
-          {me.role === 'employee' && (
+          {tracksAttendance(me) && (
             <motion.div variants={fadeUp}>
               <FaceIdCard />
             </motion.div>

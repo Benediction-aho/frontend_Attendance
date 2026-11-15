@@ -45,6 +45,25 @@ export interface MockState {
   myDashboard?: Record<string, unknown>;
   /** Status returned by the CSV export (default 200). */
   exportStatus?: number;
+  /** Activity reports (own list for the signed-in account, and the admin list). */
+  activity?: Record<string, unknown>[];
+  activityAdmin?: Record<string, unknown>[];
+  /** Next replies of POST /me/reports/activity (then 201). */
+  activityReplies?: { status: number; body: unknown }[];
+}
+
+export function activityReport(o: Record<string, unknown> = {}) {
+  return {
+    id: 41,
+    title: 'Visit to the immigration office',
+    note: 'Residence permits collected for two clients.',
+    work_date: '2026-11-14',
+    file_name: 'visit.pdf',
+    size_bytes: 180_000,
+    submitted_at: new Date(Date.now() - 5 * 60_000).toISOString(),
+    file_url: 'http://localhost:8000/api/files/41?signature=tmp',
+    ...o,
+  };
 }
 
 export function defaultMyDashboard(o: Record<string, unknown> = {}) {
@@ -304,6 +323,100 @@ export async function mockApi(page: Page, state: MockState) {
         },
       });
     }
+    if (path === '/me/reports/activity' && method === 'GET') {
+      const list = state.activity ?? [];
+      const sent = list.length;
+      return send(200, {
+        ...page1(list),
+        limits: {
+          per_day: 5,
+          sent_today: sent,
+          remaining_today: Math.max(0, 5 - sent),
+          delete_minutes: 30,
+          max_size_mb: 10,
+        },
+      });
+    }
+    if (path === '/me/reports/activity' && method === 'POST') {
+      const r = state.activityReplies?.shift();
+      if (r) return send(r.status, r.body);
+      const raw = req.postData() ?? '';
+      const title = /name="title"\r\n\r\n([^\r]*)/.exec(raw)?.[1] ?? 'Report';
+      const item = activityReport({
+        id: 100 + (state.activity ?? []).length,
+        title,
+        note: null,
+        submitted_at: new Date().toISOString(),
+        can_delete: true,
+        delete_until: new Date(Date.now() + 30 * 60_000).toISOString(),
+      });
+      state.activity = [item, ...(state.activity ?? [])];
+      return send(201, { data: item });
+    }
+    const ad = path.match(/^\/me\/reports\/activity\/(\d+)$/);
+    if (ad && method === 'DELETE') {
+      state.activity = (state.activity ?? []).filter((x) => x.id !== Number(ad[1]));
+      return route.fulfill({ status: 204, headers: { 'Access-Control-Allow-Origin': '*' } });
+    }
+    if (path === '/admin/reports/activity') {
+      let l = state.activityAdmin ?? [];
+      const uid = url.searchParams.get('user_id');
+      if (uid) l = l.filter((x) => (x.user as { id: number }).id === Number(uid));
+      return send(200, page1(l));
+    }
+    const aa = path.match(/^\/admin\/reports\/activity\/(\d+)$/);
+    if (aa) {
+      const r = (state.activityAdmin ?? []).find((x) => x.id === Number(aa[1]));
+      return r ? send(200, { data: r }) : send(404, { message: 'Not found.', code: 'not_found' });
+    }
+    if (path === '/admin/reports/weekly')
+      return send(200, {
+        week_start: '2026-11-09',
+        window_date: '2026-11-13',
+        opens_at: '2026-11-13T16:00:00Z',
+        closes_at: '2026-11-13T17:00:00Z',
+        expected_count: 0,
+        received_count: 0,
+        data: [],
+        missing: [],
+      });
+    if (path === '/me/reports/weekly/submission') {
+      const now = Date.now();
+      return send(200, {
+        data: {
+          can_submit: false,
+          week_start: '2026-11-09',
+          window_date: '2026-11-20',
+          opens_at: new Date(now + 3 * 86400_000).toISOString(),
+          closes_at: new Date(now + 3 * 86400_000 + 3600_000).toISOString(),
+          deadline: new Date(now + 3 * 86400_000 + 3600_000).toISOString(),
+          is_late_now: false,
+          expected: true,
+          max_size_mb: 10,
+          current: null,
+          versions: [],
+        },
+      });
+    }
+    if (path === '/me/reports/weekly' || path === '/me/reports/daily')
+      return send(200, {
+        data: {
+          work_date: '2026-11-14',
+          week_start: '2026-11-09',
+          week_end: '2026-11-13',
+          days: [],
+          tasks: [],
+          clients: [],
+          tasks_planned: 0,
+          tasks_done: 0,
+          clients_count: 0,
+          services: [],
+          generated_at: null,
+        },
+      });
+    if (path === '/me/tasks') return send(200, { work_date: '2026-11-14', data: [] });
+    if (path === '/me/clients')
+      return send(200, { work_date: '2026-11-14', data: [], services: [] });
     if (path === '/client-errors') return send(202, {});
     // Defaults so employee pages load in tests that do not exercise attendance.
     if (path === '/attendance/today') return send(200, defaultToday());

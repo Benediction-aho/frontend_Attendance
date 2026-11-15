@@ -245,6 +245,7 @@ export function WorkTabs() {
     { to: '/app/work', label: 'Today' },
     { to: '/app/reports/daily', label: 'Daily report' },
     { to: '/app/reports/weekly', label: 'Weekly report' },
+    { to: '/app/reports/activity', label: 'Activity reports' },
   ];
   return <TabLinks label="My work sections" tabs={tabs} />;
 }
@@ -263,6 +264,11 @@ export function TabLinks({
           key={t.to}
           to={t.to}
           end
+          // The current tab is brought into view when the row scrolls (phones).
+          ref={(el) => {
+            if (el?.getAttribute('aria-current') === 'page' && el.scrollIntoView)
+              el.scrollIntoView({ block: 'nearest', inline: 'nearest' });
+          }}
           className={({ isActive }) =>
             cx(
               'relative inline-flex min-h-11 shrink-0 items-center rounded-control px-3.5 text-sm font-medium transition-colors',
