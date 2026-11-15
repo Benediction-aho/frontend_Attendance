@@ -62,6 +62,30 @@ export function canViewAttendance(user: User | null | undefined): boolean {
 
 export const isEmployee = (u: User | null | undefined) => u?.role === 'employee';
 
+/**
+ * Whether the account gets the employee features (Today with check-in, Face ID, working
+ * week, My work, reports). The server decides (`tracks_attendance` on GET /me): employees
+ * always, admins from the configured start date, super admins never. Older API versions
+ * do not send the field: only employees tracked attendance then.
+ */
+export function tracksAttendance(u: User | null | undefined): boolean {
+  if (!u) return false;
+  return u.tracks_attendance ?? u.role === 'employee';
+}
+
+/** At least one administration page is open to this account (display only). */
+export function hasAdminArea(u: User | null | undefined): boolean {
+  return (
+    can(u, 'approve_users') ||
+    canManageAccounts(u) ||
+    canViewLogs(u) ||
+    canViewAttendance(u) ||
+    can(u, 'approve_faceid_devices') ||
+    canSeeWeeklyPdfs(u) ||
+    canManageSettings(u)
+  );
+}
+
 /** Daily reports and per-employee weekly summaries (server tier `view_reports`). */
 export const canViewReports = (u: User | null | undefined) => can(u, 'view_reports');
 

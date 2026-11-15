@@ -6,6 +6,7 @@ import { employeeDetail, type Holiday, type Leave } from '../../../lib/attendanc
 import { formatDate, isoDay } from '../../../lib/format';
 import { can } from '../../../lib/permissions';
 import { serverNow } from '../../../lib/serverTime';
+import { AdminBadge } from '../../../ui/Badge';
 import { Alert } from '../../../ui/Alert';
 import { Button } from '../../../ui/Button';
 import { Card, CardBody, CardHeader } from '../../../ui/Card';
@@ -38,6 +39,7 @@ export function LeaveRows({ leaves, names }: { leaves: Leave[]; names?: Map<numb
             {names && l.user_id !== undefined && (
               <p className="font-semibold text-ink-900">
                 {l.user ? fullName(l.user) : (names.get(l.user_id) ?? `Employee ${l.user_id}`)}
+                <AdminBadge user={l.user} />
                 {employeeDetail(l.user) && (
                   <span className="block text-xs font-normal text-ink-500">
                     {employeeDetail(l.user)}
@@ -107,7 +109,9 @@ export function LeaveForm({ userId }: { userId?: number }) {
           <option value="">Choose an employee</option>
           {day.data?.data.map((r) => (
             <option key={r.user.id} value={r.user.id}>
-              {[fullName(r.user), employeeDetail(r.user)].filter(Boolean).join(' · ')}
+              {[fullName(r.user), r.user.role === 'admin' ? 'Admin' : null, employeeDetail(r.user)]
+                .filter(Boolean)
+                .join(' · ')}
             </option>
           ))}
         </Select>

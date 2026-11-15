@@ -310,7 +310,7 @@ test('employee plans tasks, ticks one, records a client and sees the daily repor
   });
 
   await page.getByRole('link', { name: 'Daily report' }).click();
-  await expect(page.getByText('2 / 2')).toBeVisible();
+  await expect(page.getByText('2 of 2')).toBeVisible();
   await expect(
     page.getByTestId('report-clients').getByText('Kwame Owusu', { exact: true }),
   ).toBeVisible();
@@ -492,13 +492,13 @@ test('admin: missing list with job title; week summary from daily goes back to d
   await mockReports(page, state, newRep());
   await signInUi(page, 'kofi@assistance.test');
   await page.goto('/app/admin/reports');
-  await expect(page.getByText(/1 of 1 employee recorded/)).toBeVisible();
+  await expect(page.getByText(/1 of 1 person recorded/)).toBeVisible();
   await page.getByRole('button', { name: /Details/ }).click();
   await page.getByRole('link', { name: /Week summary/ }).click();
   await expect(page.getByRole('link', { name: 'Back to daily reports' })).toBeVisible();
   // Filled state (UI5-15): the mock follows the contract path /admin/users/{id}/reports/weekly.
   await expect(page.getByTestId('week-days')).toContainText('Mon');
-  await expect(page.getByText('2 / 2').first()).toBeVisible();
+  await expect(page.getByText('2 of 2').first()).toBeVisible();
   await page.goto('/app/admin/reports/weekly');
   await expect(page.getByTestId('missing').getByText('Officer')).toBeVisible();
   // UI5-13: a missing employee is listed once, with the week summary link in "Not received".

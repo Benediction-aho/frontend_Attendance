@@ -80,6 +80,8 @@ export interface ApiClientConfig {
   sleep?: (ms: number) => Promise<void>;
   baseDelayMs?: number;
   maxDelayMs?: number;
+  /** XMLHttpRequest used for uploads with progress (tests). */
+  xhrImpl?: typeof XMLHttpRequest;
 }
 
 type Listener = (e: ApiError) => void;
@@ -169,9 +171,21 @@ export function createApiClient(config: ApiClientConfig) {
       return { blob: await res.blob(), filename } as T;
     }
     const data: unknown = await res.json().catch(() => null);
+    return settle<T>(path, opts.method ?? 'GET', Boolean(token), res.status, data, (h) =>
+      res.headers.get(h),
+    );
+  }
 
-    if (res.ok) {
-      const method = opts.method ?? 'GET';
+  /** Shared outcome of every request: the data, or the ApiError matching the status. */
+  function settle<T>(
+    path: string,
+    method: string,
+    hadToken: boolean,
+    status: number,
+    data: unknown,
+    header: (name: string) => string | null,
+  ): T {
+    if (status >= 200 && status < 300) {
       if (method !== 'GET' && !path.replace(/^\/+/, '').startsWith('auth/')) {
         writeListeners.forEach((l) => l(path));
       }
@@ -181,7 +195,7 @@ export function createApiClient(config: ApiClientConfig) {
       data && typeof data === 'object' && 'message' in data && typeof data.message === 'string'
         ? data.message
         : null;
-    if (res.status === 401 && token) {
+    if (status === 401 && hadToken) {
       // Only a genuinely invalid session signs the user out.
       const code =
         data && typeof data === 'object' && 'code' in data && typeof data.code === 'string'
@@ -195,23 +209,75 @@ export function createApiClient(config: ApiClientConfig) {
         data,
       );
     }
-    if (res.status >= 500) {
-      throw new ApiError('server', res.status, 'The service is temporarily unavailable.', data);
+    if (status >= 500) {
+      throw new ApiError('server', status, 'The service is temporarily unavailable.', data);
     }
     const err = new ApiError(
       'client',
-      res.status,
+      status,
       serverMessage ?? 'The request could not be completed.',
       data,
-      parseRetryAfter(res.headers.get('Retry-After')),
+      parseRetryAfter(header('Retry-After')),
     );
-    if (res.status === 403 && err.code === 'password_change_required') {
+    if (status === 403 && err.code === 'password_change_required') {
       forbiddenListeners.forEach((l) => l(err));
     }
-    if (res.status === 403 && err.code === 'checkin_required') {
+    if (status === 403 && err.code === 'checkin_required') {
       checkinListeners.forEach((l) => l(err));
     }
     throw err;
+  }
+
+  /**
+   * Multipart POST that reports how much of the file has left the device (0 to 1).
+   * Never retried (a retry could store the file twice). Same errors as every request.
+   */
+  function upload<T>(
+    path: string,
+    form: FormData,
+    onProgress?: (fraction: number) => void,
+    signal?: AbortSignal,
+  ): Promise<T> {
+    const Xhr = config.xhrImpl ?? globalThis.XMLHttpRequest;
+    // No XMLHttpRequest (unusual): the upload still works, without progress.
+    if (typeof Xhr !== 'function') return once<T>(path, { method: 'POST', body: form, signal });
+    return new Promise<T>((resolve, reject) => {
+      const xhr = new Xhr();
+      const token = getToken();
+      xhr.open('POST', `${root}${path.startsWith('/') ? path : `/${path}`}`);
+      xhr.setRequestHeader('Accept', 'application/json');
+      if (token) xhr.setRequestHeader('Authorization', `Bearer ${token}`);
+      xhr.upload.onprogress = (e) => {
+        if (e.lengthComputable && e.total > 0) onProgress?.(Math.min(1, e.loaded / e.total));
+      };
+      const offline = () =>
+        reject(
+          new ApiError('network', null, 'You appear to be offline. Please check your connection.'),
+        );
+      xhr.onerror = offline;
+      xhr.ontimeout = offline;
+      xhr.onabort = () => reject(new DOMException('The upload was cancelled.', 'AbortError'));
+      xhr.onload = () => {
+        recordServerDate(xhr.getResponseHeader('Date'));
+        let data: unknown;
+        try {
+          data = xhr.responseText ? JSON.parse(xhr.responseText) : null;
+        } catch {
+          data = null;
+        }
+        try {
+          resolve(
+            settle<T>(path, 'POST', Boolean(token), xhr.status, data, (h) =>
+              xhr.getResponseHeader(h),
+            ),
+          );
+        } catch (e) {
+          reject(e instanceof Error ? e : new Error('Upload failed.'));
+        }
+      };
+      signal?.addEventListener('abort', () => xhr.abort(), { once: true });
+      xhr.send(form);
+    });
   }
 
   async function request<T>(path: string, opts: RequestOptions = {}): Promise<T> {
@@ -229,6 +295,7 @@ export function createApiClient(config: ApiClientConfig) {
   type O = Omit<RequestOptions, 'method' | 'body'>;
   return {
     request,
+    upload,
     get: <T>(path: string, o?: O) => request<T>(path, { ...o, method: 'GET' }),
     post: <T>(path: string, body?: unknown, o?: O) =>
       request<T>(path, { ...o, method: 'POST', body }),

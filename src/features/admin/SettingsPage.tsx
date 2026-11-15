@@ -30,6 +30,8 @@ import {
   parseInput,
   PERIMETER_HELP,
   SECTION_INFO,
+  SETTING_HINTS,
+  SETTING_LABELS,
   sectionOf,
   sameValue,
   toInput,
@@ -63,10 +65,13 @@ function SettingControl({
   onChange: (v: string | boolean) => void;
 }) {
   const range = boundsHint(s);
+  const label = SETTING_LABELS[s.key] ?? s.label;
+  const explain = SETTING_HINTS[s.key];
   const hint = (
     <>
+      {explain && <span className="block">{explain}</span>}
       {range && <span className="block">{range}</span>}
-      Default: {displayValue(s.default)}
+      Default: {s.default === null && s.type === 'date' ? 'empty' : displayValue(s.default)}
       {s.scheduled.map((x) => (
         <span key={x.effective_from} className="block text-secondary-800">
           Changes to {displayValue(x.value)} on {formatDate(x.effective_from)}
@@ -77,18 +82,47 @@ function SettingControl({
   if (s.type === 'bool')
     return (
       <div className="py-1">
-        <Switch
-          label={s.label}
-          checked={Boolean(value)}
-          onChange={onChange}
-          disabled={!s.editable}
-        />
+        <Switch label={label} checked={Boolean(value)} onChange={onChange} disabled={!s.editable} />
         <p className="mt-0.5 text-xs text-ink-500">{hint}</p>
+      </div>
+    );
+  if (s.type === 'date')
+    return (
+      <div className="flex flex-col gap-1" data-testid={`setting-${s.key}`}>
+        <Input
+          label={label}
+          type="date"
+          value={String(value)}
+          disabled={!s.editable}
+          error={error}
+          onChange={(e) => onChange(e.target.value)}
+          hint={
+            s.editable
+              ? hint
+              : s.super_admin_only
+                ? 'Only a super admin can change this.'
+                : 'Fixed by the system.'
+          }
+        />
+        {s.editable && s.nullable && value !== '' && (
+          <button
+            type="button"
+            onClick={() => onChange('')}
+            className="inline-flex min-h-11 items-center self-start text-sm font-medium text-primary-700 hover:underline"
+          >
+            Clear the date
+          </button>
+        )}
+        {value === '' && (
+          <p className="text-sm text-ink-600" data-testid="date-empty">
+            No date: admins do not check in.
+          </p>
+        )}
       </div>
     );
   return (
     <Input
-      label={s.label}
+      label={label}
       // Never a native time input: it follows the browser locale and may show AM/PM.
       type="text"
       inputMode={s.type === 'int' ? 'numeric' : s.type === 'float' ? 'decimal' : undefined}
@@ -182,7 +216,7 @@ function SettingsForm({
     for (const [k, raw] of Object.entries(draft)) {
       const s = byKey[k];
       if (!s) continue;
-      const r = parseInput(raw, s.type, s);
+      const r = parseInput(raw, s.type, { min: s.min, max: s.max, nullable: s.nullable });
       if (!r.ok) errors[k] = r.error;
       else if (!sameValue(r.value, s.value)) values[k] = r.value;
     }
@@ -496,7 +530,10 @@ export function SettingsPage({ section: forced }: { section?: SettingsSection })
     () => (settings.data?.data ?? []).filter((s) => sectionOf(s) === section),
     [settings.data, section],
   );
-  const labels = useMemo(() => Object.fromEntries(mine.map((s) => [s.key, s.label])), [mine]);
+  const labels = useMemo(
+    () => Object.fromEntries(mine.map((s) => [s.key, SETTING_LABELS[s.key] ?? s.label])),
+    [mine],
+  );
   const editable = settings.data?.sections;
   // Older API (no `sections`): only super admins could read settings at all.
   const canEdit = editable ? editable.includes(section) : true;

@@ -28,6 +28,13 @@ export interface User {
   created_at?: string;
   /** Password policy from the API settings (when provided). */
   password_min_length?: number;
+  /**
+   * Own account only: true when this account checks in and reports like an employee
+   * (employees always, admins from the configured start date, super admins never).
+   */
+  tracks_attendance?: boolean;
+  /** Admins: the date their attendance starts (null = admins do not track attendance). */
+  attendance_starts_on?: string | null;
 }
 
 export interface PageMeta {
@@ -48,7 +55,7 @@ export interface LoginResponse {
   user: User;
 }
 
-export type SettingType = 'int' | 'float' | 'bool' | 'time' | 'string' | 'int_list';
+export type SettingType = 'int' | 'float' | 'bool' | 'time' | 'string' | 'int_list' | 'date';
 export type SettingGroup = 'attendance' | 'reports' | 'system' | 'security';
 
 export interface Setting {
@@ -61,6 +68,8 @@ export interface Setting {
   /** Only super admins may change it (shown read-only to admins). */
   super_admin_only?: boolean;
   editable: boolean;
+  /** true: the value may be emptied (sent as null). */
+  nullable?: boolean;
   value: unknown;
   default: unknown;
   scheduled: { value: unknown; effective_from: string }[];

@@ -13,10 +13,10 @@ import {
   canViewAttendance,
   canViewReports,
   canViewLogs,
-  canManageSettings,
-  isEmployee,
+  hasAdminArea,
   isSuperAdmin,
   settingsSections,
+  tracksAttendance,
 } from '../lib/permissions';
 import { isSettingsSection } from '../lib/settings';
 import { TodayPage } from '../features/attendance/TodayPage';
@@ -108,18 +108,33 @@ const AdminUserWeeklyPage = lazyPage(
   () => import('../features/reports/admin/AdminReportsPages'),
   'AdminUserWeeklyPage',
 );
+const ActivityReportsPage = lazyPage(
+  () => import('../features/reports/ActivityReports'),
+  'ActivityReportsPage',
+);
+const AdminActivityReportsPage = lazyPage(
+  () => import('../features/reports/admin/AdminActivityReports'),
+  'AdminActivityReportsPage',
+);
+const AdminActivityReportPage = lazyPage(
+  () => import('../features/reports/admin/AdminActivityReports'),
+  'AdminActivityReportPage',
+);
 const InstallPage = lazyPage(() => import('../features/pwa/InstallGuide'), 'InstallPage');
 
-/** Employees land on today's check-in; staff on their dashboard. */
+/**
+ * Everyone who checks in (employees, and admins from their start date) lands on today's
+ * check-in; other staff on their dashboard.
+ */
 function HomePage() {
   const { data } = useMe();
-  return isEmployee(data) ? <TodayPage /> : <DashboardPage />;
+  return tracksAttendance(data) ? <TodayPage /> : <DashboardPage />;
 }
 
 /** /app/attendance (notification target): today for employees, the day list for staff. */
 function AttendanceEntry() {
   const { data } = useMe();
-  if (isEmployee(data)) return <Navigate to="/app" replace />;
+  if (tracksAttendance(data)) return <Navigate to="/app" replace />;
   return <Navigate to="/app/admin/attendance" replace />;
 }
 
@@ -134,14 +149,6 @@ function Allowed({
   return <Gate allowed={check(data)}>{children}</Gate>;
 }
 
-const anyAdmin = (u: User | undefined) =>
-  can(u, 'approve_users') ||
-  canManageAccounts(u) ||
-  canViewLogs(u) ||
-  canViewAttendance(u) ||
-  can(u, 'approve_faceid_devices') ||
-  canSeeWeeklyPdfs(u) ||
-  canManageSettings(u);
 /** /app/admin/settings → the first part the user may manage (or "no access"). */
 function SettingsIndex() {
   const { data } = useMe();
@@ -199,7 +206,7 @@ export const router = createBrowserRouter([
           {
             path: 'attendance/history',
             element: (
-              <Allowed check={isEmployee}>
+              <Allowed check={tracksAttendance}>
                 <MyHistoryPage />
               </Allowed>
             ),
@@ -207,7 +214,7 @@ export const router = createBrowserRouter([
           {
             path: 'attendance/schedule',
             element: (
-              <Allowed check={isEmployee}>
+              <Allowed check={tracksAttendance}>
                 <SchedulePage />
               </Allowed>
             ),
@@ -263,7 +270,7 @@ export const router = createBrowserRouter([
           {
             path: 'work',
             element: (
-              <Allowed check={isEmployee}>
+              <Allowed check={tracksAttendance}>
                 <WorkPage />
               </Allowed>
             ),
@@ -271,7 +278,7 @@ export const router = createBrowserRouter([
           {
             path: 'reports/daily',
             element: (
-              <Allowed check={isEmployee}>
+              <Allowed check={tracksAttendance}>
                 <DailyReportPage />
               </Allowed>
             ),
@@ -279,8 +286,32 @@ export const router = createBrowserRouter([
           {
             path: 'reports/weekly',
             element: (
-              <Allowed check={isEmployee}>
+              <Allowed check={tracksAttendance}>
                 <WeeklyReportPage />
+              </Allowed>
+            ),
+          },
+          {
+            path: 'reports/activity',
+            element: (
+              <Allowed check={tracksAttendance}>
+                <ActivityReportsPage />
+              </Allowed>
+            ),
+          },
+          {
+            path: 'admin/reports/activity',
+            element: (
+              <Allowed check={canSeeWeeklyPdfs}>
+                <AdminActivityReportsPage />
+              </Allowed>
+            ),
+          },
+          {
+            path: 'admin/reports/activity/:id',
+            element: (
+              <Allowed check={canSeeWeeklyPdfs}>
+                <AdminActivityReportPage />
               </Allowed>
             ),
           },
@@ -321,7 +352,7 @@ export const router = createBrowserRouter([
           {
             path: 'admin',
             element: (
-              <Allowed check={anyAdmin}>
+              <Allowed check={hasAdminArea}>
                 <AdminHubPage />
               </Allowed>
             ),

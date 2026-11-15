@@ -41,3 +41,25 @@ export const STATUS_TONE: Record<string, Tone> = {
   locked: 'warning',
   deleted: 'neutral',
 };
+
+/** Discreet marker next to an admin in lists that mix employees and admins (super admin views). */
+export function AdminBadge({
+  user,
+  className,
+}: {
+  user?: { role?: string | null } | null;
+  className?: string;
+}) {
+  if (user?.role !== 'admin') return null;
+  return (
+    <span
+      data-testid="admin-badge"
+      className={cx(
+        'ml-2 inline-flex items-center rounded-full bg-primary-50 px-2 align-middle text-[11px] leading-4 font-semibold whitespace-nowrap text-primary-700',
+        className,
+      )}
+    >
+      Admin
+    </span>
+  );
+}

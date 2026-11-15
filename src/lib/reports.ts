@@ -88,6 +88,8 @@ export interface WeeklySubmission {
 
 export interface SubmissionStatus {
   can_submit: boolean;
+  /** 0.7.1: `not_expected` when no report is due this week (upload refused). */
+  status?: string;
   week_start: string;
   window_date: string;
   opens_at: string;
@@ -105,6 +107,8 @@ export interface EmployeeSummary {
   first_name: string;
   last_name: string;
   job_title?: string | null;
+  /** Admin rows only reach super admins (an admin viewer never receives them). */
+  role?: 'employee' | 'admin';
   employee_type?: string;
   email?: string;
 }
@@ -129,7 +133,7 @@ export interface AdminWeeklyList {
   expected_count: number;
   received_count: number;
   data: { user: EmployeeSummary; expected: boolean; submission: WeeklySubmission | null }[];
-  /** Expected employees without a report (server list). */
+  /** Expected people without a report (server list). */
   missing?: EmployeeSummary[];
 }
 
@@ -137,6 +141,108 @@ export interface AdminSubmissionDetail extends WeeklySubmission {
   user: EmployeeSummary;
   versions: WeeklySubmission[];
   week: { clients_count: number; services: ServiceTotal[]; clients?: WeeklyClient[] };
+}
+
+/** A PDF with a title sent at any time (never the Friday weekly report). */
+export interface ActivityReport {
+  id: number;
+  title: string;
+  note: string | null;
+  work_date: string;
+  file_name: string;
+  size_bytes: number;
+  submitted_at: string;
+  /** Temporary download link (expires). */
+  file_url: string | null;
+  /** Author view. */
+  can_delete?: boolean;
+  delete_until?: string | null;
+  /** Reader view. */
+  user?: EmployeeSummary | null;
+}
+
+/** Limits of the day, all decided by the server. */
+export interface ActivityLimits {
+  per_day: number;
+  sent_today: number;
+  remaining_today: number;
+  delete_minutes: number;
+  max_size_mb: number;
+}
+
+export interface ActivityFormErrors {
+  title?: string;
+  note?: string;
+  file?: string;
+  /** Not tied to one field (daily limit, check-in, connection…). */
+  form?: string;
+}
+
+export const ACTIVITY_TITLE_MAX = 150;
+export const ACTIVITY_NOTE_MAX = 1000;
+
+/** Each refusal of an activity report upload, placed on the field it concerns. */
+export function activityUploadErrors(e: unknown, maxMb: number): ActivityFormErrors {
+  if (!(e instanceof ApiError)) return { form: errorMessage(e) };
+  if (e.kind === 'network')
+    return {
+      form:
+        typeof navigator !== 'undefined' && navigator.onLine === false
+          ? 'You are offline. Your report was not sent. Connect to the internet and send it again.'
+          : 'The connection was lost and your report may not have been sent. Check "Activity reports sent" before sending it again.',
+    };
+  if (e.status === 413) return { file: `This file is too large. The maximum is ${maxMb} MB.` };
+  const given = e.message && e.message !== 'The request could not be completed.' ? e.message : null;
+  switch (e.code) {
+    case 'invalid_pdf':
+      return { file: given ?? 'Please upload a PDF file.' };
+    case 'pdf_encrypted':
+      return {
+        file:
+          given ??
+          'Password-protected PDFs are not accepted. Please export the report without a password.',
+      };
+    case 'pdf_active_content':
+      return {
+        file:
+          given ??
+          'This PDF contains scripts, actions or embedded files. Please export it again as a plain PDF.',
+      };
+    case 'invalid_characters':
+      return {
+        file: 'The file name contains characters that are not allowed. Rename it and try again.',
+      };
+    case 'title_required':
+      return { title: 'Give the report a title.' };
+    case 'too_many_activity_reports': {
+      const b = e.body as { limit?: unknown } | null;
+      const n = b && typeof b.limit === 'number' ? b.limit : null;
+      return {
+        form: n
+          ? `You have reached the limit of ${n} activity reports for today. You can send more tomorrow.`
+          : 'You have reached the limit of activity reports for today. You can send more tomorrow.',
+      };
+    }
+    case 'checkin_required':
+      return { form: 'Please check in first to send a report today.' };
+    case 'employees_only':
+      return { form: 'Your account does not send activity reports.' };
+  }
+  if (e.status === 422) {
+    const f = e.fieldErrors;
+    if (f.title || f.note || f.file) return { title: f.title, note: f.note, file: f.file };
+  }
+  return { form: errorMessage(e) };
+}
+
+/** Message for a refused deletion of one's own activity report. */
+export function activityDeleteError(e: unknown): string {
+  if (e instanceof ApiError && e.code === 'delete_window_closed')
+    return 'This report can no longer be deleted: the time allowed after sending has passed.';
+  if (e instanceof ApiError && e.status === 404) return 'This report was already deleted.';
+  if (e instanceof ApiError && e.code === 'checkin_required')
+    return 'Please check in first to delete a report today.';
+  return errorMessage(e);
 }
 
 export const fullName = (u: Pick<EmployeeSummary, 'first_name' | 'last_name'>) =>

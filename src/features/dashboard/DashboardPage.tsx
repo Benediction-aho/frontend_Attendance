@@ -192,7 +192,7 @@ function PendingSection({ p }: { p: NonNullable<AdminDashboard['pending']> }) {
             to={first.to}
             className="inline-flex min-h-11 items-center text-sm text-primary-700 hover:underline"
           >
-            See {first.label.toLowerCase()}
+            See {first.label === 'Face ID devices' ? first.label : first.label.toLowerCase()}
           </Link>
         </div>
       </Section>
@@ -231,7 +231,8 @@ function PendingSection({ p }: { p: NonNullable<AdminDashboard['pending']> }) {
   );
 }
 
-export function DashboardPage() {
+/** `heading`: fixed title when the dashboard opens the Admin area (no greeting: Today has it). */
+export function DashboardPage({ heading }: { heading?: string } = {}) {
   const { data: me } = useMe();
   const unread = useUnreadCount();
   const q = useAdminDashboard();
@@ -243,7 +244,7 @@ export function DashboardPage() {
   return (
     <>
       <PageHeader
-        title={`${greeting(accraHour(now))}, ${me?.first_name ?? ''}`}
+        title={heading ?? `${greeting(accraHour(now))}, ${me?.first_name ?? ''}`}
         description={d?.work_date ? formatLongDay(d.work_date) : accraDate(now)}
       />
       {q.isPending ? (
@@ -262,7 +263,11 @@ export function DashboardPage() {
         <Card>
           <EmptyState
             title="Nothing to show yet"
-            description="Your permissions do not include dashboard figures. Use the menu to reach your pages."
+            description={
+              heading
+                ? 'Your permissions do not include team figures.'
+                : 'Your permissions do not include dashboard figures. Use the menu to reach your pages.'
+            }
           />
         </Card>
       ) : (

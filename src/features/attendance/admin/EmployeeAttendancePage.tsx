@@ -163,7 +163,9 @@ export function EmployeeAttendancePage() {
   const row = day.data?.data.find((r) => String(r.user.id) === id);
   const stateName = (loc.state as { name?: string } | null)?.name;
   const name = row ? fullName(row.user) : stateName;
-  const detail = employeeDetail(row?.user);
+  const detail = [row?.user.role === 'admin' ? 'Admin' : null, employeeDetail(row?.user)]
+    .filter(Boolean)
+    .join(' · ');
   return (
     <>
       <PageHeader

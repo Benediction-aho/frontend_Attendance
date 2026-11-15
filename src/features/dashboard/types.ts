@@ -22,6 +22,8 @@ export interface MyDashboard {
     week_end: string;
     presence_days: number;
     expected_days_so_far: number;
+    /** Check-ins on days the person was not expected (0.7.1). */
+    extra_days?: number;
     late_count: number;
     tasks_planned: number;
     tasks_done: number;
