@@ -43,10 +43,12 @@ describe('api client', () => {
   });
 
   it('never signs out after exhausting retries on 5xx', async () => {
-    const { client } = setup([json(500), json(500), json(500), json(500)]);
+    // GETs retry 5 times by default (the API may be waking up): 6 attempts in all.
+    const { client, fetchImpl } = setup(Array.from({ length: 6 }, () => json(500)));
     const err = await client.get('/x').catch((e: unknown) => e);
     expect(err).toBeInstanceOf(ApiError);
     expect((err as ApiError).kind).toBe('server');
+    expect(fetchImpl).toHaveBeenCalledTimes(6);
     expect(getToken()).toBe('secret-token');
   });
 

@@ -13,6 +13,19 @@ import {
 } from '../../lib/session';
 import type { LoginResponse, User } from '../../lib/types';
 import { resyncPush } from '../../lib/push';
+import { clearPersistedCache } from '../../lib/persist';
+
+// The server ended the session (401) or the user signed out: nothing of the previous
+// account stays in memory or on the device.
+let hadToken = Boolean(getToken());
+subscribe(() => {
+  const has = Boolean(getToken());
+  if (hadToken && !has) {
+    queryClient.clear();
+    void clearPersistedCache();
+  }
+  hadToken = has;
+});
 
 export const ME_KEY = ['me'] as const;
 
@@ -26,7 +39,7 @@ export function useMe() {
     queryKey: ME_KEY,
     queryFn: async () => (await api.get<{ data: User }>('/me')).data,
     enabled: Boolean(token),
-    staleTime: 60_000,
+    staleTime: 2 * 60_000,
   });
 }
 
@@ -42,7 +55,9 @@ export async function signIn(email: string, password: string): Promise<LoginResp
     device_name: getDeviceName(),
     is_pwa: isStandalonePwa(),
   });
+  // Another account may have used this device: start from an empty cache.
   queryClient.clear();
+  await clearPersistedCache();
   setToken(res.token);
   setMe({ ...res.user, must_change_password: res.must_change_password });
   // The server drops this device's push subscription on sign-out: send it again.
@@ -60,5 +75,6 @@ export async function signOut(): Promise<void> {
   } finally {
     setToken(null);
     queryClient.clear();
+    await clearPersistedCache();
   }
 }

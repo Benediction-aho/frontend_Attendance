@@ -7,7 +7,10 @@ export const queryClient = new QueryClient({
       // The API client already retries transient errors with backoff.
       retry: (count, error) => error instanceof ApiError && error.transient && count < 1,
       refetchOnWindowFocus: true,
-      staleTime: 15_000,
+      // Screens render from cache at once and refresh in the background when older than this.
+      staleTime: 30_000,
+      // Kept for the persisted cache (lib/persist.ts), which shows yesterday's data at most.
+      gcTime: 24 * 60 * 60_000,
     },
     mutations: { retry: false },
   },

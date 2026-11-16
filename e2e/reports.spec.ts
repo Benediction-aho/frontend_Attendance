@@ -348,11 +348,11 @@ test('weekly PDF: countdown, refusal message, then upload and version listed', a
   await expect(page.getByText(/Closes in \d+ min/)).toBeVisible();
   const pdf = { name: 'week.pdf', mimeType: 'application/pdf', buffer: Buffer.from('%PDF-1.4\n') };
   await page.getByTestId('pdf-input').setInputFiles(pdf);
-  await page.getByRole('button', { name: 'Send report' }).click();
+  await page.getByRole('button', { name: 'Send weekly report' }).click();
   await expect(
     page.getByText('Password-protected PDFs are not accepted.', { exact: false }),
   ).toBeVisible();
-  await page.getByRole('button', { name: 'Send report' }).click();
+  await page.getByRole('button', { name: 'Send weekly report' }).click();
   await expect(page.getByText('Report sent')).toBeVisible();
   await expect(page.getByTestId('versions').getByText(/^Version 1/)).toBeVisible();
   await expect(page.getByRole('button', { name: 'Replace the PDF' })).toBeVisible();
@@ -477,7 +477,7 @@ test('offline upload: clear message, sent automatically when back online', async
     buffer: Buffer.from('%PDF-1.4\n'),
   });
   await context.setOffline(true);
-  await page.getByRole('button', { name: 'Send report' }).click();
+  await page.getByRole('button', { name: 'Send weekly report' }).click();
   await expect(page.getByText(/You are offline\. Your report was not sent yet/)).toBeVisible();
   await context.setOffline(false);
   await expect(page.getByText(/Report received \(version 1\)/)).toBeVisible();

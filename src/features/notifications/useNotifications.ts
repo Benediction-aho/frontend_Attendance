@@ -2,10 +2,13 @@ import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
 import { api, qs } from '../../lib/api';
 import type { NotificationPage } from '../../lib/types';
 
+export const UNREAD_KEY = ['notifications', 'count'] as const;
+export const fetchUnread = () => api.get<NotificationPage>(`/notifications${qs({ unread: 1 })}`);
+
 export function useUnreadCount() {
   return useQuery({
-    queryKey: ['notifications', 'count'],
-    queryFn: () => api.get<NotificationPage>(`/notifications${qs({ unread: 1 })}`),
+    queryKey: UNREAD_KEY,
+    queryFn: fetchUnread,
     select: (r) => r.meta.unread_count ?? r.meta.total,
     refetchInterval: 60_000,
   });

@@ -164,6 +164,7 @@ export async function mockApi(page: Page, state: MockState) {
         user: state.me,
       });
     }
+    if (path === '/health') return send(200, { status: 'ok' });
     if (path === '/auth/logout') return send(200, {});
     if (path === '/me' && method === 'GET') return send(200, { data: state.me });
     if (path === '/me' && method === 'PATCH') {

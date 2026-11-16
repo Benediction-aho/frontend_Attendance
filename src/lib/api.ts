@@ -1,5 +1,6 @@
 import { getToken, invalidateSession } from './session';
 import { recordServerDate } from './serverTime';
+import { trackRequest, trackRetry } from './netStatus';
 
 export type ApiErrorKind = 'network' | 'server' | 'unauthorized' | 'client';
 
@@ -68,7 +69,10 @@ export interface RequestOptions {
   method?: 'GET' | 'POST' | 'PUT' | 'PATCH' | 'DELETE';
   body?: unknown;
   signal?: AbortSignal;
-  /** Retries for network/5xx errors. Defaults to 3 for GET, 0 otherwise (non-idempotent). */
+  /**
+   * Retries for network/5xx errors. Defaults to 5 for GET (enough to ride out the API
+   * waking up after a quiet period), 0 otherwise (non-idempotent).
+   */
   retries?: number;
   /** Return `{ blob, filename }` instead of parsing JSON (file downloads). */
   raw?: boolean;
@@ -281,14 +285,23 @@ export function createApiClient(config: ApiClientConfig) {
   }
 
   async function request<T>(path: string, opts: RequestOptions = {}): Promise<T> {
-    const retries = opts.retries ?? ((opts.method ?? 'GET') === 'GET' ? 3 : 0);
-    for (let attempt = 0; ; attempt++) {
-      try {
-        return await once<T>(path, opts);
-      } catch (e) {
-        if (!(e instanceof ApiError) || !e.transient || attempt >= retries) throw e;
-        await sleep(backoffDelay(attempt, base, max));
+    const retries = opts.retries ?? ((opts.method ?? 'GET') === 'GET' ? 5 : 0);
+    // A slow answer or a retry shows "Waking up the server…" (display only).
+    const settled = trackRequest();
+    let retrying: (() => void) | null = null;
+    try {
+      for (let attempt = 0; ; attempt++) {
+        try {
+          return await once<T>(path, opts);
+        } catch (e) {
+          if (!(e instanceof ApiError) || !e.transient || attempt >= retries) throw e;
+          retrying ??= trackRetry();
+          await sleep(backoffDelay(attempt, base, max));
+        }
       }
+    } finally {
+      settled();
+      retrying?.();
     }
   }
 

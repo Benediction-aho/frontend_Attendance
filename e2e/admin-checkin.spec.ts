@@ -155,9 +155,9 @@ test('activity report: upload with field errors, list, delete with confirmation'
   await page.goto('/app/reports/daily');
   await expect(page.getByTestId('activity-callout')).toContainText('not the Friday weekly report');
   if (phone) await shot(page, 'my-work-upload-button', true);
-  await page.getByRole('button', { name: 'Upload a report' }).click();
+  await page.getByRole('button', { name: 'Upload an activity report' }).click();
   const dlg = page.getByRole('dialog', { name: 'Upload an activity report' });
-  await dlg.getByRole('button', { name: 'Send report' }).click();
+  await dlg.getByRole('button', { name: 'Send activity report' }).click();
   await expect(dlg.getByText('Give the report a title.')).toBeVisible();
   await dlg.getByLabel('Title').fill('Visit to the bank');
   await dlg.getByTestId('activity-pdf-input').setInputFiles({
@@ -167,9 +167,9 @@ test('activity report: upload with field errors, list, delete with confirmation'
   });
   await expect(dlg.getByText(/up to 10 MB/)).toBeVisible();
   if (phone) await shot(page, 'upload-form', true);
-  await dlg.getByRole('button', { name: 'Send report' }).click();
+  await dlg.getByRole('button', { name: 'Send activity report' }).click();
   await expect(dlg.getByTestId('activity-file-error')).toContainText('Password-protected');
-  await dlg.getByRole('button', { name: 'Send report' }).click();
+  await dlg.getByRole('button', { name: 'Send activity report' }).click();
   await expect(dlg).toBeHidden();
   await page.getByRole('link', { name: 'See sent reports' }).click();
   await expect(page.getByTestId('activity-reports')).toContainText('Visit to the bank');

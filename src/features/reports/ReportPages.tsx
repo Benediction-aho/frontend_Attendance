@@ -402,7 +402,7 @@ export function SubmissionCard() {
                     ? 'Waiting for connection'
                     : s.current
                       ? 'Send new version'
-                      : 'Send report'}
+                      : 'Send weekly report'}
                 </Button>
               )}
             </div>

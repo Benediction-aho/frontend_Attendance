@@ -329,3 +329,42 @@ describe('Today screen', () => {
     await waitFor(() => expect(screen.getByRole('dialog')).toBeInTheDocument());
   });
 });
+
+describe('today restored from the device cache', () => {
+  afterEach(() => vi.unstubAllGlobals());
+
+  it('shows the cached day at once but keeps check-in disabled until the server answers', async () => {
+    const { QueryClient, QueryClientProvider } = await import('@tanstack/react-query');
+    const { createMemoryRouter, RouterProvider } = await import('react-router');
+    const { render } = await import('@testing-library/react');
+    const { TODAY_KEY } = await import('./useAttendance');
+    let answer: (r: Response) => void = () => {};
+    vi.stubGlobal(
+      'fetch',
+      vi.fn((url: string) =>
+        String(url).includes('/attendance/today')
+          ? new Promise<Response>((r) => (answer = r))
+          : Promise.resolve(new Response('{"selected":true}', { status: 200 })),
+      ),
+    );
+    const qc = new QueryClient({ defaultOptions: { queries: { retry: false } } });
+    // Data persisted by an earlier run of the app.
+    qc.setQueryData(TODAY_KEY, today(), { updatedAt: Date.now() - 3_600_000 - 60_000 * 60 * 24 });
+    const router = createMemoryRouter([{ path: '/app', element: <TodayPage /> }], {
+      initialEntries: ['/app'],
+    });
+    render(
+      <QueryClientProvider client={qc}>
+        <RouterProvider router={router} />
+      </QueryClientProvider>,
+    );
+    const btn = await screen.findByRole('button', { name: 'Check in at the office' });
+    expect(btn).toBeDisabled();
+    expect(screen.getByTestId('today-updating')).toHaveTextContent("Updating today's status");
+    answer(new Response(JSON.stringify(today()), { status: 200 }));
+    await waitFor(() =>
+      expect(screen.getByRole('button', { name: 'Check in at the office' })).toBeEnabled(),
+    );
+    expect(screen.queryByTestId('today-updating')).toBeNull();
+  });
+});

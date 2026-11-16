@@ -19,6 +19,7 @@ import {
 import { AnimatePresence, motion, useReducedMotion } from 'motion/react';
 import { useEffect, useState } from 'react';
 import { onCheckInRequired } from '../lib/api';
+import { preloadPath, warmAfterSignIn } from './preload';
 import { useToast } from '../ui/Toast';
 import { Link, NavLink, useLocation, useNavigate, useOutlet } from 'react-router';
 import { Modal } from '../ui/Modal';
@@ -120,14 +121,22 @@ function Count({ n }: { n?: number }) {
   );
 }
 
+/** Starts loading a screen's code and data as soon as the pointer or finger reaches its entry. */
+function preloadHandlers(to: string, me: User | undefined) {
+  const go = () => preloadPath(to, me);
+  return { onPointerEnter: go, onTouchStart: go, onFocus: go };
+}
+
 function SideLink({ item, activeId = 'side-active' }: { item: NavItem; activeId?: string }) {
   const Icon = item.icon;
   const { pathname } = useLocation();
   const area = inArea(item, pathname);
+  const { data: me } = useMe();
   return (
     <NavLink
       to={item.to}
       end={item.end}
+      {...preloadHandlers(item.to, me)}
       className={({ isActive }) =>
         cx(
           'relative flex min-h-11 items-center gap-3 rounded-control px-3 text-sm font-medium transition-colors',
@@ -159,6 +168,11 @@ export function AppLayout() {
   const { data: me } = useMe();
   const { data: unread } = useUnreadCount();
   const nav = navFor(me, unread ?? 0);
+  // Main data and the menu's screens, fetched quietly after sign-in.
+  const nextPaths = [...nav.mobile, ...nav.main].map((i) => i.to).join('|');
+  useEffect(() => {
+    warmAfterSignIn(me, nextPaths.split('|'));
+  }, [me, nextPaths]);
   const location = useLocation();
   // The element (not <Outlet/>) is captured so an exiting page keeps its own content.
   const outlet = useOutlet();
@@ -269,7 +283,7 @@ export function AppLayout() {
                 logout();
               }}
             >
-              Confirm
+              Sign out
             </Button>
           </>
         }
@@ -290,6 +304,7 @@ export function AppLayout() {
               key={to}
               to={to}
               end={end}
+              {...preloadHandlers(to, me)}
               className={({ isActive }) =>
                 cx(
                   'flex min-h-11 min-w-11 flex-col items-center justify-center gap-0.5 rounded-full text-[11px] leading-tight transition-colors',

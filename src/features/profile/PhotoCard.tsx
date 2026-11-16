@@ -13,6 +13,8 @@ export function PhotoCard({ user }: { user: User }) {
   const input = useRef<HTMLInputElement>(null);
   const [preview, setPreview] = useState<{ url: string; blob: Blob } | null>(null);
   const [busy, setBusy] = useState(false);
+  // A second tap before the button re-renders as busy must not send the photo twice.
+  const inFlight = useRef(false);
   const [confirmRemove, setConfirmRemove] = useState(false);
   const toast = useToast();
 
@@ -47,7 +49,8 @@ export function PhotoCard({ user }: { user: User }) {
   };
 
   const upload = async () => {
-    if (!preview) return;
+    if (!preview || inFlight.current) return;
+    inFlight.current = true;
     setBusy(true);
     try {
       const fd = new FormData();
@@ -63,6 +66,7 @@ export function PhotoCard({ user }: { user: User }) {
           : errorMessage(e);
       toast.show(msg, 'danger');
     } finally {
+      inFlight.current = false;
       setBusy(false);
     }
   };
