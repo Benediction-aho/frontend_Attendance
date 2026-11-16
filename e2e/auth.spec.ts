@@ -88,6 +88,7 @@ test('first sign-in without reload sends the remembered code', async ({ page }) 
 });
 
 test('session survives a reload; network errors never sign out; logout does', async ({ page }) => {
+  test.setTimeout(90_000);
   const state = newState();
   await mockApi(page, state);
   await signInUi(page);
@@ -95,8 +96,27 @@ test('session survives a reload; network errors never sign out; logout does', as
   await page.reload();
   await expect(page.getByRole('heading', { name: /Ama/ })).toBeVisible();
   await page.route('http://localhost:8000/api/me', (r) => r.fulfill({ status: 503, body: '{}' }));
+  // The account kept on the device still shows while the server is unavailable.
+  await page.waitForTimeout(1500);
   await page.reload();
-  await expect(page.getByText('We could not load your account.')).toBeVisible({ timeout: 20_000 });
+  await expect(page.getByRole('heading', { name: /Ama/ })).toBeVisible();
+  await expect(page).not.toHaveURL(/sign-in/);
+  // Without that copy (first start on this device), a clear message and a retry.
+  await page.evaluate(
+    () =>
+      new Promise<void>((resolve) => {
+        // eslint-disable-next-line @typescript-eslint/no-explicit-any
+        const r = (globalThis as any).indexedDB.open('ag');
+        r.onsuccess = () => {
+          const d = r.result.transaction('kv', 'readwrite').objectStore('kv').delete('rq.cache');
+          d.onsuccess = () => resolve();
+          d.onerror = () => resolve();
+        };
+        r.onerror = () => resolve();
+      }),
+  );
+  await page.reload();
+  await expect(page.getByText('We could not load your account.')).toBeVisible({ timeout: 40_000 });
   await page.unroute('http://localhost:8000/api/me');
   await page.getByRole('button', { name: 'Try again' }).click();
   await expect(page.getByRole('heading', { name: /Ama/ })).toBeVisible();
@@ -217,6 +237,6 @@ test('phones: Sign out in the floating bar asks for confirmation first', async (
   await expect(dialog).toHaveCount(0);
   await expect(page).toHaveURL(/\/app/);
   await bar.getByRole('button', { name: 'Sign out' }).click();
-  await page.getByRole('dialog').getByRole('button', { name: 'Confirm' }).click();
+  await page.getByRole('dialog').getByRole('button', { name: 'Sign out' }).click();
   await expect(page.getByRole('heading', { name: 'Sign in' })).toBeVisible();
 });

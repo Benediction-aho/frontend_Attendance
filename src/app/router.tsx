@@ -1,11 +1,10 @@
 import { createBrowserRouter, Navigate, useParams } from 'react-router';
 import { AppPrefixRedirect } from './AppPrefixRedirect';
-import { AppLayout } from './AppLayout';
 import { RequireAuth, RedirectIfSignedIn, Gate } from '../features/auth/guards';
 import { SignInPage } from '../features/auth/SignInPage';
-import { DashboardPage } from '../features/dashboard/DashboardPage';
 import { useMe } from '../features/auth/useSession';
 import { lazyPage } from './lazyPage';
+import { registerHome, registerRoute } from './preload';
 import {
   can,
   canManageAccounts,
@@ -19,8 +18,20 @@ import {
   tracksAttendance,
 } from '../lib/permissions';
 import { isSettingsSection } from '../lib/settings';
-import { TodayPage } from '../features/attendance/TodayPage';
 import type { User } from '../lib/types';
+
+// First screen after sign-in: split from the sign-in bundle, preloaded as soon as a
+// session exists (main.tsx) and precached by the service worker.
+const TodayPage = lazyPage(() => import('../features/attendance/TodayPage'), 'TodayPage');
+const DashboardPage = lazyPage(
+  () => import('../features/dashboard/DashboardPage'),
+  'DashboardPage',
+);
+// The signed-in shell (menu, icons) is not needed by the sign-in screen either.
+const AppLayout = lazyPage(() => import('./AppLayout'), 'AppLayout');
+registerHome(AppLayout.preload);
+registerHome(TodayPage.preload);
+registerHome(DashboardPage.preload);
 
 const SignUpPage = lazyPage(() => import('../features/auth/SignUpPage'), 'SignUpPage');
 const SignUpSentPage = lazyPage(() => import('../features/auth/SignUpSentPage'), 'SignUpSentPage');
@@ -122,6 +133,25 @@ const AdminActivityReportPage = lazyPage(
 );
 const InstallPage = lazyPage(() => import('../features/pwa/InstallGuide'), 'InstallPage');
 
+// Menu entries: their code is fetched on hover, focus or touch (AppLayout).
+registerRoute('/app/attendance/history', MyHistoryPage.preload);
+registerRoute('/app/attendance/schedule', SchedulePage.preload);
+registerRoute('/app/notifications', NotificationsPage.preload);
+registerRoute('/app/work', WorkPage.preload);
+registerRoute('/app/reports/daily', DailyReportPage.preload);
+registerRoute('/app/reports/weekly', WeeklyReportPage.preload);
+registerRoute('/app/reports/activity', ActivityReportsPage.preload);
+registerRoute('/app/profile', ProfilePage.preload);
+registerRoute('/app/admin', AdminHubPage.preload);
+registerRoute('/app/admin/attendance', AdminAttendancePage.preload);
+registerRoute('/app/admin/reports', AdminDailyReportsPage.preload);
+registerRoute('/app/admin/faceid-devices', FaceIdDevicesPage.preload);
+registerRoute('/app/admin/leave', LeavePage.preload);
+registerRoute('/app/admin/requests', RequestsPage.preload);
+registerRoute('/app/admin/users', UsersPage.preload);
+registerRoute('/app/admin/settings', SettingsPage.preload);
+registerRoute('/app/admin/logs', LogsPage.preload);
+
 /**
  * Everyone who checks in (employees, and admins from their start date) lands on today's
  * check-in; other staff on their dashboard.
@@ -163,7 +193,9 @@ function SettingsIndex() {
 function SettingsPart() {
   const { part } = useParams();
   const { data } = useMe();
-  const ok = isSettingsSection(part) && settingsSections(data).includes(part);
+  // Unknown part (old or mistyped link): back to the settings the user may open (FIN-06).
+  if (!isSettingsSection(part)) return <Navigate to="/app/admin/settings" replace />;
+  const ok = settingsSections(data).includes(part);
   return <Gate allowed={ok}>{ok && <SettingsPage />}</Gate>;
 }
 

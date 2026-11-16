@@ -290,12 +290,12 @@ describe('weekly PDF upload', () => {
     Object.defineProperty(big, 'size', { value: 11 * 1024 * 1024 });
     fireEvent.change(input, { target: { files: [big] } });
     expect(await screen.findByText(/The maximum is 10 MB/)).toBeTruthy();
-    expect(screen.queryByRole('button', { name: 'Send report' })).toBeNull();
+    expect(screen.queryByRole('button', { name: 'Send weekly report' })).toBeNull();
 
     fireEvent.change(input, {
       target: { files: [new File(['%PDF-1.4'], 'week.pdf', { type: 'application/pdf' })] },
     });
-    fireEvent.click(await screen.findByRole('button', { name: 'Send report' }));
+    fireEvent.click(await screen.findByRole('button', { name: 'Send weekly report' }));
     expect(await screen.findByText('This PDF contains active content.')).toBeTruthy();
   });
 

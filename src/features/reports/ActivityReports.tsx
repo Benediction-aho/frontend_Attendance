@@ -83,6 +83,7 @@ function ActivityReportForm({
     setErrors((x) => ({ ...x, file: undefined, form: undefined }));
   };
 
+  const sending = useRef(false);
   const submit = (e: FormEvent) => {
     e.preventDefault();
     const t = title.trim();
@@ -92,6 +93,9 @@ function ActivityReportForm({
     };
     setErrors(errs);
     if (errs.title || errs.file || !file) return;
+    // A double tap must not send the file twice (the button re-renders as busy a frame later).
+    if (sending.current) return;
+    sending.current = true;
     setProgress(0);
     onBusy(true);
     send.mutate(
@@ -102,7 +106,10 @@ function ActivityReportForm({
           onDone();
         },
         onError: (err) => setErrors(activityUploadErrors(err, maxMb)),
-        onSettled: () => onBusy(false),
+        onSettled: () => {
+          sending.current = false;
+          onBusy(false);
+        },
       },
     );
   };
@@ -226,14 +233,14 @@ function ActivityReportForm({
           Cancel
         </Button>
         <Button type="submit" loading={send.isPending} disabled={locked || full}>
-          Send report
+          Send activity report
         </Button>
       </div>
     </form>
   );
 }
 
-/** "Upload a report" button with its form in a sheet (phones) or a dialog. */
+/** "Upload an activity report" button with its form in a sheet (phones) or a dialog. */
 export function UploadReportButton({
   variant = 'primary',
   limits,
@@ -254,7 +261,7 @@ export function UploadReportButton({
         aria-haspopup="dialog"
         onClick={() => setOpen(true)}
       >
-        Upload a report
+        Upload an activity report
       </Button>
       <Modal
         open={open}

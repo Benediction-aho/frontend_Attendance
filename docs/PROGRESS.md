@@ -143,7 +143,7 @@ Admins track attendance (2026-11-14) – questions (safe default implemented):
 Activity reports (2026-11-14) – questions (safe default implemented, the starred ones are settings of the reports section):
 - **Q35 – Who sends**: anyone who tracks attendance, any day and time; the upload needs today's check-in on expected days (same rule as tasks and clients). Confirm.
 - **Q36 – Content**: mandatory title (150 characters, no link or e-mail address), optional note (1000), one PDF with the weekly report's checks and size limit. Confirm.
-- **Q37 – Daily limit***: `activity_reports_per_day` = 5 per person (a deleted report still counts). Confirm the number.
+- **Q37 – Daily limit***: `activity_reports_per_day` = 5 per person (owner decision 2026-11-15: a deleted report frees its slot). Confirm the number.
 - **Q38 – Deletion***: the author can delete a report within `activity_report_delete_minutes` = 30 after sending (0 = never); no edit. Confirm.
 - **Q39 – Readers**: the people who may read the author's weekly reports: super admins, and for an employee the admins holding "View reports" or "Receive weekly reports"; an admin's report is read by super admins only. Confirm (or restrict to "View reports" only).
 - **Q40 – Notification***: in-app to those readers at each upload; e-mail only when `activity_report_email` is on (default off). Confirm.
@@ -281,3 +281,21 @@ Tests: `tests/Feature/Reports/ActivityReportTest.php` (36 tests: sending, valida
 - UXC-05: "people" (from `totals.people` / `with_report`, API 0.7.1, fallback to rows). UXC-06: "See Face ID devices". UXC-08: at the daily limit "Upload a report" is disabled with the quota line beside it.
 - API 0.7.1: weekly status `not_expected` → "Not expected this week" (dashboard and weekly page, no "To send"); `week.extra_days` → "1 extra day" instead of "1 of 0".
 - Screenshots refreshed in `/home/user/apercu/admin-checkin/` (320, 360, 390 px).
+
+## 2026-11-15 – Activity report slot and private disk name
+- **Q37 answered (owner, 2026-11-15)**: deleting an activity report frees its slot; the daily limit counts only the day's non-deleted reports (`limits.sent_today` / `remaining_today` follow). No other API change.
+- **Robustness**: `PRIVATE_FILES_DISK` is lower-cased and trimmed in `config/filesystems.php` (production had `S3`, every upload failed with "Disk [S3] does not have a configured driver"); at boot the API logs a clear error if the private disk is not a configured disk.
+
+
+## 2026-11-16 – Speed pass for the team presentation (owner request) – ready for frontend-ui-designer, then frontend-ux-tester
+- **Persisted query cache** (`src/lib/persist.ts`, official `@tanstack/react-query-persist-client` + async-storage persister on the existing IndexedDB kv store, key `rq.cache`, buster `v1`, max age 24 h). Allowlist only: `me`, `me/dashboard|work-schedule|leaves|tasks|clients`, `attendance/today`, `admin/dashboard`, `notifications/count`, `holidays`. Never stored: tokens (separate key, unchanged), other people's lists, logs, settings, reports (expiring file links). Erased on sign-in, sign-out, on any 401 that ends the session, and at start-up when no session exists.
+- **Check-in never acts on cached data**: Today restored from the device is shown at once, but the card is inside a disabled `fieldset` with "Updating today's status…" until the server answers during this run (`isFreshThisRun`); `today` has `staleTime: 0`. The intent/confirm calls are unchanged (server decides).
+- **staleTime / gcTime**: default 30 s / 24 h; me 2 min; dashboards 60 s; schedule 5 min; holidays 1 h; today 0.
+- **Prefetch** (`src/app/preload.ts`): after sign-in or opening the app signed in: home chunks, today + my dashboard (or admin dashboard), unread count; on idle: the menu screens' chunks and My work data (only once the server says the user is checked in, so the `checkin_required` redirect never fires from a prefetch). Menu entries prefetch code + data on pointer enter, focus and touchstart.
+- **Optimistic updates**: task tick (existing), task delete and client delete (rollback on error).
+- **Code splitting**: Today, Dashboard and the signed-in shell (AppLayout) are now lazy chunks, preloaded as soon as a token exists; page fallback is a skeleton instead of a spinner. SW precache unchanged in principle (all chunks precached, never API responses).
+- **Cold start**: `wakeApi()` sends one anonymous `GET /health` when the app opens; GETs retry 5 times with backoff (was 3); a "Waking up the server…" status pill (`src/ui/WakeBanner.tsx`, polite live region, no icon) shows while any request is slower than 3.5 s or being retried, hidden when offline.
+- **Uploads**: profile photo was already downscaled on the device (1024 px, JPEG 0.85, EXIF dropped); added a synchronous guard against a double tap for the photo and for activity-report PDFs.
+- Measured: see the commit message. Tests: `src/lib/perf.test.ts`, Today cache test in `attendance.test.tsx`, `e2e/perf.spec.ts` (reload with a slow API shows Today from the device, actions disabled then enabled, wake notice; sign-out erases the device cache).
+- Accepted risk: a restored screen may show data up to 24 h old for a moment before it refreshes (clearly refreshed in background; actions on Today wait for the server).
+- Same session, from `docs/reports/final-2026-11-16-ux.md`: FIN-04 (buttons "Send weekly report" / "Upload an activity report" / "Send activity report"), FIN-05 (greeting "Hello" 00:00–04:59, then morning/afternoon/evening), FIN-06 (unknown settings part redirects to Settings instead of "no access"), FIN-07 (sign-out confirmation button "Sign out"). FIN-01: the client already reads the `Date` header (`recordServerDate`); it takes effect now that the API exposes it.

@@ -26,19 +26,16 @@ export const SUBMISSION_KEY = ['me', 'reports', 'submission'] as const;
 /** Temporary file links expire: refresh lists holding them regularly. */
 const LINK_REFRESH_MS = 4 * 60_000;
 
+export const fetchTasks = () => api.get<{ work_date: string; data: Task[] }>('/me/tasks');
+export const fetchClients = () =>
+  api.get<{ work_date: string; data: ClientEntry[]; services: ServiceTotal[] }>('/me/clients');
+
 export function useTasks() {
-  return useQuery({
-    queryKey: TASKS_KEY,
-    queryFn: () => api.get<{ work_date: string; data: Task[] }>('/me/tasks'),
-  });
+  return useQuery({ queryKey: TASKS_KEY, queryFn: fetchTasks });
 }
 
 export function useClients() {
-  return useQuery({
-    queryKey: CLIENTS_KEY,
-    queryFn: () =>
-      api.get<{ work_date: string; data: ClientEntry[]; services: ServiceTotal[] }>('/me/clients'),
-  });
+  return useQuery({ queryKey: CLIENTS_KEY, queryFn: fetchClients });
 }
 
 export function useServiceSuggestions(q: string, enabled: boolean) {
@@ -99,7 +96,21 @@ export function useTaskMutations() {
   });
   const remove = useMutation({
     mutationFn: (id: number) => api.del(`/me/tasks/${id}`),
-    onSuccess: done,
+    // The row disappears at once; it comes back if the server refuses.
+    onMutate: async (id) => {
+      await qc.cancelQueries({ queryKey: TASKS_KEY });
+      const prev = qc.getQueryData<TaskList>(TASKS_KEY);
+      if (prev)
+        qc.setQueryData<TaskList>(TASKS_KEY, {
+          ...prev,
+          data: prev.data.filter((t) => t.id !== id),
+        });
+      return { prev };
+    },
+    onError: (_e, _id, ctx) => {
+      if (ctx?.prev) qc.setQueryData(TASKS_KEY, ctx.prev);
+    },
+    onSettled: done,
   });
   return { add, update, remove };
 }
@@ -121,9 +132,25 @@ export function useClientMutations() {
       api.patch<{ data: ClientEntry }>(`/me/clients/${id}`, v),
     onSuccess: done,
   });
+  const qc = useQueryClient();
+  type ClientList = { work_date: string; data: ClientEntry[]; services: ServiceTotal[] };
   const remove = useMutation({
     mutationFn: (id: number) => api.del(`/me/clients/${id}`),
-    onSuccess: done,
+    // The row disappears at once (totals follow from the server); restored on refusal.
+    onMutate: async (id) => {
+      await qc.cancelQueries({ queryKey: CLIENTS_KEY });
+      const prev = qc.getQueryData<ClientList>(CLIENTS_KEY);
+      if (prev)
+        qc.setQueryData<ClientList>(CLIENTS_KEY, {
+          ...prev,
+          data: prev.data.filter((c) => c.id !== id),
+        });
+      return { prev };
+    },
+    onError: (_e, _id, ctx) => {
+      if (ctx?.prev) qc.setQueryData(CLIENTS_KEY, ctx.prev);
+    },
+    onSettled: done,
   });
   return { add, update, remove };
 }

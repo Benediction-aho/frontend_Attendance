@@ -27,6 +27,7 @@ import {
   LOCATE_HINT_AFTER_MS,
 } from './checkInErrors';
 import { TODAY_KEY, useMySchedule, useToday } from './useAttendance';
+import { isFreshThisRun } from '../../lib/persist';
 import { useCheckIn, type CheckInState } from './useCheckIn';
 
 const FLOW_STEPS = ['Location', 'Face ID', 'Confirmed'];
@@ -441,6 +442,7 @@ export function TodayPage() {
   const today = useToday();
   const schedule = useMySchedule();
   const t = today.data;
+  const fresh = isFreshThisRun(today.dataUpdatedAt);
   // Animate the checked-in card only when it appears during this visit (after an action).
   const [seen, setSeen] = useState({ notCheckedIn: false, openDay: false });
   if (t && !t.checked_in && !seen.notCheckedIn) setSeen({ ...seen, notCheckedIn: true });
@@ -484,6 +486,23 @@ export function TodayPage() {
         </Alert>
       )}
       {!t && today.isPending && <Skeleton className="h-48 w-full" />}
+      {t && !fresh && (
+        <p role="status" data-testid="today-updating" className="text-sm text-ink-600">
+          {today.isError
+            ? "Today's status could not be refreshed. Check-in needs an internet connection."
+            : "Updating today's status…"}
+          {today.isError && (
+            <Button
+              variant="outline"
+              size="sm"
+              className="ml-2"
+              onClick={() => void today.refetch()}
+            >
+              Try again
+            </Button>
+          )}
+        </p>
+      )}
 
       {t && (
         <>
@@ -492,13 +511,17 @@ export function TodayPage() {
           </motion.div>
           <motion.div variants={fadeUp}>
             <Card data-testid="today-card">
-              {t.checked_in && t.attendance ? (
-                <CheckedInPanel today={t} celebrate={celebrate} />
-              ) : !t.expected && t.available_check_ins.length === 0 ? (
-                <RestDay today={t} />
-              ) : (
-                <CheckInPanel today={t} />
-              )}
+              {/* A day restored from the device is shown at once, but its actions wait
+                  for the server's current answer (never act on cached data). */}
+              <fieldset disabled={!fresh} aria-busy={!fresh || undefined} className="contents">
+                {t.checked_in && t.attendance ? (
+                  <CheckedInPanel today={t} celebrate={celebrate} />
+                ) : !t.expected && t.available_check_ins.length === 0 ? (
+                  <RestDay today={t} />
+                ) : (
+                  <CheckInPanel today={t} />
+                )}
+              </fieldset>
             </Card>
           </motion.div>
         </>

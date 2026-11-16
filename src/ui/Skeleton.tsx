@@ -19,3 +19,15 @@ export function SkeletonRows({ rows = 5 }: { rows?: number }) {
     </div>
   );
 }
+
+/** Placeholder while a screen's code downloads: title line and two cards, no layout jump. */
+export function PageSkeleton() {
+  return (
+    <div role="status" aria-label="Loading" className="mx-auto flex w-full max-w-xl flex-col gap-4">
+      <Skeleton className="h-4 w-28" />
+      <Skeleton className="h-8 w-48" />
+      <Skeleton className="h-40 w-full rounded-card" />
+      <Skeleton className="h-24 w-full rounded-card" />
+    </div>
+  );
+}

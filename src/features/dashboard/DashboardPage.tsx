@@ -17,7 +17,9 @@ import { useAdminDashboard } from './useDashboard';
 import { formatDate, formatDateTime, formatLongDay } from '../../lib/format';
 import type { AdminDashboard } from './types';
 
-function greeting(hour: number) {
+/** By the hour in Accra; between midnight and 5 AM a neutral "Hello" (FIN-05). */
+export function greeting(hour: number) {
+  if (hour < 5) return 'Hello';
   if (hour < 12) return 'Good morning';
   if (hour < 17) return 'Good afternoon';
   return 'Good evening';
